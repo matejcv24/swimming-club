@@ -7,8 +7,6 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { send } from '@/routes/verification';
-import ProfileController from '@/actions/App/Http/Controllers/Settings/ProfileController';
-import { edit } from '@/routes/profile';
 
 export default function Profile({
     mustVerifyEmail,
@@ -33,7 +31,8 @@ export default function Profile({
                 />
 
                 <Form
-                    {...ProfileController.update.form()}
+                    action="/settings/profile"
+                    method="patch"
                     options={{
                         preserveScroll: true,
                     }}
@@ -139,7 +138,7 @@ Profile.layout = {
     breadcrumbs: [
         {
             title: 'Profile settings',
-            href: edit(),
+            href: '/settings/profile',
         },
     ],
 };

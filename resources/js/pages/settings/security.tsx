@@ -11,8 +11,6 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { useTwoFactorAuth } from '@/hooks/use-two-factor-auth';
 import { disable, enable } from '@/routes/two-factor';
-import SecurityController from '@/actions/App/Http/Controllers/Settings/SecurityController';
-import { edit } from '@/routes/security';
 
 type Props = {
     canManageTwoFactor?: boolean;
@@ -64,7 +62,8 @@ export default function Security({
                 />
 
                 <Form
-                    {...SecurityController.update.form()}
+                    action="/settings/password"
+                    method="put"
                     options={{
                         preserveScroll: true,
                     }}
@@ -256,7 +255,7 @@ Security.layout = {
     breadcrumbs: [
         {
             title: 'Security settings',
-            href: edit(),
+            href: '/settings/security',
         },
     ],
 };
