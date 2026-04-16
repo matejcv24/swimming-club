@@ -33,13 +33,8 @@ class User extends Authenticatable
         ];
     }
 
-    public function members(): HasMany
-{
-    return $this->hasMany(Member::class, 'parent_id');
-}
-
-public function trainings(): HasMany
-{
-    return $this->hasMany(Training::class, 'coach_id');
-}
+    public function trainings(): HasMany
+    {
+        return $this->hasMany(Training::class, 'coach_id');
+    }
 }
