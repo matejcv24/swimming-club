@@ -175,11 +175,16 @@ export default function TrainingsIndex({ members }: Props) {
                 fullWidth
                 maxWidth="sm"
                 PaperProps={{
-                    sx: { bgcolor: DARK_BG },
+                    sx: {
+                        bgcolor: DARK_BG,
+                        height: '70vh',
+                        display: 'flex',
+                        flexDirection: 'column',
+                    },
                 }}
             >
                 <DialogTitle sx={{ p: 0 }}>
-                    <div className="flex flex-col gap-3 px-4 py-3">
+                    <div className="flex items-center justify-between px-4 py-3">
                         {/* Search Bar */}
                         <TextField
                             variant="standard"
@@ -195,6 +200,7 @@ export default function TrainingsIndex({ members }: Props) {
                                 ),
                             }}
                             sx={{
+                                flex: 1,
                                 '& input': { color: 'white' },
                                 '& .MuiInput-underline::before': { borderBottomColor: 'rgba(255,255,255,0.3)' },
                                 '& .MuiInput-underline:hover::before': { borderBottomColor: 'white' },
@@ -202,36 +208,24 @@ export default function TrainingsIndex({ members }: Props) {
                             }}
                         />
 
-                        {/* Date and Pool Info */}
-                        <div className="flex items-center justify-between">
-                            <div className="flex flex-col">
-                                <Typography variant="h6" fontWeight="bold">
-                                    {selectedDate?.format('DD MMM YYYY')}
-                                </Typography>
-                                <Typography variant="body2" color="text.secondary">
-                                    {activePool === 'big'
-                                        ? 'Big Pool'
-                                        : 'Small Pool'}
-                                </Typography>
-                            </div>
-                            <div className="flex items-center gap-1">
-                                <IconButton
-                                    onClick={() => setEditMode((prev) => !prev)}
-                                    color={editMode ? 'primary' : 'default'}
-                                    title="Edit attendance"
-                                >
-                                    <EditIcon />
-                                </IconButton>
-                                <IconButton
-                                    onClick={() => {
-                                        setShowAttendanceModal(false);
-                                        setAttendanceSearch('');
-                                    }}
-                                    color="error"
-                                >
-                                    <CloseIcon />
-                                </IconButton>
-                            </div>
+                        {/* Edit and Close Buttons */}
+                        <div className="flex items-center gap-1 ml-2">
+                            <IconButton
+                                onClick={() => setEditMode((prev) => !prev)}
+                                color={editMode ? 'primary' : 'default'}
+                                title="Edit attendance"
+                            >
+                                <EditIcon />
+                            </IconButton>
+                            <IconButton
+                                onClick={() => {
+                                    setShowAttendanceModal(false);
+                                    setAttendanceSearch('');
+                                }}
+                                color="error"
+                            >
+                                <CloseIcon />
+                            </IconButton>
                         </div>
                     </div>
                     {editMode && (
@@ -246,7 +240,7 @@ export default function TrainingsIndex({ members }: Props) {
                     <Divider />
                 </DialogTitle>
 
-                <DialogContent sx={{ p: 0 }}>
+                <DialogContent sx={{ p: 0, flex: 1, overflowY: 'auto' }}>
                     {loading ? (
                         <Typography
                             variant="body2"
@@ -308,8 +302,8 @@ export default function TrainingsIndex({ members }: Props) {
                     )}
                 </DialogContent>
 
-                {/* Footer */}
-                <div className="p-4">
+                {/* Footer - Fixed */}
+                <div className="p-4 flex-shrink-0">
                     {editMode || isNewSession ? (
                         <Button
                             variant="contained"
