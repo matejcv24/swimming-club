@@ -32,7 +32,6 @@ export default function ClaimAccount({
             },
         );
     };
-    1;
 
     return (
         <>
