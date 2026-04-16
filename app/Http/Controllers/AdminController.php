@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Member;
+use App\Models\Training;
 
 class AdminController extends Controller
 {
@@ -10,7 +11,7 @@ class AdminController extends Controller
     {
         return inertia('dashboard', [
             'totalMembers' => Member::count(),
-            'totalTrainings' => 0,
+            'totalTrainings' => Training::count(),
             'unpaidFees' => 0,
         ]);
     }
