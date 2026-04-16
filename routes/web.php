@@ -1,15 +1,16 @@
 <?php
 
 use App\Http\Controllers\AdminController;
-use App\Http\Controllers\MemberController;
-use App\Http\Controllers\TrainingController;
-use App\Http\Controllers\MembershipFeeController;
-use App\Http\Controllers\ClubParentController;
-use App\Http\Controllers\StaffController;
 use App\Http\Controllers\Auth\ClaimAccountController;
 use App\Http\Controllers\Auth\ClaimCoachAccountController;
-use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\ClubParentController;
+use App\Http\Controllers\MemberController;
+use App\Http\Controllers\MembershipFeeController;
 use App\Http\Controllers\SalaryController;
+use App\Http\Controllers\StaffController;
+use App\Http\Controllers\TrainingController;
+use Illuminate\Support\Facades\Route;
+use Inertia\Inertia;
 
 // Redirect home to dashboard
 Route::get('/', function () {
