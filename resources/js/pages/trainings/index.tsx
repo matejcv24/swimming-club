@@ -23,6 +23,9 @@ import { DateCalendar } from '@mui/x-date-pickers/DateCalendar';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import CloseIcon from '@mui/icons-material/Close';
 import EditIcon from '@mui/icons-material/Edit';
+import SearchIcon from '@mui/icons-material/Search';
+import InputAdornment from '@mui/material/InputAdornment';
+import TextField from '@mui/material/TextField';
 
 interface Member {
     id: number;
@@ -47,6 +50,7 @@ export default function TrainingsIndex({ members }: Props) {
     const [checkedIds, setCheckedIds] = useState<number[]>([]);
     const [editMode, setEditMode] = useState(false);
     const [loading, setLoading] = useState(false);
+    const [attendanceSearch, setAttendanceSearch] = useState('');
 
     const activePool = activeTab === 0 ? 'big' : 'small';
     const poolMembers = members.filter((m) => m.pool === activePool);
@@ -171,22 +175,41 @@ export default function TrainingsIndex({ members }: Props) {
                 fullWidth
                 maxWidth="sm"
                 PaperProps={{
-                    sx: { bgcolor: DARK_BG },
+                    sx: {
+                        bgcolor: DARK_BG,
+                        height: '70vh',
+                        display: 'flex',
+                        flexDirection: 'column',
+                    },
                 }}
             >
                 <DialogTitle sx={{ p: 0 }}>
                     <div className="flex items-center justify-between px-4 py-3">
-                        <div className="flex flex-col">
-                            <Typography variant="h6" fontWeight="bold">
-                                {selectedDate?.format('DD MMM YYYY')}
-                            </Typography>
-                            <Typography variant="body2" color="text.secondary">
-                                {activePool === 'big'
-                                    ? 'Big Pool'
-                                    : 'Small Pool'}
-                            </Typography>
-                        </div>
-                        <div className="flex items-center gap-1">
+                        {/* Search Bar */}
+                        <TextField
+                            variant="standard"
+                            placeholder="Search swimmer..."
+                            value={attendanceSearch}
+                            onChange={(e) => setAttendanceSearch(e.target.value)}
+                            size="small"
+                            InputProps={{
+                                startAdornment: (
+                                    <InputAdornment position="start">
+                                        <SearchIcon fontSize="small" />
+                                    </InputAdornment>
+                                ),
+                            }}
+                            sx={{
+                                flex: 1,
+                                '& input': { color: 'white' },
+                                '& .MuiInput-underline::before': { borderBottomColor: 'rgba(255,255,255,0.3)' },
+                                '& .MuiInput-underline:hover::before': { borderBottomColor: 'white' },
+                                '& .MuiInput-underline::after': { borderBottomColor: 'white' },
+                            }}
+                        />
+
+                        {/* Edit and Close Buttons */}
+                        <div className="flex items-center gap-1 ml-2">
                             <IconButton
                                 onClick={() => setEditMode((prev) => !prev)}
                                 color={editMode ? 'primary' : 'default'}
@@ -195,7 +218,10 @@ export default function TrainingsIndex({ members }: Props) {
                                 <EditIcon />
                             </IconButton>
                             <IconButton
-                                onClick={() => setShowAttendanceModal(false)}
+                                onClick={() => {
+                                    setShowAttendanceModal(false);
+                                    setAttendanceSearch('');
+                                }}
                                 color="error"
                             >
                                 <CloseIcon />
@@ -206,7 +232,7 @@ export default function TrainingsIndex({ members }: Props) {
                         <Typography
                             variant="caption"
                             color="text.secondary"
-                            sx={{ px: 2, pb: 1, display: 'block' }}
+                            sx={{ px: 4, pb: 1, display: 'block' }}
                         >
                             Edit mode — check or uncheck members then save
                         </Typography>
@@ -214,7 +240,7 @@ export default function TrainingsIndex({ members }: Props) {
                     <Divider />
                 </DialogTitle>
 
-                <DialogContent sx={{ p: 0 }}>
+                <DialogContent sx={{ p: 0, flex: 1, overflowY: 'auto' }}>
                     {loading ? (
                         <Typography
                             variant="body2"
@@ -235,7 +261,8 @@ export default function TrainingsIndex({ members }: Props) {
                         <List disablePadding>
                             {poolMembers
                                 .filter((m) =>
-                                    editMode ? true : checkedIds.includes(m.id),
+                                    (editMode ? true : checkedIds.includes(m.id)) &&
+                                    m.name.toLowerCase().includes(attendanceSearch.toLowerCase())
                                 )
                                 .map((member) => (
                                     <ListItem
@@ -275,8 +302,8 @@ export default function TrainingsIndex({ members }: Props) {
                     )}
                 </DialogContent>
 
-                {/* Footer */}
-                <div className="p-4">
+                {/* Footer - Fixed */}
+                <div className="p-4 flex-shrink-0">
                     {editMode || isNewSession ? (
                         <Button
                             variant="contained"
