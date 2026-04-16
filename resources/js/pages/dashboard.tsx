@@ -1,4 +1,4 @@
-import { Head } from '@inertiajs/react';
+import { Head, router } from '@inertiajs/react';
 
 interface Props {
     totalMembers?: number;
@@ -23,10 +23,13 @@ export default function Dashboard({
                         <p className="mt-2 text-4xl font-bold">{totalMembers}</p>
                     </div>
 
-                    <div className="rounded-xl border border-sidebar-border/70 bg-white p-6 shadow-sm dark:bg-neutral-900">
-                        <p className="text-sm text-gray-500">Total Trainings</p>
-                        <p className="mt-2 text-4xl font-bold">{totalTrainings}</p>
-                    </div>
+                    <button
+                        onClick={() => router.visit('/invoices')}
+                        className="rounded-xl border border-sidebar-border/70 bg-white p-6 shadow-sm hover:bg-gray-50 dark:bg-neutral-900 dark:hover:bg-neutral-800 text-left transition-colors"
+                    >
+                        <p className="text-sm text-gray-500">Invoices</p>
+                        <p className="mt-2 text-4xl font-bold">📄</p>
+                    </button>
 
                     <div className="rounded-xl border border-sidebar-border/70 bg-white p-6 shadow-sm dark:bg-neutral-900">
                         <p className="text-sm text-gray-500">Unpaid Fees</p>
