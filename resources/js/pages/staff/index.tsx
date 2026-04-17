@@ -40,6 +40,11 @@ interface Salary {
     month: string;
 }
 
+interface GroupedSalaryByMonth {
+    month: string;
+    total: number;
+}
+
 interface Props {
     staff: Staff[];
 }
@@ -68,22 +73,93 @@ const datePickerSx = {
     '& .MuiSvgIcon-root': { color: 'white' },
 };
 
+const formatCurrency = (value: number): string => {
+    return new Intl.NumberFormat('en-US', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+    }).format(value);
+};
+
 export default function StaffIndex({ staff }: Props) {
     const [showAddModal, setShowAddModal] = useState(false);
     const [search, setSearch] = useState('');
     const [form, setForm] = useState({ name: '', email: '' });
 
-    // Salary states
     const [selectedCoach, setSelectedCoach] = useState<Staff | null>(null);
     const [salaries, setSalaries] = useState<Salary[]>([]);
     const [loadingSalaries, setLoadingSalaries] = useState(false);
     const [salaryAmount, setSalaryAmount] = useState('');
     const [salaryMonth, setSalaryMonth] = useState<Dayjs | null>(null);
     const [showSalaryHistoryModal, setShowSalaryHistoryModal] = useState(false);
+    const [showSalaryYearDetailModal, setShowSalaryYearDetailModal] =
+        useState(false);
+    const [selectedSalaryYear, setSelectedSalaryYear] = useState<string | null>(
+        null,
+    );
 
     const filteredStaff = staff.filter((s) =>
         s.name.toLowerCase().includes(search.toLowerCase()),
     );
+
+    const groupedSalaries: Record<string, GroupedSalaryByMonth> = {};
+
+    salaries.forEach((salary) => {
+        const monthKey = dayjs(salary.month)
+            .startOf('month')
+            .format('YYYY-MM-DD');
+
+        if (!groupedSalaries[monthKey]) {
+            groupedSalaries[monthKey] = {
+                month: monthKey,
+                total: 0,
+            };
+        }
+
+        groupedSalaries[monthKey].total += Number(salary.amount);
+    });
+
+    const sortedSalaryMonths = Object.keys(groupedSalaries).sort().reverse();
+    const currentYear = dayjs().format('YYYY');
+
+    const currentYearSalaryMonths = sortedSalaryMonths.filter(
+        (month) => dayjs(month).format('YYYY') === currentYear,
+    );
+
+    const currentYearLastSalaryMonth = currentYearSalaryMonths[0];
+    const currentYearLastSalary = currentYearLastSalaryMonth
+        ? groupedSalaries[currentYearLastSalaryMonth]
+        : null;
+
+    const salaryYearGroups: Record<
+        string,
+        { year: string; total: number; monthCount: number }
+    > = {};
+
+    Object.values(groupedSalaries).forEach((monthData) => {
+        const year = dayjs(monthData.month).format('YYYY');
+
+        if (!salaryYearGroups[year]) {
+            salaryYearGroups[year] = {
+                year,
+                total: 0,
+                monthCount: 0,
+            };
+        }
+
+        salaryYearGroups[year].total += monthData.total;
+        salaryYearGroups[year].monthCount += 1;
+    });
+
+    const sortedSalaryYears = Object.keys(salaryYearGroups)
+        .filter((year) => year !== currentYear)
+        .sort()
+        .reverse();
+
+    const salaryYearMonths = selectedSalaryYear
+        ? sortedSalaryMonths.filter(
+              (month) => dayjs(month).format('YYYY') === selectedSalaryYear,
+          )
+        : [];
 
     const getInitials = (name: string) =>
         name
@@ -107,6 +183,9 @@ export default function StaffIndex({ staff }: Props) {
         setSelectedCoach(coach);
         setSalaries([]);
         setLoadingSalaries(true);
+        setShowSalaryHistoryModal(false);
+        setShowSalaryYearDetailModal(false);
+        setSelectedSalaryYear(null);
 
         try {
             const response = await fetch(`/salaries/by-coach/${coach.id}`);
@@ -145,7 +224,6 @@ export default function StaffIndex({ staff }: Props) {
         <ThemeProvider theme={darkTheme}>
             <Head title="Staff" />
 
-            {/* Main Staff Modal */}
             <Dialog
                 open={true}
                 onClose={() => router.visit('/dashboard')}
@@ -160,7 +238,6 @@ export default function StaffIndex({ staff }: Props) {
                     },
                 }}
             >
-                {/* Header */}
                 <DialogTitle sx={{ p: 0 }}>
                     <div className="flex items-center justify-between gap-3 px-4 py-3">
                         <TextField
@@ -199,7 +276,6 @@ export default function StaffIndex({ staff }: Props) {
                     <Divider />
                 </DialogTitle>
 
-                {/* Staff List */}
                 <DialogContent sx={{ p: 0, overflowY: 'auto' }}>
                     {filteredStaff.length === 0 ? (
                         <Typography
@@ -249,7 +325,6 @@ export default function StaffIndex({ staff }: Props) {
                 </DialogContent>
             </Dialog>
 
-            {/* Coach Salary Modal */}
             {selectedCoach && (
                 <Dialog
                     open={!!selectedCoach}
@@ -277,7 +352,6 @@ export default function StaffIndex({ staff }: Props) {
 
                     <DialogContent sx={{ overflowY: 'auto' }}>
                         <div className="flex flex-col gap-6 py-4">
-                            {/* Record Salary */}
                             <Typography
                                 variant="caption"
                                 color="text.secondary"
@@ -336,7 +410,6 @@ export default function StaffIndex({ staff }: Props) {
 
                             <Divider />
 
-                            {/* Last Salary */}
                             <Typography
                                 variant="caption"
                                 color="text.secondary"
@@ -345,7 +418,7 @@ export default function StaffIndex({ staff }: Props) {
                                     letterSpacing: 1,
                                 }}
                             >
-                                Last Salary
+                                Payment History By Month
                             </Typography>
 
                             {loadingSalaries ? (
@@ -355,14 +428,7 @@ export default function StaffIndex({ staff }: Props) {
                                 >
                                     Loading...
                                 </Typography>
-                            ) : salaries.length === 0 ? (
-                                <Typography
-                                    variant="body2"
-                                    color="text.secondary"
-                                >
-                                    No salaries recorded yet.
-                                </Typography>
-                            ) : (
+                            ) : currentYearLastSalary ? (
                                 <List disablePadding>
                                     <ListItem
                                         divider
@@ -370,54 +436,158 @@ export default function StaffIndex({ staff }: Props) {
                                             px: 0,
                                             cursor: 'pointer',
                                             display: 'flex',
-                                            justifyContent: 'space-between',
+                                            flexDirection: 'column',
+                                            height: 'auto',
+                                            gap: 2,
+                                            paddingY: 1.5,
                                             alignItems: 'center',
-                                            gap: 1,
+                                            '&:hover': {
+                                                bgcolor:
+                                                    'rgba(255,255,255,0.05)',
+                                            },
                                         }}
                                         onClick={() =>
                                             setShowSalaryHistoryModal(true)
                                         }
                                     >
-                                        <ListItemText
-                                            primary={
-                                                <Typography variant="body2">
-                                                    {dayjs(
-                                                        salaries[0].month,
-                                                    ).format('MMMM YYYY')}
-                                                </Typography>
-                                            }
-                                            secondary={
-                                                salaries.length > 1 ? (
-                                                    <Typography
-                                                        variant="caption"
-                                                        color="primary"
-                                                    >
-                                                        Click to see all{' '}
-                                                        {salaries.length}{' '}
-                                                        payments
-                                                    </Typography>
-                                                ) : null
-                                            }
-                                            sx={{
-                                                flex: '1 1 auto',
-                                                minWidth: 0,
+                                        <div
+                                            style={{
+                                                display: 'flex',
+                                                justifyContent: 'center',
+                                                alignItems: 'center',
+                                                gap: '16px',
                                             }}
-                                        />
+                                        >
+                                            <Typography variant="body2">
+                                                {dayjs(
+                                                    currentYearLastSalary.month,
+                                                ).format('MMMM YYYY')}
+                                            </Typography>
+                                            {currentYearSalaryMonths.length >
+                                                1 && (
+                                                <Typography
+                                                    variant="caption"
+                                                    color="primary"
+                                                >
+                                                    {
+                                                        currentYearSalaryMonths.length
+                                                    }{' '}
+                                                    months
+                                                </Typography>
+                                            )}
+                                        </div>
+
                                         <Chip
-                                            label={`${salaries[0].amount} MKD`}
+                                            label={`${formatCurrency(currentYearLastSalary.total)} MKD`}
                                             color="success"
                                             size="small"
-                                            sx={{ flexShrink: 0 }}
                                         />
                                     </ListItem>
                                 </List>
+                            ) : (
+                                <Typography
+                                    variant="body2"
+                                    color="text.secondary"
+                                >
+                                    No salary payments recorded for{' '}
+                                    {currentYear}.
+                                </Typography>
+                            )}
+
+                            <Divider />
+
+                            <Typography
+                                variant="caption"
+                                color="text.secondary"
+                                sx={{
+                                    textTransform: 'uppercase',
+                                    letterSpacing: 1,
+                                }}
+                            >
+                                Payment History By Year
+                            </Typography>
+
+                            {loadingSalaries ? (
+                                <Typography
+                                    variant="body2"
+                                    color="text.secondary"
+                                >
+                                    Loading...
+                                </Typography>
+                            ) : sortedSalaryYears.length > 0 ? (
+                                <List disablePadding>
+                                    {sortedSalaryYears.map((year) => (
+                                        <ListItem
+                                            key={year}
+                                            divider
+                                            sx={{
+                                                px: 0,
+                                                cursor: 'pointer',
+                                                display: 'flex',
+                                                flexDirection: 'column',
+                                                height: 'auto',
+                                                gap: 2,
+                                                paddingY: 1.5,
+                                                alignItems: 'center',
+                                                '&:hover': {
+                                                    bgcolor:
+                                                        'rgba(255,255,255,0.05)',
+                                                },
+                                            }}
+                                            onClick={() => {
+                                                setSelectedSalaryYear(year);
+                                                setShowSalaryYearDetailModal(
+                                                    true,
+                                                );
+                                            }}
+                                        >
+                                            <div
+                                                style={{
+                                                    display: 'flex',
+                                                    justifyContent: 'center',
+                                                    alignItems: 'center',
+                                                    gap: '16px',
+                                                }}
+                                            >
+                                                <Typography variant="body2">
+                                                    {year}
+                                                </Typography>
+                                                <Typography
+                                                    variant="caption"
+                                                    color="primary"
+                                                >
+                                                    {
+                                                        salaryYearGroups[year]
+                                                            .monthCount
+                                                    }{' '}
+                                                    months
+                                                </Typography>
+                                            </div>
+
+                                            <Chip
+                                                label={`${formatCurrency(
+                                                    salaryYearGroups[year]
+                                                        .total,
+                                                )} MKD`}
+                                                color="success"
+                                                size="small"
+                                            />
+                                        </ListItem>
+                                    ))}
+                                </List>
+                            ) : (
+                                <Typography
+                                    variant="body2"
+                                    color="text.secondary"
+                                >
+                                    No past-year payment history yet.
+                                </Typography>
                             )}
                         </div>
                     </DialogContent>
                 </Dialog>
             )}
 
-            {/* Salary History Modal */}
             <Dialog
                 open={showSalaryHistoryModal}
                 onClose={() => setShowSalaryHistoryModal(false)}
@@ -430,7 +600,7 @@ export default function StaffIndex({ staff }: Props) {
                 <DialogTitle sx={{ p: 0 }}>
                     <div className="flex items-center justify-between px-4 py-3">
                         <Typography variant="h6" fontWeight="bold">
-                            Salary History — {selectedCoach?.name}
+                            Payment History By Month — {selectedCoach?.name}
                         </Typography>
                         <IconButton
                             onClick={() => setShowSalaryHistoryModal(false)}
@@ -444,41 +614,115 @@ export default function StaffIndex({ staff }: Props) {
 
                 <DialogContent sx={{ p: 0 }}>
                     <List disablePadding>
-                        {salaries.map((salary) => (
-                            <ListItem
-                                key={salary.id}
-                                divider
-                                sx={{
-                                    px: 2,
-                                    display: 'flex',
-                                    justifyContent: 'space-between',
-                                    alignItems: 'center',
-                                    gap: 1,
-                                }}
-                            >
-                                <ListItemText
-                                    primary={
-                                        <Typography variant="body2">
-                                            {dayjs(salary.month).format(
-                                                'MMMM YYYY',
-                                            )}
-                                        </Typography>
-                                    }
-                                    sx={{ flex: '1 1 auto', minWidth: 0 }}
-                                />
-                                <Chip
-                                    label={`${salary.amount} MKD`}
-                                    color="success"
-                                    size="small"
-                                    sx={{ flexShrink: 0 }}
-                                />
-                            </ListItem>
-                        ))}
+                        {currentYearSalaryMonths.map((month) => {
+                            const monthData = groupedSalaries[month];
+
+                            return (
+                                <ListItem
+                                    key={month}
+                                    divider
+                                    sx={{
+                                        px: 2,
+                                        display: 'flex',
+                                        justifyContent: 'space-between',
+                                        alignItems: 'center',
+                                        gap: 1,
+                                    }}
+                                >
+                                    <ListItemText
+                                        primary={
+                                            <Typography variant="body2">
+                                                {dayjs(month).format(
+                                                    'MMMM YYYY',
+                                                )}
+                                            </Typography>
+                                        }
+                                        sx={{ flex: '1 1 auto', minWidth: 0 }}
+                                    />
+                                    <Chip
+                                        label={`${formatCurrency(monthData.total)} MKD`}
+                                        color="success"
+                                        size="small"
+                                        sx={{ flexShrink: 0 }}
+                                    />
+                                </ListItem>
+                            );
+                        })}
                     </List>
                 </DialogContent>
             </Dialog>
 
-            {/* Add Coach Modal */}
+            <Dialog
+                open={showSalaryYearDetailModal}
+                onClose={() => {
+                    setShowSalaryYearDetailModal(false);
+                    setSelectedSalaryYear(null);
+                }}
+                fullWidth
+                maxWidth="sm"
+                PaperProps={{
+                    sx: { bgcolor: DARK_BG },
+                }}
+            >
+                <DialogTitle sx={{ p: 0 }}>
+                    <div className="flex items-center justify-between px-4 py-3">
+                        <Typography variant="h6" fontWeight="bold">
+                            Payment History - {selectedSalaryYear} —{' '}
+                            {selectedCoach?.name}
+                        </Typography>
+                        <IconButton
+                            onClick={() => {
+                                setShowSalaryYearDetailModal(false);
+                                setSelectedSalaryYear(null);
+                            }}
+                            color="error"
+                        >
+                            <CloseIcon />
+                        </IconButton>
+                    </div>
+                    <Divider />
+                </DialogTitle>
+
+                <DialogContent sx={{ p: 0 }}>
+                    <List disablePadding>
+                        {salaryYearMonths.map((month) => {
+                            const monthData = groupedSalaries[month];
+
+                            return (
+                                <ListItem
+                                    key={month}
+                                    divider
+                                    sx={{
+                                        px: 2,
+                                        display: 'flex',
+                                        justifyContent: 'space-between',
+                                        alignItems: 'center',
+                                        gap: 1,
+                                    }}
+                                >
+                                    <ListItemText
+                                        primary={
+                                            <Typography variant="body2">
+                                                {dayjs(month).format(
+                                                    'MMMM YYYY',
+                                                )}
+                                            </Typography>
+                                        }
+                                        sx={{ flex: '1 1 auto', minWidth: 0 }}
+                                    />
+                                    <Chip
+                                        label={`${formatCurrency(monthData.total)} MKD`}
+                                        color="success"
+                                        size="small"
+                                        sx={{ flexShrink: 0 }}
+                                    />
+                                </ListItem>
+                            );
+                        })}
+                    </List>
+                </DialogContent>
+            </Dialog>
+
             <Dialog
                 open={showAddModal}
                 onClose={() => setShowAddModal(false)}
