@@ -98,8 +98,8 @@ export default function MembershipFeesIndex({ members }: Props) {
         setFees([]);
 
         if (!member) {
-return;
-}
+            return;
+        }
 
         setLoadingFees(true);
 
@@ -118,8 +118,8 @@ return;
 
     const handleSave = () => {
         if (!selectedMember || !startDate || !endDate) {
-return;
-}
+            return;
+        }
 
         router.post(
             '/membership-fees',

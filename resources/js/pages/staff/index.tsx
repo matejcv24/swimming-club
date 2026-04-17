@@ -121,8 +121,8 @@ export default function StaffIndex({ staff }: Props) {
 
     const handleSalarySave = () => {
         if (!selectedCoach || !salaryAmount || !salaryMonth) {
-return;
-}
+            return;
+        }
 
         router.post(
             '/salaries',

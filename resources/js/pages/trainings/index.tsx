@@ -57,8 +57,8 @@ export default function TrainingsIndex({ members }: Props) {
 
     const handleDateClick = async (date: Dayjs | null) => {
         if (!date) {
-return;
-}
+            return;
+        }
 
         setSelectedDate(date);
         setEditMode(false);
@@ -81,8 +81,8 @@ return;
 
     const toggleMember = (id: number) => {
         if (!editMode) {
-return;
-}
+            return;
+        }
 
         setCheckedIds((prev) =>
             prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id],
@@ -91,8 +91,8 @@ return;
 
     const handleSave = () => {
         if (!selectedDate) {
-return;
-}
+            return;
+        }
 
         router.post(
             '/trainings',
@@ -198,7 +198,9 @@ return;
                             variant="standard"
                             placeholder="Search swimmer..."
                             value={attendanceSearch}
-                            onChange={(e) => setAttendanceSearch(e.target.value)}
+                            onChange={(e) =>
+                                setAttendanceSearch(e.target.value)
+                            }
                             size="small"
                             InputProps={{
                                 startAdornment: (
@@ -210,14 +212,20 @@ return;
                             sx={{
                                 flex: 1,
                                 '& input': { color: 'white' },
-                                '& .MuiInput-underline::before': { borderBottomColor: 'rgba(255,255,255,0.3)' },
-                                '& .MuiInput-underline:hover::before': { borderBottomColor: 'white' },
-                                '& .MuiInput-underline::after': { borderBottomColor: 'white' },
+                                '& .MuiInput-underline::before': {
+                                    borderBottomColor: 'rgba(255,255,255,0.3)',
+                                },
+                                '& .MuiInput-underline:hover::before': {
+                                    borderBottomColor: 'white',
+                                },
+                                '& .MuiInput-underline::after': {
+                                    borderBottomColor: 'white',
+                                },
                             }}
                         />
 
                         {/* Edit and Close Buttons */}
-                        <div className="flex items-center gap-1 ml-2">
+                        <div className="ml-2 flex items-center gap-1">
                             <IconButton
                                 onClick={() => setEditMode((prev) => !prev)}
                                 color={editMode ? 'primary' : 'default'}
@@ -268,9 +276,16 @@ return;
                     ) : (
                         <List disablePadding>
                             {poolMembers
-                                .filter((m) =>
-                                    (editMode ? true : checkedIds.includes(m.id)) &&
-                                    m.name.toLowerCase().includes(attendanceSearch.toLowerCase())
+                                .filter(
+                                    (m) =>
+                                        (editMode
+                                            ? true
+                                            : checkedIds.includes(m.id)) &&
+                                        m.name
+                                            .toLowerCase()
+                                            .includes(
+                                                attendanceSearch.toLowerCase(),
+                                            ),
                                 )
                                 .map((member) => (
                                     <ListItem
@@ -311,7 +326,7 @@ return;
                 </DialogContent>
 
                 {/* Footer - Fixed */}
-                <div className="p-4 flex-shrink-0">
+                <div className="flex-shrink-0 p-4">
                     {editMode || isNewSession ? (
                         <Button
                             variant="contained"

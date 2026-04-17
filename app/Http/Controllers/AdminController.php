@@ -15,6 +15,7 @@ class AdminController extends Controller
             'totalMembers' => Member::count(),
             'totalTrainings' => Training::count(),
             'unpaidFees' => MembershipFee::count(),
+            'invoiceTotal' => (float) Invoice::whereYear('month', now()->year)->sum('amount'),
         ]);
     }
 

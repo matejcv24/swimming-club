@@ -3,11 +3,13 @@ import { Head, router } from '@inertiajs/react';
 interface Props {
     totalMembers?: number;
     unpaidFees?: number;
+    invoiceTotal?: number;
 }
 
 export default function Dashboard({
     totalMembers = 0,
     unpaidFees = 0,
+    invoiceTotal = 0,
 }: Props) {
     return (
         <>
@@ -18,20 +20,30 @@ export default function Dashboard({
                 <div className="grid gap-4 md:grid-cols-3">
                     <div className="rounded-xl border border-sidebar-border/70 bg-white p-6 shadow-sm dark:bg-neutral-900">
                         <p className="text-sm text-gray-500">Total Members</p>
-                        <p className="mt-2 text-4xl font-bold">{totalMembers}</p>
+                        <p className="mt-2 text-4xl font-bold">
+                            {totalMembers}
+                        </p>
                     </div>
 
                     <button
                         onClick={() => router.visit('/invoices')}
-                        className="rounded-xl border border-sidebar-border/70 bg-white p-6 shadow-sm hover:bg-gray-50 dark:bg-neutral-900 dark:hover:bg-neutral-800 text-left transition-colors"
+                        className="cursor-pointer rounded-xl border border-sidebar-border/70 bg-white p-6 text-left shadow-sm transition duration-200 ease-in-out hover:-translate-y-0.5 hover:bg-gray-50 hover:shadow-lg dark:bg-neutral-900 dark:hover:bg-neutral-800"
                     >
                         <p className="text-sm text-gray-500">Invoices</p>
-                        <p className="mt-2 text-4xl font-bold">📄</p>
+                        <p className="mt-2 text-4xl font-bold">
+                            {invoiceTotal.toLocaleString('en-US', {
+                                minimumFractionDigits: 2,
+                                maximumFractionDigits: 2,
+                            })}{' '}
+                            MKD
+                        </p>
                     </button>
 
                     <div className="rounded-xl border border-sidebar-border/70 bg-white p-6 shadow-sm dark:bg-neutral-900">
                         <p className="text-sm text-gray-500">Unpaid Fees</p>
-                        <p className="mt-2 text-4xl font-bold text-red-500">{unpaidFees}</p>
+                        <p className="mt-2 text-4xl font-bold text-red-500">
+                            {unpaidFees}
+                        </p>
                     </div>
                 </div>
 
@@ -70,7 +82,9 @@ export default function Dashboard({
                         href="/membership-fees"
                         className="rounded-xl border border-sidebar-border/70 bg-white p-6 shadow-sm hover:bg-gray-50 dark:bg-neutral-900 dark:hover:bg-neutral-800"
                     >
-                        <h2 className="text-lg font-semibold">Membership Fees</h2>
+                        <h2 className="text-lg font-semibold">
+                            Membership Fees
+                        </h2>
                         <p className="mt-1 text-sm text-gray-500">
                             Payment tracking is coming in a later milestone.
                         </p>
