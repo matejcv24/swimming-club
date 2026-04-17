@@ -2,13 +2,11 @@ import { Head, router } from '@inertiajs/react';
 
 interface Props {
     totalMembers?: number;
-    totalTrainings?: number;
     unpaidFees?: number;
 }
 
 export default function Dashboard({
     totalMembers = 0,
-    totalTrainings = 0,
     unpaidFees = 0,
 }: Props) {
     return (

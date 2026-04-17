@@ -24,6 +24,7 @@ class AdminController extends Controller
 
         return inertia('invoices/index', [
             'invoices' => $invoices,
+            'csrf_token' => csrf_token(),
         ]);
     }
 }

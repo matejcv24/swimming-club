@@ -1,6 +1,7 @@
 import { Head, router } from '@inertiajs/react';
-import { useState } from 'react';
-import dayjs, { Dayjs } from 'dayjs';
+import CloseIcon from '@mui/icons-material/Close';
+import PersonAddAlt1Icon from '@mui/icons-material/PersonAddAlt1';
+import SearchIcon from '@mui/icons-material/Search';
 import Avatar from '@mui/material/Avatar';
 import Button from '@mui/material/Button';
 import Chip from '@mui/material/Chip';
@@ -16,15 +17,15 @@ import ListItem from '@mui/material/ListItem';
 import ListItemAvatar from '@mui/material/ListItemAvatar';
 import ListItemButton from '@mui/material/ListItemButton';
 import ListItemText from '@mui/material/ListItemText';
+import { createTheme, ThemeProvider } from '@mui/material/styles';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
-import { createTheme, ThemeProvider } from '@mui/material/styles';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
-import CloseIcon from '@mui/icons-material/Close';
-import PersonAddAlt1Icon from '@mui/icons-material/PersonAddAlt1';
-import SearchIcon from '@mui/icons-material/Search';
+import dayjs from 'dayjs';
+import type { Dayjs } from 'dayjs';
+import { useState } from 'react';
 
 interface Staff {
     id: number;
@@ -106,6 +107,7 @@ export default function StaffIndex({ staff }: Props) {
         setSelectedCoach(coach);
         setSalaries([]);
         setLoadingSalaries(true);
+
         try {
             const response = await fetch(`/salaries/by-coach/${coach.id}`);
             const data = await response.json();
@@ -113,11 +115,14 @@ export default function StaffIndex({ staff }: Props) {
         } catch {
             setSalaries([]);
         }
+
         setLoadingSalaries(false);
     };
 
     const handleSalarySave = () => {
-        if (!selectedCoach || !salaryAmount || !salaryMonth) return;
+        if (!selectedCoach || !salaryAmount || !salaryMonth) {
+return;
+}
 
         router.post(
             '/salaries',
