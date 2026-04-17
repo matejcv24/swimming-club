@@ -3,21 +3,27 @@
 namespace App\Http\Controllers;
 
 use App\Models\Invoice;
-use App\Models\Member;
 use App\Models\MembershipFee;
-use App\Models\Training;
+use App\Models\Salary;
 
 class AdminController extends Controller
 {
-    public function index()
-    {
-        return inertia('dashboard', [
-            'totalMembers' => Member::count(),
-            'totalTrainings' => Training::count(),
-            'unpaidFees' => MembershipFee::count(),
-            'invoiceTotal' => (float) Invoice::whereYear('month', now()->year)->sum('amount'),
-        ]);
-    }
+public function index()
+{
+    $currentYear = now()->year;
+
+    $membershipTotal = (float) MembershipFee::whereYear('start_date', $currentYear)->sum('amount');
+    $salaryTotal = (float) Salary::whereYear('month', $currentYear)->sum('amount');
+    $invoiceTotal = (float) Invoice::whereYear('month', $currentYear)->sum('amount');
+
+    $profitTotal = $membershipTotal - $salaryTotal - $invoiceTotal;
+
+    return inertia('dashboard', [
+        'unpaidFees' => MembershipFee::count(),
+        'invoiceTotal' => $invoiceTotal,
+        'profitTotal' => $profitTotal,
+    ]);
+}
 
     public function invoices()
     {

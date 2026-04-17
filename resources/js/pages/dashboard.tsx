@@ -1,13 +1,13 @@
 import { Head, router } from '@inertiajs/react';
 
 interface Props {
-    totalMembers?: number;
+    profitTotal?: number;
     unpaidFees?: number;
     invoiceTotal?: number;
 }
 
 export default function Dashboard({
-    totalMembers = 0,
+    profitTotal = 0,
     unpaidFees = 0,
     invoiceTotal = 0,
 }: Props) {
@@ -18,12 +18,19 @@ export default function Dashboard({
                 <h1 className="text-2xl font-bold">Swimming Club Dashboard</h1>
 
                 <div className="grid gap-4 md:grid-cols-3">
-                    <div className="rounded-xl border border-sidebar-border/70 bg-white p-6 shadow-sm dark:bg-neutral-900">
-                        <p className="text-sm text-gray-500">Total Members</p>
+                    <button
+                        onClick={() => router.visit('/profit')}
+                        className="cursor-pointer rounded-xl border border-sidebar-border/70 bg-white p-6 text-left shadow-sm transition duration-200 ease-in-out hover:-translate-y-0.5 hover:bg-gray-50 hover:shadow-lg dark:bg-neutral-900 dark:hover:bg-neutral-800"
+                    >
+                        <p className="text-sm text-gray-500">Profit</p>
                         <p className="mt-2 text-4xl font-bold">
-                            {totalMembers}
+                            {profitTotal.toLocaleString('en-US', {
+                                minimumFractionDigits: 2,
+                                maximumFractionDigits: 2,
+                            })}{' '}
+                            MKD
                         </p>
-                    </div>
+                    </button>
 
                     <button
                         onClick={() => router.visit('/invoices')}
