@@ -46,12 +46,15 @@ export default function Dashboard({
                         </p>
                     </button>
 
-                    <div className="rounded-xl border border-sidebar-border/70 bg-white p-6 shadow-sm dark:bg-neutral-900">
+                    <button
+                        onClick={() => router.visit('/unpaid-fees')}
+                        className="cursor-pointer rounded-xl border border-sidebar-border/70 bg-white p-6 text-left shadow-sm transition duration-200 ease-in-out hover:-translate-y-0.5 hover:bg-gray-50 hover:shadow-lg dark:bg-neutral-900 dark:hover:bg-neutral-800"
+                    >
                         <p className="text-sm text-gray-500">Unpaid Fees</p>
                         <p className="mt-2 text-4xl font-bold text-red-500">
                             {unpaidFees}
                         </p>
-                    </div>
+                    </button>
                 </div>
 
                 <div className="grid gap-4 md:grid-cols-2">

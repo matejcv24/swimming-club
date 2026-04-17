@@ -11,6 +11,7 @@ use App\Http\Controllers\TrainingController;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\ProfitController;
+use App\Http\Controllers\UnpaidFeeController;
 
 Route::get('/', function () {
     return Inertia::render('welcome');
@@ -35,4 +36,5 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::put('/invoices/{invoice}', [InvoiceController::class, 'update'])->name('invoices.update');
     Route::delete('/invoices/{invoice}', [InvoiceController::class, 'destroy'])->name('invoices.destroy');
     Route::get('/profit', [ProfitController::class, 'index'])->name('profit.index');
+    Route::get('/unpaid-fees', [UnpaidFeeController::class, 'index'])->name('unpaid-fees.index');
 });
