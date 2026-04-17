@@ -1,6 +1,5 @@
 import { Head, router } from '@inertiajs/react';
 import CloseIcon from '@mui/icons-material/Close';
-import Button from '@mui/material/Button';
 import Chip from '@mui/material/Chip';
 import Dialog from '@mui/material/Dialog';
 import DialogContent from '@mui/material/DialogContent';
