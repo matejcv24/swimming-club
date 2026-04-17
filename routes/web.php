@@ -10,6 +10,7 @@ use App\Http\Controllers\StaffController;
 use App\Http\Controllers\TrainingController;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\ProfitController;
 
 Route::get('/', function () {
     return Inertia::render('welcome');
@@ -33,4 +34,5 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/invoices/by-month/{month}', [InvoiceController::class, 'getByMonth'])->name('invoices.byMonth');
     Route::put('/invoices/{invoice}', [InvoiceController::class, 'update'])->name('invoices.update');
     Route::delete('/invoices/{invoice}', [InvoiceController::class, 'destroy'])->name('invoices.destroy');
+    Route::get('/profit', [ProfitController::class, 'index'])->name('profit.index');
 });
