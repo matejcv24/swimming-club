@@ -1,6 +1,7 @@
 import { Head, router } from '@inertiajs/react';
-import { useState } from 'react';
-import { Dayjs } from 'dayjs';
+import CloseIcon from '@mui/icons-material/Close';
+import EditIcon from '@mui/icons-material/Edit';
+import SearchIcon from '@mui/icons-material/Search';
 import Avatar from '@mui/material/Avatar';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
@@ -10,22 +11,21 @@ import DialogContent from '@mui/material/DialogContent';
 import DialogTitle from '@mui/material/DialogTitle';
 import Divider from '@mui/material/Divider';
 import IconButton from '@mui/material/IconButton';
+import InputAdornment from '@mui/material/InputAdornment';
 import List from '@mui/material/List';
 import ListItem from '@mui/material/ListItem';
 import ListItemAvatar from '@mui/material/ListItemAvatar';
 import ListItemText from '@mui/material/ListItemText';
+import { createTheme, ThemeProvider } from '@mui/material/styles';
 import Tab from '@mui/material/Tab';
 import Tabs from '@mui/material/Tabs';
+import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
-import { createTheme, ThemeProvider } from '@mui/material/styles';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import { DateCalendar } from '@mui/x-date-pickers/DateCalendar';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
-import CloseIcon from '@mui/icons-material/Close';
-import EditIcon from '@mui/icons-material/Edit';
-import SearchIcon from '@mui/icons-material/Search';
-import InputAdornment from '@mui/material/InputAdornment';
-import TextField from '@mui/material/TextField';
+import type { Dayjs } from 'dayjs';
+import { useState } from 'react';
 
 interface Member {
     id: number;
@@ -56,7 +56,10 @@ export default function TrainingsIndex({ members }: Props) {
     const poolMembers = members.filter((m) => m.pool === activePool);
 
     const handleDateClick = async (date: Dayjs | null) => {
-        if (!date) return;
+        if (!date) {
+            return;
+        }
+
         setSelectedDate(date);
         setEditMode(false);
         setLoading(true);
@@ -77,14 +80,19 @@ export default function TrainingsIndex({ members }: Props) {
     };
 
     const toggleMember = (id: number) => {
-        if (!editMode) return;
+        if (!editMode) {
+            return;
+        }
+
         setCheckedIds((prev) =>
             prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id],
         );
     };
 
     const handleSave = () => {
-        if (!selectedDate) return;
+        if (!selectedDate) {
+            return;
+        }
 
         router.post(
             '/trainings',
@@ -190,7 +198,9 @@ export default function TrainingsIndex({ members }: Props) {
                             variant="standard"
                             placeholder="Search swimmer..."
                             value={attendanceSearch}
-                            onChange={(e) => setAttendanceSearch(e.target.value)}
+                            onChange={(e) =>
+                                setAttendanceSearch(e.target.value)
+                            }
                             size="small"
                             InputProps={{
                                 startAdornment: (
@@ -202,14 +212,20 @@ export default function TrainingsIndex({ members }: Props) {
                             sx={{
                                 flex: 1,
                                 '& input': { color: 'white' },
-                                '& .MuiInput-underline::before': { borderBottomColor: 'rgba(255,255,255,0.3)' },
-                                '& .MuiInput-underline:hover::before': { borderBottomColor: 'white' },
-                                '& .MuiInput-underline::after': { borderBottomColor: 'white' },
+                                '& .MuiInput-underline::before': {
+                                    borderBottomColor: 'rgba(255,255,255,0.3)',
+                                },
+                                '& .MuiInput-underline:hover::before': {
+                                    borderBottomColor: 'white',
+                                },
+                                '& .MuiInput-underline::after': {
+                                    borderBottomColor: 'white',
+                                },
                             }}
                         />
 
                         {/* Edit and Close Buttons */}
-                        <div className="flex items-center gap-1 ml-2">
+                        <div className="ml-2 flex items-center gap-1">
                             <IconButton
                                 onClick={() => setEditMode((prev) => !prev)}
                                 color={editMode ? 'primary' : 'default'}
@@ -260,9 +276,16 @@ export default function TrainingsIndex({ members }: Props) {
                     ) : (
                         <List disablePadding>
                             {poolMembers
-                                .filter((m) =>
-                                    (editMode ? true : checkedIds.includes(m.id)) &&
-                                    m.name.toLowerCase().includes(attendanceSearch.toLowerCase())
+                                .filter(
+                                    (m) =>
+                                        (editMode
+                                            ? true
+                                            : checkedIds.includes(m.id)) &&
+                                        m.name
+                                            .toLowerCase()
+                                            .includes(
+                                                attendanceSearch.toLowerCase(),
+                                            ),
                                 )
                                 .map((member) => (
                                     <ListItem
@@ -303,7 +326,7 @@ export default function TrainingsIndex({ members }: Props) {
                 </DialogContent>
 
                 {/* Footer - Fixed */}
-                <div className="p-4 flex-shrink-0">
+                <div className="flex-shrink-0 p-4">
                     {editMode || isNewSession ? (
                         <Button
                             variant="contained"

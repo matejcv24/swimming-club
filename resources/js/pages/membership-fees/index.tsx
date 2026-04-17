@@ -1,6 +1,5 @@
 import { Head, router } from '@inertiajs/react';
-import { useState } from 'react';
-import dayjs, { Dayjs } from 'dayjs';
+import CloseIcon from '@mui/icons-material/Close';
 import Autocomplete from '@mui/material/Autocomplete';
 import Button from '@mui/material/Button';
 import Chip from '@mui/material/Chip';
@@ -16,13 +15,15 @@ import ListItem from '@mui/material/ListItem';
 import ListItemText from '@mui/material/ListItemText';
 import MenuItem from '@mui/material/MenuItem';
 import Select from '@mui/material/Select';
+import { createTheme, ThemeProvider } from '@mui/material/styles';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
-import { createTheme, ThemeProvider } from '@mui/material/styles';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
-import CloseIcon from '@mui/icons-material/Close';
+import dayjs from 'dayjs';
+import type { Dayjs } from 'dayjs';
+import { useState } from 'react';
 
 interface Member {
     id: number;
@@ -96,9 +97,12 @@ export default function MembershipFeesIndex({ members }: Props) {
         setSelectedMember(member);
         setFees([]);
 
-        if (!member) return;
+        if (!member) {
+            return;
+        }
 
         setLoadingFees(true);
+
         try {
             const response = await fetch(
                 `/membership-fees/by-member/${member.id}`,
@@ -108,11 +112,14 @@ export default function MembershipFeesIndex({ members }: Props) {
         } catch {
             setFees([]);
         }
+
         setLoadingFees(false);
     };
 
     const handleSave = () => {
-        if (!selectedMember || !startDate || !endDate) return;
+        if (!selectedMember || !startDate || !endDate) {
+            return;
+        }
 
         router.post(
             '/membership-fees',
