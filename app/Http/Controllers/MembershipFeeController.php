@@ -12,25 +12,31 @@ class MembershipFeeController extends Controller
     {
         $members = Member::all();
 
+        $allFees = MembershipFee::with('member')
+            ->orderBy('start_date', 'desc')
+            ->get();
+
         return inertia('membership-fees/index', [
             'members' => $members,
+            'allFees' => $allFees,
         ]);
     }
 
-public function store(Request $request)
-{
-    $validated = $request->validate([
-        'member_id'      => ['required', 'exists:members,id'],
-        'amount'         => ['required', 'numeric', 'min:0'],
-        'payment_method' => ['required', 'in:cash,card'],
-        'start_date'     => ['required', 'date'],
-        'end_date'       => ['required', 'date', 'after:start_date'],
-    ]);
+    public function store(Request $request)
+    {
+        $validated = $request->validate([
+            'member_id'      => ['required', 'exists:members,id'],
+            'amount'         => ['required', 'numeric', 'min:0'],
+            'payment_method' => ['required', 'in:cash,card'],
+            'start_date'     => ['required', 'date'],
+            'end_date'       => ['required', 'date', 'after:start_date'],
+        ]);
 
-    MembershipFee::create($validated);
+        MembershipFee::create($validated);
 
-    return back()->with('success', 'Payment recorded!');
-}
+        return back()->with('success', 'Payment recorded!');
+    }
+
     public function getByMember(Member $member)
     {
         $fees = MembershipFee::where('member_id', $member->id)

@@ -15,6 +15,12 @@ import ListItem from '@mui/material/ListItem';
 import ListItemText from '@mui/material/ListItemText';
 import MenuItem from '@mui/material/MenuItem';
 import Select from '@mui/material/Select';
+import Table from '@mui/material/Table';
+import TableBody from '@mui/material/TableBody';
+import TableCell from '@mui/material/TableCell';
+import TableContainer from '@mui/material/TableContainer';
+import TableHead from '@mui/material/TableHead';
+import TableRow from '@mui/material/TableRow';
 import { createTheme, ThemeProvider } from '@mui/material/styles';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
@@ -23,7 +29,7 @@ import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import dayjs from 'dayjs';
 import type { Dayjs } from 'dayjs';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 
 interface Member {
     id: number;
@@ -33,14 +39,32 @@ interface Member {
 
 interface Fee {
     id: number;
+    member_id: number;
     amount: number;
     payment_method: 'cash' | 'card';
     start_date: string;
     end_date: string;
+    member?: {
+        id: number;
+        name: string;
+    };
+}
+
+interface YearGroup {
+    year: string;
+    total: number;
+    monthCount: number;
+}
+
+interface MonthGroup {
+    month: string;
+    total: number;
+    fees: Fee[];
 }
 
 interface Props {
     members: Member[];
+    allFees: Fee[];
 }
 
 const darkTheme = createTheme({
@@ -71,7 +95,14 @@ function PaymentMethodBadge({ fee }: { fee: Fee }) {
                 flexShrink: 0,
             }}
         >
-            <Chip label={`${fee.amount} MKD`} color="success" size="small" />
+            <Chip
+                label={`${Number(fee.amount).toLocaleString('en-US', {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                })} MKD`}
+                color="success"
+                size="small"
+            />
             <Typography
                 variant="caption"
                 color="text.secondary"
@@ -83,7 +114,14 @@ function PaymentMethodBadge({ fee }: { fee: Fee }) {
     );
 }
 
-export default function MembershipFeesIndex({ members }: Props) {
+const formatCurrency = (value: number): string => {
+    return new Intl.NumberFormat('en-US', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+    }).format(value);
+};
+
+export default function MembershipFeesIndex({ members, allFees }: Props) {
     const [selectedMember, setSelectedMember] = useState<Member | null>(null);
     const [fees, setFees] = useState<Fee[]>([]);
     const [loadingFees, setLoadingFees] = useState(false);
@@ -92,6 +130,75 @@ export default function MembershipFeesIndex({ members }: Props) {
     const [startDate, setStartDate] = useState<Dayjs | null>(null);
     const [endDate, setEndDate] = useState<Dayjs | null>(null);
     const [showHistoryModal, setShowHistoryModal] = useState(false);
+
+    const [showYearHistoryModal, setShowYearHistoryModal] = useState(false);
+    const [showMonthDetailModal, setShowMonthDetailModal] = useState(false);
+    const [selectedYear, setSelectedYear] = useState<string | null>(null);
+    const [selectedMonth, setSelectedMonth] = useState<string | null>(null);
+
+    const groupedFeesByMonth = useMemo(() => {
+        const grouped: Record<string, MonthGroup> = {};
+
+        allFees.forEach((fee) => {
+            const monthKey = dayjs(fee.start_date)
+                .startOf('month')
+                .format('YYYY-MM-DD');
+
+            if (!grouped[monthKey]) {
+                grouped[monthKey] = {
+                    month: monthKey,
+                    total: 0,
+                    fees: [],
+                };
+            }
+
+            grouped[monthKey].total += Number(fee.amount);
+            grouped[monthKey].fees.push(fee);
+        });
+
+        return grouped;
+    }, [allFees]);
+
+    const sortedMonths = useMemo(
+        () => Object.keys(groupedFeesByMonth).sort().reverse(),
+        [groupedFeesByMonth],
+    );
+
+    const yearGroups = useMemo(() => {
+        const grouped: Record<string, YearGroup> = {};
+
+        Object.values(groupedFeesByMonth).forEach((monthData) => {
+            const year = dayjs(monthData.month).format('YYYY');
+
+            if (!grouped[year]) {
+                grouped[year] = {
+                    year,
+                    total: 0,
+                    monthCount: 0,
+                };
+            }
+
+            grouped[year].total += monthData.total;
+            grouped[year].monthCount += 1;
+        });
+
+        return grouped;
+    }, [groupedFeesByMonth]);
+
+    const sortedYears = useMemo(
+        () => Object.keys(yearGroups).sort().reverse(),
+        [yearGroups],
+    );
+
+    const yearMonths = selectedYear
+        ? sortedMonths.filter(
+              (month) => dayjs(month).format('YYYY') === selectedYear,
+          )
+        : [];
+
+    const selectedMonthData = selectedMonth
+        ? groupedFeesByMonth[selectedMonth]
+        : null;
 
     const handleMemberSelect = async (member: Member | null) => {
         setSelectedMember(member);
@@ -155,7 +262,6 @@ export default function MembershipFeesIndex({ members }: Props) {
         <ThemeProvider theme={darkTheme}>
             <Head title="Membership Fees" />
 
-            {/* Main Modal */}
             <Dialog
                 open={true}
                 onClose={() => router.visit('/dashboard')}
@@ -169,7 +275,6 @@ export default function MembershipFeesIndex({ members }: Props) {
                     },
                 }}
             >
-                {/* Header */}
                 <DialogTitle sx={{ p: 0 }}>
                     <div className="flex items-center justify-between px-4 py-3">
                         <Typography variant="h6" fontWeight="bold">
@@ -185,10 +290,8 @@ export default function MembershipFeesIndex({ members }: Props) {
                     <Divider />
                 </DialogTitle>
 
-                {/* Content */}
                 <DialogContent sx={{ overflowY: 'auto' }}>
                     <div className="flex flex-col gap-6 py-4">
-                        {/* Member Search */}
                         <Autocomplete
                             options={members}
                             getOptionLabel={(m) => m.name}
@@ -204,7 +307,6 @@ export default function MembershipFeesIndex({ members }: Props) {
                             )}
                         />
 
-                        {/* Payment History */}
                         {selectedMember && (
                             <>
                                 <div>
@@ -299,7 +401,6 @@ export default function MembershipFeesIndex({ members }: Props) {
                             </>
                         )}
 
-                        {/* New Payment Form */}
                         <Typography
                             variant="caption"
                             color="text.secondary"
@@ -311,7 +412,6 @@ export default function MembershipFeesIndex({ members }: Props) {
                             Record New Payment
                         </Typography>
 
-                        {/* Amount + Payment Method */}
                         <div className="flex gap-3">
                             <TextField
                                 label="Amount (MKD)"
@@ -346,13 +446,13 @@ export default function MembershipFeesIndex({ members }: Props) {
                             </FormControl>
                         </div>
 
-                        {/* Date Pickers */}
                         <LocalizationProvider dateAdapter={AdapterDayjs}>
                             <DatePicker
                                 label="Start Date"
                                 value={startDate}
                                 onChange={(val) => setStartDate(val)}
                                 sx={inputSx}
+                                format="DD/MM/YYYY"
                             />
                             <DatePicker
                                 label="End Date"
@@ -360,10 +460,10 @@ export default function MembershipFeesIndex({ members }: Props) {
                                 onChange={(val) => setEndDate(val)}
                                 minDate={startDate ?? undefined}
                                 sx={inputSx}
+                                format="DD/MM/YYYY"
                             />
                         </LocalizationProvider>
 
-                        {/* Buttons */}
                         <div className="flex gap-3">
                             <Button
                                 variant="contained"
@@ -388,11 +488,90 @@ export default function MembershipFeesIndex({ members }: Props) {
                                 Cancel
                             </Button>
                         </div>
+
+                        <Divider />
+
+                        <div className="flex flex-col gap-4">
+                            <Typography
+                                variant="caption"
+                                color="text.secondary"
+                                sx={{
+                                    textTransform: 'uppercase',
+                                    letterSpacing: 1,
+                                }}
+                            >
+                                Membership Fees By Year
+                            </Typography>
+
+                            {sortedYears.length > 0 ? (
+                                <List disablePadding>
+                                    {sortedYears.map((year) => (
+                                        <ListItem
+                                            key={year}
+                                            divider
+                                            sx={{
+                                                px: 0,
+                                                cursor: 'pointer',
+                                                display: 'flex',
+                                                flexDirection: 'column',
+                                                height: 'auto',
+                                                gap: 2,
+                                                paddingY: 1.5,
+                                                alignItems: 'center',
+                                                '&:hover': {
+                                                    bgcolor:
+                                                        'rgba(255,255,255,0.05)',
+                                                },
+                                            }}
+                                            onClick={() => {
+                                                setSelectedYear(year);
+                                                setShowYearHistoryModal(true);
+                                            }}
+                                        >
+                                            <div
+                                                style={{
+                                                    display: 'flex',
+                                                    justifyContent: 'center',
+                                                    alignItems: 'center',
+                                                    gap: '16px',
+                                                }}
+                                            >
+                                                <Typography variant="body2">
+                                                    {year}
+                                                </Typography>
+                                                <Typography
+                                                    variant="caption"
+                                                    color="primary"
+                                                >
+                                                    {
+                                                        yearGroups[year]
+                                                            .monthCount
+                                                    }{' '}
+                                                    months
+                                                </Typography>
+                                            </div>
+
+                                            <Chip
+                                                label={`Total: ${formatCurrency(yearGroups[year].total)} MKD`}
+                                                color="success"
+                                                size="small"
+                                            />
+                                        </ListItem>
+                                    ))}
+                                </List>
+                            ) : (
+                                <Typography
+                                    variant="body2"
+                                    color="text.secondary"
+                                >
+                                    No membership fees recorded yet.
+                                </Typography>
+                            )}
+                        </div>
                     </div>
                 </DialogContent>
             </Dialog>
 
-            {/* Payment History Modal */}
             <Dialog
                 open={showHistoryModal}
                 onClose={() => setShowHistoryModal(false)}
@@ -450,6 +629,185 @@ export default function MembershipFeesIndex({ members }: Props) {
                             </ListItem>
                         ))}
                     </List>
+                </DialogContent>
+            </Dialog>
+
+            <Dialog
+                open={showYearHistoryModal}
+                onClose={() => {
+                    setShowYearHistoryModal(false);
+                    setSelectedYear(null);
+                }}
+                fullWidth
+                maxWidth="sm"
+                PaperProps={{
+                    sx: { bgcolor: DARK_BG },
+                }}
+            >
+                <DialogTitle sx={{ p: 0 }}>
+                    <div className="flex items-center justify-between px-4 py-3">
+                        <Typography variant="h6" fontWeight="bold">
+                            Membership Fees - {selectedYear}
+                        </Typography>
+                        <IconButton
+                            onClick={() => {
+                                setShowYearHistoryModal(false);
+                                setSelectedYear(null);
+                            }}
+                            color="error"
+                        >
+                            <CloseIcon />
+                        </IconButton>
+                    </div>
+                    <Divider />
+                </DialogTitle>
+
+                <DialogContent sx={{ p: 0 }}>
+                    <List disablePadding>
+                        {yearMonths.map((month) => {
+                            const monthData = groupedFeesByMonth[month];
+
+                            return (
+                                <ListItem
+                                    key={month}
+                                    divider
+                                    sx={{
+                                        px: 2,
+                                        py: 2,
+                                        display: 'flex',
+                                        flexDirection: 'column',
+                                        height: 'auto',
+                                        gap: 2,
+                                        alignItems: 'center',
+                                        cursor: 'pointer',
+                                        '&:hover': {
+                                            bgcolor: 'rgba(255,255,255,0.05)',
+                                        },
+                                    }}
+                                    onClick={() => {
+                                        setSelectedMonth(month);
+                                        setShowMonthDetailModal(true);
+                                    }}
+                                >
+                                    <div
+                                        style={{
+                                            display: 'flex',
+                                            justifyContent: 'center',
+                                            alignItems: 'center',
+                                            gap: '16px',
+                                        }}
+                                    >
+                                        <Typography variant="body2">
+                                            {dayjs(month).format('MMMM YYYY')}
+                                        </Typography>
+                                        <Typography
+                                            variant="caption"
+                                            color="primary"
+                                        >
+                                            {monthData.fees.length} payments
+                                        </Typography>
+                                    </div>
+
+                                    <Chip
+                                        label={`Total: ${formatCurrency(monthData.total)} MKD`}
+                                        color="success"
+                                        size="small"
+                                    />
+                                </ListItem>
+                            );
+                        })}
+                    </List>
+                </DialogContent>
+            </Dialog>
+
+            <Dialog
+                open={showMonthDetailModal}
+                onClose={() => {
+                    setShowMonthDetailModal(false);
+                    setSelectedMonth(null);
+                }}
+                fullWidth
+                maxWidth="md"
+                PaperProps={{
+                    sx: { bgcolor: DARK_BG },
+                }}
+            >
+                <DialogTitle sx={{ p: 0 }}>
+                    <div className="flex items-center justify-between px-4 py-3">
+                        <Typography variant="h6" fontWeight="bold">
+                            Membership Details —{' '}
+                            {selectedMonth
+                                ? dayjs(selectedMonth).format('MMMM YYYY')
+                                : ''}
+                        </Typography>
+                        <IconButton
+                            onClick={() => {
+                                setShowMonthDetailModal(false);
+                                setSelectedMonth(null);
+                            }}
+                            color="error"
+                        >
+                            <CloseIcon />
+                        </IconButton>
+                    </div>
+                    <Divider />
+                </DialogTitle>
+
+                <DialogContent sx={{ p: 0 }}>
+                    <TableContainer>
+                        <Table>
+                            <TableHead>
+                                <TableRow>
+                                    <TableCell sx={{ color: 'white' }}>
+                                        Member
+                                    </TableCell>
+                                    <TableCell sx={{ color: 'white' }}>
+                                        Start Date
+                                    </TableCell>
+                                    <TableCell sx={{ color: 'white' }}>
+                                        End Date
+                                    </TableCell>
+                                    <TableCell sx={{ color: 'white' }}>
+                                        Amount
+                                    </TableCell>
+                                    <TableCell sx={{ color: 'white' }}>
+                                        Method
+                                    </TableCell>
+                                </TableRow>
+                            </TableHead>
+                            <TableBody>
+                                {selectedMonthData?.fees.map((fee) => (
+                                    <TableRow key={fee.id}>
+                                        <TableCell sx={{ color: 'white' }}>
+                                            {fee.member?.name ?? '—'}
+                                        </TableCell>
+                                        <TableCell sx={{ color: 'white' }}>
+                                            {dayjs(fee.start_date).format(
+                                                'DD.MM.YYYY',
+                                            )}
+                                        </TableCell>
+                                        <TableCell sx={{ color: 'white' }}>
+                                            {dayjs(fee.end_date).format(
+                                                'DD.MM.YYYY',
+                                            )}
+                                        </TableCell>
+                                        <TableCell sx={{ color: 'white' }}>
+                                            {formatCurrency(Number(fee.amount))}{' '}
+                                            MKD
+                                        </TableCell>
+                                        <TableCell
+                                            sx={{
+                                                color: 'white',
+                                                textTransform: 'capitalize',
+                                            }}
+                                        >
+                                            {fee.payment_method}
+                                        </TableCell>
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
+                    </TableContainer>
                 </DialogContent>
             </Dialog>
         </ThemeProvider>
