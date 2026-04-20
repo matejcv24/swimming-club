@@ -98,7 +98,6 @@ export default function InvoicesIndex({ invoices }: Props) {
     const [invoiceMonth, setInvoiceMonth] = useState<Dayjs | null>(null);
     const [invoicePool, setInvoicePool] = useState<'big' | 'small'>('big');
     const [invoiceAmount, setInvoiceAmount] = useState('');
-    const [showHistoryModal, setShowHistoryModal] = useState(false);
     const [showYearDetailModal, setShowYearDetailModal] = useState(false);
     const [selectedYear, setSelectedYear] = useState<string | null>(null);
     const [editingInvoice, setEditingInvoice] = useState<Invoice | null>(null);
@@ -137,14 +136,6 @@ export default function InvoicesIndex({ invoices }: Props) {
     });
 
     const sortedMonths = Object.keys(groupedInvoices).sort().reverse();
-    const currentYear = dayjs().format('YYYY');
-    const currentYearMonths = sortedMonths.filter(
-        (month) => dayjs(month).format('YYYY') === currentYear,
-    );
-    const currentYearLastMonth = currentYearMonths[0];
-    const currentYearLastInvoice = currentYearLastMonth
-        ? groupedInvoices[currentYearLastMonth]
-        : null;
 
     const yearGroups: Record<
         string,
@@ -165,11 +156,7 @@ export default function InvoicesIndex({ invoices }: Props) {
         yearGroups[year].total += monthData.total;
         yearGroups[year].monthCount += 1;
     });
-
-    const sortedYears = Object.keys(yearGroups)
-        .filter((year) => year !== currentYear)
-        .sort()
-        .reverse();
+    const sortedYears = Object.keys(yearGroups).sort().reverse();
 
     const yearMonths = selectedYear
         ? sortedMonths.filter(
@@ -247,7 +234,6 @@ export default function InvoicesIndex({ invoices }: Props) {
                 setInvoiceMonth(null);
                 setInvoicePool('big');
                 setInvoiceAmount('');
-                setShowHistoryModal(false);
                 console.log('Invoice saved successfully');
             } else {
                 const errorData = await response
@@ -329,8 +315,6 @@ export default function InvoicesIndex({ invoices }: Props) {
                 setInvoiceList(invoiceList.filter((inv) => inv.id !== id));
                 setEditingInvoice(null);
                 setEditAmount('');
-                // Close history modal to show updated list
-                setShowHistoryModal(false);
             } else {
                 console.error('Error deleting invoice');
             }
@@ -472,112 +456,6 @@ export default function InvoicesIndex({ invoices }: Props) {
 
                         <Divider />
 
-                        {/* Last Invoice / History Section */}
-                        <div className="flex flex-col gap-4">
-                            <Typography
-                                variant="caption"
-                                color="text.secondary"
-                                sx={{
-                                    textTransform: 'uppercase',
-                                    letterSpacing: 1,
-                                }}
-                            >
-                                Invoice History By Month
-                            </Typography>
-
-                            {currentYearLastInvoice ? (
-                                <List disablePadding>
-                                    <ListItem
-                                        divider
-                                        sx={{
-                                            px: 0,
-                                            cursor: 'pointer',
-                                            display: 'flex',
-                                            flexDirection: 'column',
-                                            height: 'auto',
-                                            gap: 2,
-                                            paddingY: 1.5,
-                                            alignItems: 'center',
-                                            '&:hover': {
-                                                bgcolor:
-                                                    'rgba(255,255,255,0.05)',
-                                            },
-                                        }}
-                                        onClick={() =>
-                                            setShowHistoryModal(true)
-                                        }
-                                    >
-                                        <div
-                                            style={{
-                                                display: 'flex',
-                                                justifyContent: 'center',
-                                                alignItems: 'center',
-                                                gap: '16px',
-                                            }}
-                                        >
-                                            <Typography variant="body2">
-                                                {dayjs(
-                                                    currentYearLastInvoice.month,
-                                                ).format('MMMM YYYY')}
-                                            </Typography>
-                                            {currentYearMonths.length > 1 && (
-                                                <Typography
-                                                    variant="caption"
-                                                    color="primary"
-                                                >
-                                                    {currentYearMonths.length}{' '}
-                                                    months
-                                                </Typography>
-                                            )}
-                                        </div>
-
-                                        <div
-                                            style={{
-                                                display: 'flex',
-                                                flexDirection: 'column',
-                                                gap: '8px',
-                                                alignItems: 'center',
-                                            }}
-                                        >
-                                            <Chip
-                                                label={`Big: ${formatCurrency(currentYearLastInvoice.big_pool)} MKD`}
-                                                size="small"
-                                                sx={{
-                                                    ...chipSx,
-                                                    bgcolor:
-                                                        'rgba(33, 150, 243, 0.3)',
-                                                }}
-                                            />
-                                            <Chip
-                                                label={`Small: ${formatCurrency(currentYearLastInvoice.small_pool)} MKD`}
-                                                size="small"
-                                                sx={{
-                                                    ...chipSx,
-                                                    bgcolor:
-                                                        'rgba(76, 175, 80, 0.3)',
-                                                }}
-                                            />
-                                            <Chip
-                                                label={`Total: ${formatCurrency(currentYearLastInvoice.total)} MKD`}
-                                                color="success"
-                                                size="small"
-                                                sx={chipSx}
-                                            />
-                                        </div>
-                                    </ListItem>
-                                </List>
-                            ) : (
-                                <Typography
-                                    variant="body2"
-                                    color="text.secondary"
-                                >
-                                    No invoices recorded for {currentYear}.
-                                </Typography>
-                            )}
-                        </div>
-
-                        <Divider />
-
                         <div className="flex flex-col gap-4">
                             <Typography
                                 variant="caption"
@@ -668,130 +546,6 @@ export default function InvoicesIndex({ invoices }: Props) {
                 </DialogContent>
             </Dialog>
 
-            {/* Invoice History Modal */}
-            <Dialog
-                open={showHistoryModal}
-                onClose={() => setShowHistoryModal(false)}
-                fullWidth
-                maxWidth="sm"
-                PaperProps={{
-                    sx: { bgcolor: DARK_BG },
-                }}
-            >
-                <DialogTitle sx={{ p: 0 }}>
-                    <div className="flex items-center justify-between px-4 py-3">
-                        <Typography variant="h6" fontWeight="bold">
-                            Invoice History By Month
-                        </Typography>
-                        <IconButton
-                            onClick={() => setShowHistoryModal(false)}
-                            color="error"
-                        >
-                            <CloseIcon />
-                        </IconButton>
-                    </div>
-                    <Divider />
-                </DialogTitle>
-
-                <DialogContent sx={{ p: 0 }}>
-                    <List disablePadding>
-                        {currentYearMonths.map((month) => {
-                            const monthData = groupedInvoices[month];
-
-                            return (
-                                <ListItem
-                                    key={month}
-                                    divider
-                                    sx={{
-                                        px: 2,
-                                        py: 2,
-                                        display: 'flex',
-                                        flexDirection: 'column',
-                                        height: 'auto',
-                                        gap: 2,
-                                        alignItems: 'center',
-                                    }}
-                                >
-                                    <div
-                                        style={{
-                                            display: 'flex',
-                                            justifyContent: 'center',
-                                            alignItems: 'center',
-                                            gap: '16px',
-                                        }}
-                                    >
-                                        <Typography variant="body2">
-                                            {dayjs(month).format('MMMM YYYY')}
-                                        </Typography>
-                                        <IconButton
-                                            size="small"
-                                            onClick={() => {
-                                                setEditPoolSelection('big');
-                                                const bigInvoice =
-                                                    invoiceList.find(
-                                                        (i) =>
-                                                            i.month === month &&
-                                                            i.pool === 'big',
-                                                    );
-
-                                                if (bigInvoice) {
-                                                    setEditingInvoice(
-                                                        bigInvoice,
-                                                    );
-                                                    setEditAmount(
-                                                        String(
-                                                            bigInvoice.amount,
-                                                        ),
-                                                    );
-                                                }
-                                            }}
-                                        >
-                                            <EditIcon
-                                                fontSize="small"
-                                                sx={{ color: '#2196F3' }}
-                                            />
-                                        </IconButton>
-                                    </div>
-                                    <div
-                                        style={{
-                                            display: 'flex',
-                                            flexDirection: 'column',
-                                            gap: '8px',
-                                            alignItems: 'center',
-                                        }}
-                                    >
-                                        <Chip
-                                            label={`Big: ${formatCurrency(monthData.big_pool)} MKD`}
-                                            size="small"
-                                            sx={{
-                                                ...chipSx,
-                                                bgcolor:
-                                                    'rgba(33, 150, 243, 0.3)',
-                                            }}
-                                        />
-                                        <Chip
-                                            label={`Small: ${formatCurrency(monthData.small_pool)} MKD`}
-                                            size="small"
-                                            sx={{
-                                                ...chipSx,
-                                                bgcolor:
-                                                    'rgba(76, 175, 80, 0.3)',
-                                            }}
-                                        />
-                                        <Chip
-                                            label={`Total: ${formatCurrency(monthData.total)} MKD`}
-                                            color="success"
-                                            size="small"
-                                            sx={chipSx}
-                                        />
-                                    </div>
-                                </ListItem>
-                            );
-                        })}
-                    </List>
-                </DialogContent>
-            </Dialog>
-
             {/* Year Invoice History Modal */}
             <Dialog
                 open={showYearDetailModal}
@@ -808,7 +562,7 @@ export default function InvoicesIndex({ invoices }: Props) {
                 <DialogTitle sx={{ p: 0 }}>
                     <div className="flex items-center justify-between px-4 py-3">
                         <Typography variant="h6" fontWeight="bold">
-                            Invoice History - {selectedYear}
+                            Invoice History By Month - {selectedYear}
                         </Typography>
                         <IconButton
                             onClick={() => {
