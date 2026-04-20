@@ -1,12 +1,14 @@
 import { Head, router } from '@inertiajs/react';
 
 interface Props {
+    activeMembers?: number;
     profitTotal?: number;
     unpaidFees?: number;
     invoiceTotal?: number;
 }
 
 export default function Dashboard({
+    activeMembers = 0,
     profitTotal = 0,
     unpaidFees = 0,
     invoiceTotal = 0,
@@ -64,7 +66,7 @@ export default function Dashboard({
                     >
                         <h2 className="text-lg font-semibold">Members</h2>
                         <p className="mt-1 text-sm text-gray-500">
-                            Member management is coming in the next milestone.
+                            Active members: {activeMembers}
                         </p>
                     </a>
 
@@ -73,9 +75,6 @@ export default function Dashboard({
                         className="rounded-xl border border-sidebar-border/70 bg-white p-6 shadow-sm hover:bg-gray-50 dark:bg-neutral-900 dark:hover:bg-neutral-800"
                     >
                         <h2 className="text-lg font-semibold">Trainings</h2>
-                        <p className="mt-1 text-sm text-gray-500">
-                            Training tracking is coming in a later milestone.
-                        </p>
                     </a>
 
                     <a
@@ -83,9 +82,6 @@ export default function Dashboard({
                         className="rounded-xl border border-sidebar-border/70 bg-white p-6 shadow-sm hover:bg-gray-50 dark:bg-neutral-900 dark:hover:bg-neutral-800"
                     >
                         <h2 className="text-lg font-semibold">Staff</h2>
-                        <p className="mt-1 text-sm text-gray-500">
-                            Staff management is coming in a later milestone.
-                        </p>
                     </a>
 
                     <a
@@ -95,9 +91,6 @@ export default function Dashboard({
                         <h2 className="text-lg font-semibold">
                             Membership Fees
                         </h2>
-                        <p className="mt-1 text-sm text-gray-500">
-                            Payment tracking is coming in a later milestone.
-                        </p>
                     </a>
                 </div>
             </div>
