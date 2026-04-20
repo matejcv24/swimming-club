@@ -35,6 +35,7 @@ class AdminController extends Controller
             ->count();
 
         return inertia('dashboard', [
+            'activeMembers' => Member::where('status', 'active')->count(),
             'unpaidFees' => $unpaidFees,
             'invoiceTotal' => $invoiceTotal,
             'profitTotal' => $profitTotal,
