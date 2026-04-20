@@ -21,18 +21,19 @@ class AdminController extends Controller
 
         $profitTotal = $membershipTotal - $salaryTotal - $invoiceTotal;
 
-        $unpaidFees = Member::with([
-            'membershipFees' => function ($query) {
-                $query->orderBy('end_date', 'desc');
-            },
-        ])
-            ->get()
-            ->filter(function ($member) use ($today) {
-                $latestFee = $member->membershipFees->first();
+$unpaidFees = Member::where('status', 'active')
+    ->with([
+        'membershipFees' => function ($query) {
+            $query->orderBy('end_date', 'desc');
+        },
+    ])
+    ->get()
+    ->filter(function ($member) use ($today) {
+        $latestFee = $member->membershipFees->first();
 
-                return !$latestFee || Carbon::parse($latestFee->end_date)->lt($today);
-            })
-            ->count();
+        return !$latestFee || Carbon::parse($latestFee->end_date)->lt($today);
+    })
+    ->count();
 
         return inertia('dashboard', [
             'activeMembers' => Member::where('status', 'active')->count(),

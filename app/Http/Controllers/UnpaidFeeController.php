@@ -11,12 +11,14 @@ class UnpaidFeeController extends Controller
     {
         $today = Carbon::today();
 
-        $members = Member::with([
-            'parent',
-            'membershipFees' => function ($query) {
-                $query->orderBy('end_date', 'desc');
-            },
-        ])->get();
+$members = Member::where('status', 'active')
+    ->with([
+        'parent',
+        'membershipFees' => function ($query) {
+            $query->orderBy('end_date', 'desc');
+        },
+    ])
+    ->get();
 
         $unpaidMembers = $members
             ->map(function ($member) use ($today) {
