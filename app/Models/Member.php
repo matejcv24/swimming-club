@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Member extends Model
 {
-    protected $fillable = ['name', 'date_of_birth', 'pool', 'parent_id'];
+    protected $fillable = ['name', 'date_of_birth', 'pool', 'status', 'parent_id'];
 
     public function parent(): BelongsTo
     {

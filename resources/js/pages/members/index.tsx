@@ -26,11 +26,14 @@ import { createTheme, ThemeProvider } from '@mui/material/styles';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 import { useState } from 'react';
+import FormControlLabel from '@mui/material/FormControlLabel';
+import Switch from '@mui/material/Switch';
 
 interface Member {
     id: number;
     name: string;
     pool: string;
+    status: 'active' | 'inactive';
     parent: {
         id: number;
         name: string;
@@ -64,13 +67,16 @@ export default function MembersIndex({ members }: Props) {
     const [form, setForm] = useState({
         name: '',
         pool: 'big',
+        status: 'active' as 'active' | 'inactive',
         parent_name: '',
         parent_email: '',
         parent_phone: '',
     });
+
     const [editForm, setEditForm] = useState({
         name: '',
         pool: 'big',
+        status: 'active' as 'active' | 'inactive',
         parent_name: '',
         parent_email: '',
         parent_phone: '',
@@ -79,6 +85,15 @@ export default function MembersIndex({ members }: Props) {
     const filteredMembers = members.filter((m) =>
         m.name.toLowerCase().includes(search.toLowerCase()),
     );
+
+    const hasEditChanges =
+        !!editMember &&
+        (editForm.name !== editMember.name ||
+            editForm.pool !== editMember.pool ||
+            editForm.status !== editMember.status ||
+            editForm.parent_name !== (editMember.parent?.name ?? '') ||
+            editForm.parent_email !== (editMember.parent?.email ?? '') ||
+            editForm.parent_phone !== (editMember.parent?.phone ?? ''));
 
     const getInitials = (name: string) =>
         name
@@ -96,6 +111,7 @@ export default function MembersIndex({ members }: Props) {
                 setForm({
                     name: '',
                     pool: 'big',
+                    status: 'active',
                     parent_name: '',
                     parent_email: '',
                     parent_phone: '',
@@ -110,6 +126,7 @@ export default function MembersIndex({ members }: Props) {
         setEditForm({
             name: member.name,
             pool: member.pool,
+            status: member.status ?? 'active',
             parent_name: member.parent?.name ?? '',
             parent_email: member.parent?.email ?? '',
             parent_phone: member.parent?.phone ?? '',
@@ -120,8 +137,12 @@ export default function MembersIndex({ members }: Props) {
         e.preventDefault();
 
         if (!editMember) {
-return;
-}
+            return;
+        }
+
+        if (!hasEditChanges) {
+            return;
+        }
 
         router.patch(`/members/${editMember.id}`, editForm, {
             onSuccess: () => setEditMember(null),
@@ -139,8 +160,8 @@ return;
 
     const handleDeleteConfirm = () => {
         if (!memberToDelete) {
-return;
-}
+            return;
+        }
 
         router.delete(`/members/${memberToDelete.id}`, {
             onSuccess: () => {
@@ -251,7 +272,22 @@ return;
                                             >
                                                 {member.pool === 'big'
                                                     ? 'Big Pool'
-                                                    : 'Small Pool'}
+                                                    : 'Small Pool'}{' '}
+                                                •{' '}
+                                                <span
+                                                    style={{
+                                                        color:
+                                                            member.status ===
+                                                            'active'
+                                                                ? '#4caf50' // green
+                                                                : '#f44336', // red
+                                                        fontWeight: 500,
+                                                    }}
+                                                >
+                                                    {member.status === 'active'
+                                                        ? 'Active'
+                                                        : 'Inactive'}
+                                                </span>
                                             </Typography>
                                         }
                                     />
@@ -328,6 +364,27 @@ return;
                                     variant="caption"
                                     color="text.secondary"
                                 >
+                                    Status
+                                </Typography>
+                                <Typography
+                                    variant="body1"
+                                    color={
+                                        selectedMember.status === 'active'
+                                            ? 'success.main'
+                                            : 'error.main'
+                                    }
+                                >
+                                    {selectedMember.status === 'active'
+                                        ? 'Active'
+                                        : 'Inactive'}
+                                </Typography>
+                            </div>
+
+                            <div>
+                                <Typography
+                                    variant="caption"
+                                    color="text.secondary"
+                                >
                                     Pool
                                 </Typography>
                                 <Typography variant="body1">
@@ -385,10 +442,33 @@ return;
             >
                 <DialogTitle sx={{ p: 0 }}>
                     <div className="flex items-center justify-between px-4 py-3">
-                        <div className="w-10" />
-                        <Typography variant="h6" fontWeight="bold">
-                            Edit Member
-                        </Typography>
+                        {/* LEFT: Switch */}
+                        <FormControlLabel
+                            control={
+                                <Switch
+                                    checked={editForm.status === 'active'}
+                                    onChange={(e) =>
+                                        setEditForm({
+                                            ...editForm,
+                                            status: e.target.checked
+                                                ? 'active'
+                                                : 'inactive',
+                                        })
+                                    }
+                                />
+                            }
+                            label={
+                                editForm.status === 'active'
+                                    ? 'Active'
+                                    : 'Inactive'
+                            }
+                            sx={{
+                                m: 0,
+                                '& .MuiTypography-root': { fontSize: '0.9rem' },
+                            }}
+                        />
+
+                        {/* RIGHT: Close button */}
                         <IconButton
                             onClick={() => setEditMember(null)}
                             color="error"
@@ -524,6 +604,7 @@ return;
                                 variant="contained"
                                 fullWidth
                                 size="medium"
+                                disabled={!hasEditChanges}
                             >
                                 Save Changes
                             </Button>
@@ -551,11 +632,25 @@ return;
                     PaperProps={{ sx: { bgcolor: DARK_BG } }}
                 >
                     <DialogTitle sx={{ p: 0 }}>
-                        <div className="relative flex items-center justify-between px-4 py-3">
-                            <div className="w-10" />
+                        <div className="flex items-center justify-between px-4 py-3">
+                            {/* LEFT: Switch */}
+                            <FormControlLabel
+                                control={<Switch checked disabled />}
+                                label="Active"
+                                sx={{
+                                    m: 0,
+                                    '& .MuiTypography-root': {
+                                        fontSize: '0.9rem',
+                                    },
+                                }}
+                            />
+
+                            {/* CENTER: Title */}
                             <Typography variant="h6" fontWeight="bold">
                                 Add Member
                             </Typography>
+
+                            {/* RIGHT: Close */}
                             <IconButton
                                 onClick={() => setShowAddModal(false)}
                                 color="error"
