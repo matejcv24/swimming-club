@@ -41,6 +41,7 @@ class MemberController extends Controller
         Member::create([
             'name' => $validated['name'],
             'pool' => $validated['pool'],
+            'status' => 'active',
             'parent_id' => $parent->id,
         ]);
 
@@ -62,6 +63,7 @@ class MemberController extends Controller
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'pool' => ['required', 'in:big,small'],
+            'status' => ['required', 'in:active,inactive'],
             'parent_name' => ['required', 'string', 'max:255'],
             'parent_email' => ['nullable', 'email'],
             'parent_phone' => ['required', 'string', 'max:20'],
@@ -70,6 +72,7 @@ class MemberController extends Controller
         $member->update([
             'name' => $validated['name'],
             'pool' => $validated['pool'],
+            'status' => $validated['status'],
         ]);
 
         if ($member->parent) {
