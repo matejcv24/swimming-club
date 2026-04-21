@@ -65,6 +65,7 @@ interface MonthGroup {
 interface Props {
     members: Member[];
     allFees: Fee[];
+    userRole: 'admin' | 'coach';
 }
 
 const darkTheme = createTheme({
@@ -121,7 +122,11 @@ const formatCurrency = (value: number): string => {
     }).format(value);
 };
 
-export default function MembershipFeesIndex({ members, allFees }: Props) {
+export default function MembershipFeesIndex({
+    members,
+    allFees,
+    userRole,
+}: Props) {
     const [selectedMember, setSelectedMember] = useState<Member | null>(null);
     const [fees, setFees] = useState<Fee[]>([]);
     const [loadingFees, setLoadingFees] = useState(false);
@@ -491,83 +496,88 @@ export default function MembershipFeesIndex({ members, allFees }: Props) {
 
                         <Divider />
 
-                        <div className="flex flex-col gap-4">
-                            <Typography
-                                variant="caption"
-                                color="text.secondary"
-                                sx={{
-                                    textTransform: 'uppercase',
-                                    letterSpacing: 1,
-                                }}
-                            >
-                                Membership Fees By Year
-                            </Typography>
+                        {userRole === 'admin' && (
+                            <div className="flex flex-col gap-4">
+                                <Typography
+                                    variant="caption"
+                                    color="text.secondary"
+                                    sx={{
+                                        textTransform: 'uppercase',
+                                        letterSpacing: 1,
+                                    }}
+                                >
+                                    Membership Fees By Year
+                                </Typography>
 
-                            {sortedYears.length > 0 ? (
-                                <List disablePadding>
-                                    {sortedYears.map((year) => (
-                                        <ListItem
-                                            key={year}
-                                            divider
-                                            sx={{
-                                                px: 0,
-                                                cursor: 'pointer',
-                                                display: 'flex',
-                                                flexDirection: 'column',
-                                                height: 'auto',
-                                                gap: 2,
-                                                paddingY: 1.5,
-                                                alignItems: 'center',
-                                                '&:hover': {
-                                                    bgcolor:
-                                                        'rgba(255,255,255,0.05)',
-                                                },
-                                            }}
-                                            onClick={() => {
-                                                setSelectedYear(year);
-                                                setShowYearHistoryModal(true);
-                                            }}
-                                        >
-                                            <div
-                                                style={{
+                                {sortedYears.length > 0 ? (
+                                    <List disablePadding>
+                                        {sortedYears.map((year) => (
+                                            <ListItem
+                                                key={year}
+                                                divider
+                                                sx={{
+                                                    px: 0,
+                                                    cursor: 'pointer',
                                                     display: 'flex',
-                                                    justifyContent: 'center',
+                                                    flexDirection: 'column',
+                                                    height: 'auto',
+                                                    gap: 2,
+                                                    paddingY: 1.5,
                                                     alignItems: 'center',
-                                                    gap: '16px',
+                                                    '&:hover': {
+                                                        bgcolor:
+                                                            'rgba(255,255,255,0.05)',
+                                                    },
+                                                }}
+                                                onClick={() => {
+                                                    setSelectedYear(year);
+                                                    setShowYearHistoryModal(
+                                                        true,
+                                                    );
                                                 }}
                                             >
-                                                <Typography variant="body2">
-                                                    {year}
-                                                </Typography>
-                                                <Typography
-                                                    variant="caption"
-                                                    color="primary"
+                                                <div
+                                                    style={{
+                                                        display: 'flex',
+                                                        justifyContent:
+                                                            'center',
+                                                        alignItems: 'center',
+                                                        gap: '16px',
+                                                    }}
                                                 >
-                                                    {
-                                                        yearGroups[year]
-                                                            .monthCount
-                                                    }{' '}
-                                                    months
-                                                </Typography>
-                                            </div>
+                                                    <Typography variant="body2">
+                                                        {year}
+                                                    </Typography>
+                                                    <Typography
+                                                        variant="caption"
+                                                        color="primary"
+                                                    >
+                                                        {
+                                                            yearGroups[year]
+                                                                .monthCount
+                                                        }{' '}
+                                                        months
+                                                    </Typography>
+                                                </div>
 
-                                            <Chip
-                                                label={`Total: ${formatCurrency(yearGroups[year].total)} MKD`}
-                                                color="success"
-                                                size="small"
-                                            />
-                                        </ListItem>
-                                    ))}
-                                </List>
-                            ) : (
-                                <Typography
-                                    variant="body2"
-                                    color="text.secondary"
-                                >
-                                    No membership fees recorded yet.
-                                </Typography>
-                            )}
-                        </div>
+                                                <Chip
+                                                    label={`Total: ${formatCurrency(yearGroups[year].total)} MKD`}
+                                                    color="success"
+                                                    size="small"
+                                                />
+                                            </ListItem>
+                                        ))}
+                                    </List>
+                                ) : (
+                                    <Typography
+                                        variant="body2"
+                                        color="text.secondary"
+                                    >
+                                        No membership fees recorded yet.
+                                    </Typography>
+                                )}
+                            </div>
+                        )}
                     </div>
                 </DialogContent>
             </Dialog>

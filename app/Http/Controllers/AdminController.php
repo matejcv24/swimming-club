@@ -7,6 +7,7 @@ use App\Models\Member;
 use App\Models\MembershipFee;
 use App\Models\Salary;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Auth;
 
 class AdminController extends Controller
 {
@@ -35,12 +36,13 @@ $unpaidFees = Member::where('status', 'active')
     })
     ->count();
 
-        return inertia('dashboard', [
-            'activeMembers' => Member::where('status', 'active')->count(),
-            'unpaidFees' => $unpaidFees,
-            'invoiceTotal' => $invoiceTotal,
-            'profitTotal' => $profitTotal,
-        ]);
+return inertia('dashboard', [
+    'userRole' => Auth::user()->role,
+    'activeMembers' => Member::where('status', 'active')->count(),
+    'unpaidFees' => $unpaidFees,
+    'invoiceTotal' => $invoiceTotal,
+    'profitTotal' => $profitTotal,
+]);
     }
 
     public function invoices()
