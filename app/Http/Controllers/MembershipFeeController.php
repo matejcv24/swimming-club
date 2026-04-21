@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Member;
 use App\Models\MembershipFee;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 
 class MembershipFeeController extends Controller
 {
@@ -19,6 +20,7 @@ class MembershipFeeController extends Controller
         return inertia('membership-fees/index', [
             'members' => $members,
             'allFees' => $allFees,
+            'userRole' => Auth::user()->role,
         ]);
     }
 
