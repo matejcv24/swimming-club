@@ -331,6 +331,7 @@ export default function ProfitIndex({ profits }: Props) {
             <Dialog
                 open={showHistoryModal}
                 onClose={() => setShowHistoryModal(false)}
+                disableRestoreFocus
                 fullWidth
                 maxWidth="sm"
                 PaperProps={{
@@ -430,6 +431,7 @@ export default function ProfitIndex({ profits }: Props) {
                     setShowYearDetailModal(false);
                     setSelectedYear(null);
                 }}
+                disableRestoreFocus
                 fullWidth
                 maxWidth="sm"
                 PaperProps={{

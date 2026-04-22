@@ -1,7 +1,6 @@
 import { Head, router } from '@inertiajs/react';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import CloseIcon from '@mui/icons-material/Close';
-import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
 import PersonAddAlt1Icon from '@mui/icons-material/PersonAddAlt1';
 import SearchIcon from '@mui/icons-material/Search';
@@ -149,28 +148,6 @@ export default function MembersIndex({ members }: Props) {
         });
     };
 
-    const [showDeleteModal, setShowDeleteModal] = useState(false);
-    const [memberToDelete, setMemberToDelete] = useState<Member | null>(null);
-
-    const handleDeleteClick = (e: React.MouseEvent, member: Member) => {
-        e.stopPropagation();
-        setMemberToDelete(member);
-        setShowDeleteModal(true);
-    };
-
-    const handleDeleteConfirm = () => {
-        if (!memberToDelete) {
-            return;
-        }
-
-        router.delete(`/members/${memberToDelete.id}`, {
-            onSuccess: () => {
-                setShowDeleteModal(false);
-                setMemberToDelete(null);
-            },
-        });
-    };
-
     return (
         <ThemeProvider theme={darkTheme}>
             <Head title="Members" />
@@ -302,15 +279,6 @@ export default function MembersIndex({ members }: Props) {
                                         >
                                             <EditIcon fontSize="small" />
                                         </IconButton>
-                                        <IconButton
-                                            size="small"
-                                            color="error"
-                                            onClick={(e) =>
-                                                handleDeleteClick(e, member)
-                                            }
-                                        >
-                                            <DeleteIcon fontSize="small" />
-                                        </IconButton>
                                     </div>
                                 </ListItemButton>
                             ))}
@@ -323,6 +291,7 @@ export default function MembersIndex({ members }: Props) {
             <Dialog
                 open={!!selectedMember}
                 onClose={() => setSelectedMember(null)}
+                disableRestoreFocus
                 fullWidth
                 maxWidth="sm"
                 PaperProps={{ sx: { bgcolor: DARK_BG } }}
@@ -436,6 +405,7 @@ export default function MembersIndex({ members }: Props) {
             <Dialog
                 open={!!editMember}
                 onClose={() => setEditMember(null)}
+                disableRestoreFocus
                 fullWidth
                 maxWidth="sm"
                 PaperProps={{ sx: { bgcolor: DARK_BG } }}
@@ -627,6 +597,7 @@ export default function MembersIndex({ members }: Props) {
                 <Dialog
                     open={showAddModal}
                     onClose={() => setShowAddModal(false)}
+                    disableRestoreFocus
                     fullWidth
                     maxWidth="sm"
                     PaperProps={{ sx: { bgcolor: DARK_BG } }}
@@ -803,55 +774,6 @@ export default function MembersIndex({ members }: Props) {
                     </DialogContent>
                 </Dialog>
             )}
-            {/* Delete Confirmation Modal */}
-            <Dialog
-                open={showDeleteModal}
-                onClose={() => setShowDeleteModal(false)}
-                maxWidth="xs"
-                fullWidth
-                PaperProps={{ sx: { bgcolor: DARK_BG } }}
-            >
-                <DialogTitle sx={{ p: 0 }}>
-                    <div className="flex items-center justify-between px-4 py-3">
-                        <Typography variant="h6" fontWeight="bold">
-                            Delete Member
-                        </Typography>
-                        <IconButton
-                            onClick={() => setShowDeleteModal(false)}
-                            color="error"
-                        >
-                            <CloseIcon />
-                        </IconButton>
-                    </div>
-                    <Divider />
-                </DialogTitle>
-
-                <DialogContent>
-                    <div className="flex flex-col gap-6 py-4">
-                        <Typography variant="body1">
-                            Are you sure you want to delete{' '}
-                            <strong>{memberToDelete?.name}</strong>?
-                        </Typography>
-                        <div className="flex gap-3">
-                            <Button
-                                variant="contained"
-                                color="error"
-                                fullWidth
-                                onClick={handleDeleteConfirm}
-                            >
-                                Yes, Delete
-                            </Button>
-                            <Button
-                                variant="outlined"
-                                fullWidth
-                                onClick={() => setShowDeleteModal(false)}
-                            >
-                                Cancel
-                            </Button>
-                        </div>
-                    </div>
-                </DialogContent>
-            </Dialog>
         </ThemeProvider>
     );
 }

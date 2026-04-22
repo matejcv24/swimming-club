@@ -553,6 +553,7 @@ export default function InvoicesIndex({ invoices }: Props) {
                     setShowYearDetailModal(false);
                     setSelectedYear(null);
                 }}
+                disableRestoreFocus
                 fullWidth
                 maxWidth="sm"
                 PaperProps={{
@@ -685,6 +686,7 @@ export default function InvoicesIndex({ invoices }: Props) {
                         setEditAmount('');
                         setEditPoolSelection('big');
                     }}
+                    disableRestoreFocus
                     fullWidth
                     maxWidth="sm"
                     PaperProps={{

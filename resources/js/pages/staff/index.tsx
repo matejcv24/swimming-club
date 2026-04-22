@@ -658,6 +658,7 @@ export default function StaffIndex({ staff }: Props) {
                     setShowSalaryYearDetailModal(false);
                     setSelectedSalaryYear(null);
                 }}
+                disableRestoreFocus
                 fullWidth
                 maxWidth="sm"
                 PaperProps={{

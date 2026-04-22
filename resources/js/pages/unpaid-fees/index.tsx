@@ -117,6 +117,7 @@ export default function UnpaidFeesIndex({
                                             {getInitials(member.name)}
                                         </Avatar>
                                     </ListItemAvatar>
+
                                     <ListItemText
                                         primary={
                                             <Typography
@@ -129,20 +130,27 @@ export default function UnpaidFeesIndex({
                                         secondary={
                                             <>
                                                 <Typography
+                                                    component="span"
                                                     variant="body2"
                                                     color="text.secondary"
+                                                    sx={{ display: 'block' }}
                                                 >
-                                                    Parent: {member.parentName}
+                                                    Parent:{' '}
+                                                    {member.parentName ?? '-'}
                                                 </Typography>
                                                 <Typography
+                                                    component="span"
                                                     variant="body2"
                                                     color="text.secondary"
+                                                    sx={{ display: 'block' }}
                                                 >
-                                                    Phone: {member.phone}
+                                                    Phone: {member.phone ?? '-'}
                                                 </Typography>
                                                 <Typography
+                                                    component="span"
                                                     variant="body2"
                                                     color="error"
+                                                    sx={{ display: 'block' }}
                                                 >
                                                     Expired:{' '}
                                                     {member.latest_end_date
@@ -153,6 +161,9 @@ export default function UnpaidFeesIndex({
                                                 </Typography>
                                             </>
                                         }
+                                        secondaryTypographyProps={{
+                                            component: 'div',
+                                        }}
                                     />
                                 </ListItem>
                             ))}
