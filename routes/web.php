@@ -10,6 +10,7 @@ use App\Http\Controllers\StaffController;
 use App\Http\Controllers\TrainingController;
 use App\Http\Controllers\UnpaidFeeController;
 use App\Http\Controllers\ProfitController;
+use App\Http\Controllers\AttendanceController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
@@ -31,6 +32,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::middleware(['role:admin,coach'])->group(function () {
         Route::resource('members', MemberController::class)->except(['destroy']);
         Route::post('/parents', [ClubParentController::class, 'store'])->name('parents.store');
+        Route::get('/attendance', [AttendanceController::class, 'index'])->name('attendance.index');
 
         Route::get('/trainings/by-date', [TrainingController::class, 'getByDate'])->name('trainings.byDate');
         Route::resource('trainings', TrainingController::class);

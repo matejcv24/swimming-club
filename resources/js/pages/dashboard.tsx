@@ -91,6 +91,12 @@ export default function Dashboard({
                             Membership Fees
                         </h2>
                     </a>
+                    <a
+                        href="/attendance"
+                        className="rounded-xl border border-sidebar-border/70 bg-white p-6 shadow-sm hover:bg-gray-50 dark:bg-neutral-900 dark:hover:bg-neutral-800"
+                    >
+                        <h2 className="text-lg font-semibold">Attendance</h2>
+                    </a>
 
                     {userRole === 'admin' && (
                         <a
