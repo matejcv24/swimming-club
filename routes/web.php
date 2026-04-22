@@ -29,7 +29,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/dashboard', [AdminController::class, 'index'])->name('dashboard');
 
     Route::middleware(['role:admin,coach'])->group(function () {
-        Route::resource('members', MemberController::class);
+        Route::resource('members', MemberController::class)->except(['destroy']);
         Route::post('/parents', [ClubParentController::class, 'store'])->name('parents.store');
 
         Route::get('/trainings/by-date', [TrainingController::class, 'getByDate'])->name('trainings.byDate');

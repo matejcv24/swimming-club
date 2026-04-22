@@ -585,6 +585,7 @@ export default function MembershipFeesIndex({
             <Dialog
                 open={showHistoryModal}
                 onClose={() => setShowHistoryModal(false)}
+                disableRestoreFocus
                 fullWidth
                 maxWidth="sm"
                 PaperProps={{
@@ -648,6 +649,7 @@ export default function MembershipFeesIndex({
                     setShowYearHistoryModal(false);
                     setSelectedYear(null);
                 }}
+                disableRestoreFocus
                 fullWidth
                 maxWidth="sm"
                 PaperProps={{
@@ -736,6 +738,7 @@ export default function MembershipFeesIndex({
                     setShowMonthDetailModal(false);
                     setSelectedMonth(null);
                 }}
+                disableRestoreFocus
                 fullWidth
                 maxWidth="md"
                 PaperProps={{

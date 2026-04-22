@@ -10,14 +10,16 @@ use Illuminate\Support\Facades\Auth;
 
 class TrainingController extends Controller
 {
-    public function index()
-    {
-        $members = Member::all();
+public function index()
+{
+    $members = Member::where('status', 'active')
+        ->orderBy('name')
+        ->get();
 
-        return inertia('trainings/index', [
-            'members' => $members,
-        ]);
-    }
+    return inertia('trainings/index', [
+        'members' => $members,
+    ]);
+}
 
     public function store(Request $request)
     {

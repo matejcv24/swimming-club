@@ -180,6 +180,7 @@ export default function TrainingsIndex({ members }: Props) {
             <Dialog
                 open={showAttendanceModal}
                 onClose={() => setShowAttendanceModal(false)}
+                disableRestoreFocus
                 fullWidth
                 maxWidth="sm"
                 PaperProps={{

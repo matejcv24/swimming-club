@@ -25,9 +25,9 @@ class MemberController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'name'         => ['required', 'string', 'max:255'],
-            'pool'         => ['required', 'in:big,small'],
-            'parent_name'  => ['required', 'string', 'max:255'],
+            'name' => ['required', 'string', 'max:255'],
+            'pool' => ['required', 'in:big,small'],
+            'parent_name' => ['required', 'string', 'max:255'],
             'parent_email' => ['nullable', 'sometimes', 'email', 'unique:parents,email'],
             'parent_phone' => ['required', 'string', 'max:20'],
         ]);
@@ -88,8 +88,6 @@ class MemberController extends Controller
 
     public function destroy(Member $member)
     {
-        $member->delete();
-
-        return back()->with('success', 'Member deleted!');
+        abort(403, 'Deleting members is not allowed.');
     }
 }
