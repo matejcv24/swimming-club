@@ -2,63 +2,53 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
+use App\Models\Attendance;
+use App\Models\Member;
+use Carbon\Carbon;
+use Illuminate\Support\Facades\Auth;
+use Inertia\Inertia;
 
 class AttendanceController extends Controller
 {
-    /**
-     * Display a listing of the resource.
-     */
     public function index()
     {
-        //
-    }
+        $userRole = Auth::user()->role;
+        $currentMonthStart = Carbon::now()->startOfMonth();
+        $currentMonthEnd = Carbon::now()->endOfMonth();
 
-    /**
-     * Show the form for creating a new resource.
-     */
-    public function create()
-    {
-        //
-    }
+        $members = Member::where('status', 'active')
+            ->withCount([
+                'attendances as current_month_attendances_count' => function ($query) use ($currentMonthStart, $currentMonthEnd) {
+                    $query->whereHas('training', function ($trainingQuery) use ($currentMonthStart, $currentMonthEnd) {
+                        $trainingQuery->whereBetween('date', [$currentMonthStart->toDateString(), $currentMonthEnd->toDateString()]);
+                    })->where('present', true);
+                },
+            ])
+            ->orderBy('name')
+            ->get();
 
-    /**
-     * Store a newly created resource in storage.
-     */
-    public function store(Request $request)
-    {
-        //
-    }
+        $attendanceRows = Attendance::with(['member', 'training'])
+            ->where('present', true)
+            ->whereHas('member', function ($query) {
+                $query->where('status', 'active');
+            })
+            ->get()
+            ->map(function ($attendance) {
+                return [
+                    'id' => $attendance->id,
+                    'member_id' => $attendance->member_id,
+                    'member_name' => $attendance->member?->name,
+                    'pool' => $attendance->member?->pool,
+                    'date' => $attendance->training?->date,
+                ];
+            })
+            ->filter(fn ($row) => $row['member_id'] && $row['date'])
+            ->values();
 
-    /**
-     * Display the specified resource.
-     */
-    public function show(string $id)
-    {
-        //
-    }
-
-    /**
-     * Show the form for editing the specified resource.
-     */
-    public function edit(string $id)
-    {
-        //
-    }
-
-    /**
-     * Update the specified resource in storage.
-     */
-    public function update(Request $request, string $id)
-    {
-        //
-    }
-
-    /**
-     * Remove the specified resource from storage.
-     */
-    public function destroy(string $id)
-    {
-        //
+        return Inertia::render('attendance/index', [
+            'userRole' => $userRole,
+            'members' => $members,
+            'attendanceRows' => $attendanceRows,
+        ]);
     }
 }
