@@ -98,8 +98,10 @@ export default function TrainingsIndex({ members }: Props) {
             return;
         }
 
-        setActiveTab(pool === 'big' ? 0 : 1);
-        void loadAttendance(dayjs(date), pool);
+        queueMicrotask(() => {
+            setActiveTab(pool === 'big' ? 0 : 1);
+            void loadAttendance(dayjs(date), pool);
+        });
     }, [loadAttendance]);
 
     const toggleMember = (id: number) => {

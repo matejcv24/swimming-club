@@ -15,13 +15,13 @@ import ListItem from '@mui/material/ListItem';
 import ListItemText from '@mui/material/ListItemText';
 import MenuItem from '@mui/material/MenuItem';
 import Select from '@mui/material/Select';
+import { createTheme, ThemeProvider } from '@mui/material/styles';
 import Table from '@mui/material/Table';
 import TableBody from '@mui/material/TableBody';
 import TableCell from '@mui/material/TableCell';
 import TableContainer from '@mui/material/TableContainer';
 import TableHead from '@mui/material/TableHead';
 import TableRow from '@mui/material/TableRow';
-import { createTheme, ThemeProvider } from '@mui/material/styles';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
@@ -242,8 +242,10 @@ export default function MembershipFeesIndex({
         );
 
         if (notificationMember) {
-            void handleMemberSelect(notificationMember);
-            setShowHistoryModal(true);
+            queueMicrotask(() => {
+                void handleMemberSelect(notificationMember);
+                setShowHistoryModal(true);
+            });
         }
     }, [handleMemberSelect, members]);
 

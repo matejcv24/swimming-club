@@ -1,5 +1,6 @@
 import { Link, router, usePage } from '@inertiajs/react';
 import { LogOut, Settings } from 'lucide-react';
+import { NotificationsMenu } from '@/components/notifications-menu';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
     DropdownMenu,
@@ -8,7 +9,6 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { NotificationsMenu } from '@/components/notifications-menu';
 import { useInitials } from '@/hooks/use-initials';
 
 function EnglishLanguageIndicator() {

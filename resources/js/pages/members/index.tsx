@@ -11,6 +11,7 @@ import DialogContent from '@mui/material/DialogContent';
 import DialogTitle from '@mui/material/DialogTitle';
 import Divider from '@mui/material/Divider';
 import FormControl from '@mui/material/FormControl';
+import FormControlLabel from '@mui/material/FormControlLabel';
 import IconButton from '@mui/material/IconButton';
 import Input from '@mui/material/Input';
 import InputAdornment from '@mui/material/InputAdornment';
@@ -22,11 +23,10 @@ import ListItemText from '@mui/material/ListItemText';
 import MenuItem from '@mui/material/MenuItem';
 import Select from '@mui/material/Select';
 import { createTheme, ThemeProvider } from '@mui/material/styles';
+import Switch from '@mui/material/Switch';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 import { useEffect, useState } from 'react';
-import FormControlLabel from '@mui/material/FormControlLabel';
-import Switch from '@mui/material/Switch';
 
 interface Member {
     id: number;
@@ -95,7 +95,7 @@ export default function MembersIndex({ members }: Props) {
         );
 
         if (notificationMember) {
-            setSelectedMember(notificationMember);
+            queueMicrotask(() => setSelectedMember(notificationMember));
         }
     }, [members]);
 
