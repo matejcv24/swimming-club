@@ -15,10 +15,17 @@ class AdminController extends Controller
     {
         $currentYear = now()->year;
         $today = Carbon::today();
+        $user = Auth::user();
 
         $membershipTotal = (float) MembershipFee::whereYear('start_date', $currentYear)->sum('amount');
         $salaryTotal = (float) Salary::whereYear('month', $currentYear)->sum('amount');
         $invoiceTotal = (float) Invoice::whereYear('month', $currentYear)->sum('amount');
+        $coachSalaries = $user->role === 'coach'
+            ? Salary::where('user_id', $user->id)->orderBy('month', 'desc')->get()
+            : collect();
+        $coachSalaryTotal = (float) $coachSalaries
+            ->filter(fn ($salary) => Carbon::parse($salary->month)->year === $currentYear)
+            ->sum('amount');
 
         $profitTotal = $membershipTotal - $salaryTotal - $invoiceTotal;
 
@@ -37,11 +44,13 @@ $unpaidFees = Member::where('status', 'active')
     ->count();
 
 return inertia('dashboard', [
-    'userRole' => Auth::user()->role,
+    'userRole' => $user->role,
     'activeMembers' => Member::where('status', 'active')->count(),
     'unpaidFees' => $unpaidFees,
     'invoiceTotal' => $invoiceTotal,
     'profitTotal' => $profitTotal,
+    'coachSalaryTotal' => $coachSalaryTotal,
+    'coachSalaries' => $coachSalaries,
 ]);
     }
 
