@@ -33,15 +33,38 @@ class HandleInertiaRequests extends Middleware
      *
      * @return array<string, mixed>
      */
-    public function share(Request $request): array
-    {
-        return [
-            ...parent::share($request),
-            'name' => config('app.name'),
-            'auth' => [
-                'user' => $request->user(),
+public function share(Request $request): array
+{
+    return [
+        ...parent::share($request),
+        'auth' => [
+            'user' => $request->user(),
+        ],
+        'notifications' => $request->user()
+            ? [
+                'unread_count' => $request->user()->unreadNotifications()->count(),
+                'unread' => $request->user()->unreadNotifications()->latest()->take(5)->get()->map(fn ($notification) => [
+                    'id' => $notification->id,
+                    'message' => $notification->data['message'] ?? '',
+                    'url' => $notification->data['url'] ?? '/dashboard',
+                    'type' => $notification->data['type'] ?? '',
+                    'created_at' => $notification->created_at?->toDateTimeString(),
+                    'read_at' => $notification->read_at?->toDateTimeString(),
+                ])->values(),
+                'all' => $request->user()->notifications()->latest()->take(20)->get()->map(fn ($notification) => [
+                    'id' => $notification->id,
+                    'message' => $notification->data['message'] ?? '',
+                    'url' => $notification->data['url'] ?? '/dashboard',
+                    'type' => $notification->data['type'] ?? '',
+                    'created_at' => $notification->created_at?->toDateTimeString(),
+                    'read_at' => $notification->read_at?->toDateTimeString(),
+                ])->values(),
+            ]
+            : [
+                'unread_count' => 0,
+                'unread' => [],
+                'all' => [],
             ],
-            'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
-        ];
-    }
+    ];
+}
 }

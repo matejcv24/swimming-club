@@ -24,7 +24,7 @@ import Select from '@mui/material/Select';
 import { createTheme, ThemeProvider } from '@mui/material/styles';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import FormControlLabel from '@mui/material/FormControlLabel';
 import Switch from '@mui/material/Switch';
 
@@ -80,6 +80,24 @@ export default function MembersIndex({ members }: Props) {
         parent_email: '',
         parent_phone: '',
     });
+
+    useEffect(() => {
+        const memberId = new URLSearchParams(window.location.search).get(
+            'member',
+        );
+
+        if (!memberId) {
+            return;
+        }
+
+        const notificationMember = members.find(
+            (member) => member.id === Number(memberId),
+        );
+
+        if (notificationMember) {
+            setSelectedMember(notificationMember);
+        }
+    }, [members]);
 
     const filteredMembers = members.filter((m) =>
         m.name.toLowerCase().includes(search.toLowerCase()),

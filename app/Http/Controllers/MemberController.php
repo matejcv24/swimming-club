@@ -4,7 +4,10 @@ namespace App\Http\Controllers;
 
 use App\Models\ClubParent;
 use App\Models\Member;
+use App\Models\User;
+use App\Notifications\MemberChangedNotification;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 
 class MemberController extends Controller
 {
@@ -38,12 +41,23 @@ class MemberController extends Controller
             'phone' => $validated['parent_phone'],
         ]);
 
-        Member::create([
+        $member = Member::create([
             'name' => $validated['name'],
             'pool' => $validated['pool'],
             'status' => 'active',
             'parent_id' => $parent->id,
         ]);
+
+        if (Auth::user()?->role === 'coach') {
+            $admins = User::where('role', 'admin')->get();
+
+            foreach ($admins as $admin) {
+                $admin->notify(new MemberChangedNotification(
+                    Auth::user()->name . ' added a new member ' . $member->name,
+                    '/members?member=' . $member->id
+                ));
+            }
+        }
 
         return back()->with('success', 'Member added successfully!');
     }
@@ -69,6 +83,32 @@ class MemberController extends Controller
             'parent_phone' => ['required', 'string', 'max:20'],
         ]);
 
+        $changes = [];
+
+        if ($member->name !== $validated['name']) {
+            $changes[] = 'name';
+        }
+
+        if ($member->pool !== $validated['pool']) {
+            $changes[] = 'pool';
+        }
+
+        if ($member->status !== $validated['status']) {
+            $changes[] = 'status';
+        }
+
+        if (($member->parent?->name ?? '') !== $validated['parent_name']) {
+            $changes[] = 'parent name';
+        }
+
+        if (($member->parent?->email ?? '') !== ($validated['parent_email'] ?? null)) {
+            $changes[] = 'parent email';
+        }
+
+        if (($member->parent?->phone ?? '') !== $validated['parent_phone']) {
+            $changes[] = 'parent phone';
+        }
+
         $member->update([
             'name' => $validated['name'],
             'pool' => $validated['pool'],
@@ -81,6 +121,18 @@ class MemberController extends Controller
                 'email' => $validated['parent_email'] ?? null,
                 'phone' => $validated['parent_phone'],
             ]);
+        }
+
+        if (Auth::user()?->role === 'coach' && count($changes) > 0) {
+            $admins = User::where('role', 'admin')->get();
+            $changeSummary = implode(', ', $changes);
+
+            foreach ($admins as $admin) {
+                $admin->notify(new MemberChangedNotification(
+                    Auth::user()->name . ' updated ' . $changeSummary . ' for ' . $member->name,
+                    '/members?member=' . $member->id
+                ));
+            }
         }
 
         return back()->with('success', 'Member updated!');

@@ -12,6 +12,7 @@ use App\Http\Controllers\UnpaidFeeController;
 use App\Http\Controllers\ProfitController;
 use App\Http\Controllers\AttendanceController;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\NotificationController;
 use Inertia\Inertia;
 
 Route::get('/', function () {
@@ -28,6 +29,9 @@ Route::post('/claim-coach-account/{coach}', [StaffController::class, 'claimAccou
 
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/dashboard', [AdminController::class, 'index'])->name('dashboard');
+    Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications.index');
+    Route::post('/notifications/read-all', [NotificationController::class, 'markAllAsRead'])->name('notifications.read-all');
+    Route::post('/notifications/{notification}/read', [NotificationController::class, 'markAsRead'])->name('notifications.read');
 
     Route::middleware(['role:admin,coach'])->group(function () {
         Route::resource('members', MemberController::class)->except(['destroy']);
