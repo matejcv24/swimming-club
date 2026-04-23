@@ -24,8 +24,9 @@ import Typography from '@mui/material/Typography';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import { DateCalendar } from '@mui/x-date-pickers/DateCalendar';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
+import dayjs from 'dayjs';
 import type { Dayjs } from 'dayjs';
-import { useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
 interface Member {
     id: number;
@@ -55,11 +56,7 @@ export default function TrainingsIndex({ members }: Props) {
     const activePool = activeTab === 0 ? 'big' : 'small';
     const poolMembers = members.filter((m) => m.pool === activePool);
 
-    const handleDateClick = async (date: Dayjs | null) => {
-        if (!date) {
-            return;
-        }
-
+    const loadAttendance = useCallback(async (date: Dayjs, pool: string) => {
         setSelectedDate(date);
         setEditMode(false);
         setLoading(true);
@@ -67,7 +64,7 @@ export default function TrainingsIndex({ members }: Props) {
         // Fetch existing attendance for this date and pool
         try {
             const response = await fetch(
-                `/trainings/by-date?date=${date.format('YYYY-MM-DD')}&pool=${activePool}`,
+                `/trainings/by-date?date=${date.format('YYYY-MM-DD')}&pool=${pool}`,
             );
             const data = await response.json();
             setCheckedIds(data.member_ids ?? []);
@@ -77,7 +74,35 @@ export default function TrainingsIndex({ members }: Props) {
 
         setLoading(false);
         setShowAttendanceModal(true);
+    }, []);
+
+    const handleDateClick = async (date: Dayjs | null) => {
+        if (!date) {
+            return;
+        }
+
+        await loadAttendance(date, activePool);
     };
+
+    useEffect(() => {
+        const params = new URLSearchParams(window.location.search);
+        const date = params.get('date');
+        const pool = params.get('pool');
+        const shouldOpenAttendance = params.get('attendance') === '1';
+
+        if (!date || !pool || !shouldOpenAttendance) {
+            return;
+        }
+
+        if (pool !== 'big' && pool !== 'small') {
+            return;
+        }
+
+        queueMicrotask(() => {
+            setActiveTab(pool === 'big' ? 0 : 1);
+            void loadAttendance(dayjs(date), pool);
+        });
+    }, [loadAttendance]);
 
     const toggleMember = (id: number) => {
         if (!editMode) {

@@ -15,13 +15,13 @@ import ListItem from '@mui/material/ListItem';
 import ListItemText from '@mui/material/ListItemText';
 import MenuItem from '@mui/material/MenuItem';
 import Select from '@mui/material/Select';
+import { createTheme, ThemeProvider } from '@mui/material/styles';
 import Table from '@mui/material/Table';
 import TableBody from '@mui/material/TableBody';
 import TableCell from '@mui/material/TableCell';
 import TableContainer from '@mui/material/TableContainer';
 import TableHead from '@mui/material/TableHead';
 import TableRow from '@mui/material/TableRow';
-import { createTheme, ThemeProvider } from '@mui/material/styles';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
@@ -29,7 +29,7 @@ import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import dayjs from 'dayjs';
 import type { Dayjs } from 'dayjs';
-import { useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
 interface Member {
     id: number;
@@ -205,7 +205,7 @@ export default function MembershipFeesIndex({
         ? groupedFeesByMonth[selectedMonth]
         : null;
 
-    const handleMemberSelect = async (member: Member | null) => {
+    const handleMemberSelect = useCallback(async (member: Member | null) => {
         setSelectedMember(member);
         setFees([]);
 
@@ -226,7 +226,28 @@ export default function MembershipFeesIndex({
         }
 
         setLoadingFees(false);
-    };
+    }, []);
+
+    useEffect(() => {
+        const params = new URLSearchParams(window.location.search);
+        const memberId = params.get('member');
+        const shouldOpenHistory = params.get('history') === '1';
+
+        if (!memberId || !shouldOpenHistory) {
+            return;
+        }
+
+        const notificationMember = members.find(
+            (member) => member.id === Number(memberId),
+        );
+
+        if (notificationMember) {
+            queueMicrotask(() => {
+                void handleMemberSelect(notificationMember);
+                setShowHistoryModal(true);
+            });
+        }
+    }, [handleMemberSelect, members]);
 
     const handleSave = () => {
         if (!selectedMember || !startDate || !endDate) {

@@ -5,21 +5,23 @@ namespace App\Http\Controllers;
 use App\Models\Attendance;
 use App\Models\Member;
 use App\Models\Training;
+use App\Models\User;
+use App\Notifications\TrainingAttendanceNotification;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
 class TrainingController extends Controller
 {
-public function index()
-{
-    $members = Member::where('status', 'active')
-        ->orderBy('name')
-        ->get();
+    public function index()
+    {
+        $members = Member::where('status', 'active')
+            ->orderBy('name')
+            ->get();
 
-    return inertia('trainings/index', [
-        'members' => $members,
-    ]);
-}
+        return inertia('trainings/index', [
+            'members' => $members,
+        ]);
+    }
 
     public function store(Request $request)
     {
@@ -51,6 +53,19 @@ public function index()
                 'member_id'   => $memberId,
                 'present'     => true,
             ]);
+        }
+
+        if (Auth::user()?->role === 'coach') {
+            $admins = User::where('role', 'admin')->get();
+            $formattedDate = \Carbon\Carbon::parse($validated['date'])->format('d.m.Y');
+            $poolLabel = $validated['pool'] === 'big' ? 'Big Pool' : 'Small Pool';
+
+            foreach ($admins as $admin) {
+                $admin->notify(new TrainingAttendanceNotification(
+                    Auth::user()->name . ' updated training attendance for ' . $formattedDate . ' (' . $poolLabel . ')',
+                    '/trainings?date=' . $validated['date'] . '&pool=' . $validated['pool'] . '&attendance=1'
+                ));
+            }
         }
 
         return back()->with('success', 'Attendance saved!');
