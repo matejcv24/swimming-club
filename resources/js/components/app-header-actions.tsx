@@ -10,6 +10,7 @@ import {
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { useInitials } from '@/hooks/use-initials';
+import type { User } from '@/types';
 
 function EnglishLanguageIndicator() {
     return (
@@ -27,14 +28,16 @@ function EnglishLanguageIndicator() {
 }
 
 export function AppHeaderActions() {
-    const { auth } = usePage().props;
+    const { auth } = usePage().props as {
+        auth?: { user?: User | null };
+    };
     const getInitials = useInitials();
 
     const handleLogout = () => {
         router.flushAll();
     };
 
-    if (!auth.user) {
+    if (!auth?.user) {
         return <EnglishLanguageIndicator />;
     }
 
