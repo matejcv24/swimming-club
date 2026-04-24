@@ -28,12 +28,14 @@ export function NotificationsMenu() {
     const [open, setOpen] = useState(false);
     const [hasViewedUnread, setHasViewedUnread] = useState(false);
     const { notifications } = usePage().props as {
-        notifications: NotificationSharedData;
+        notifications?: NotificationSharedData;
     };
     const unreadCount = notifications?.unread_count ?? 0;
     const unreadNotifications = notifications?.unread ?? [];
 
-    const markViewedNotificationsAsRead = () => {
+    const markViewedNotificationsAsRead = (
+        options?: Parameters<typeof router.post>[2],
+    ) => {
         if (!hasViewedUnread) {
             return;
         }
@@ -45,6 +47,7 @@ export function NotificationsMenu() {
                 preserveScroll: true,
                 preserveState: true,
                 only: ['notifications'],
+                ...options,
             },
         );
         setHasViewedUnread(false);
@@ -62,8 +65,18 @@ export function NotificationsMenu() {
         setOpen(nextOpen);
     };
 
-    const openNotification = (notificationId: string) => {
-        router.post(`/notifications/${notificationId}/read`);
+    const openNotification = (url: string) => {
+        setOpen(false);
+
+        if (hasViewedUnread) {
+            markViewedNotificationsAsRead({
+                onSuccess: () => router.visit(url),
+            });
+
+            return;
+        }
+
+        router.visit(url);
     };
 
     return (
@@ -110,7 +123,7 @@ export function NotificationsMenu() {
                         <DropdownMenuItem
                             key={notification.id}
                             className="cursor-pointer items-start gap-3 py-3"
-                            onSelect={() => openNotification(notification.id)}
+                            onSelect={() => openNotification(notification.url)}
                         >
                             <span className="mt-1 size-2 shrink-0 rounded-full bg-red-600" />
                             <span className="min-w-0 flex-1">
