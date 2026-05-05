@@ -50,6 +50,11 @@ interface StoreMemberResponse {
     member: Member;
 }
 
+interface UpdateMemberResponse {
+    message: string;
+    member: Member;
+}
+
 interface ValidationErrorResponse {
     message?: string;
     errors?: Record<string, string[]>;
@@ -82,6 +87,9 @@ export default function MembersIndex({ members: initialMembers }: Props) {
     const [addError, setAddError] = useState<string | null>(null);
     const [addErrors, setAddErrors] = useState<Record<string, string[]>>({});
     const [isAddingMember, setIsAddingMember] = useState(false);
+    const [editError, setEditError] = useState<string | null>(null);
+    const [editErrors, setEditErrors] = useState<Record<string, string[]>>({});
+    const [isUpdatingMember, setIsUpdatingMember] = useState(false);
     const [form, setForm] = useState({
         name: '',
         pool: 'big',
@@ -198,6 +206,8 @@ export default function MembersIndex({ members: initialMembers }: Props) {
 
     const handleEditClick = (e: React.MouseEvent, member: Member) => {
         e.stopPropagation();
+        setEditError(null);
+        setEditErrors({});
         setEditMember(member);
         setEditForm({
             name: member.name,
@@ -209,7 +219,7 @@ export default function MembersIndex({ members: initialMembers }: Props) {
         });
     };
 
-    const handleEditSubmit = (e: React.FormEvent) => {
+    const handleEditSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
         if (!editMember) {
@@ -220,9 +230,56 @@ export default function MembersIndex({ members: initialMembers }: Props) {
             return;
         }
 
-        router.patch(`/members/${editMember.id}`, editForm, {
-            onSuccess: () => setEditMember(null),
-        });
+        setEditError(null);
+        setEditErrors({});
+        setIsUpdatingMember(true);
+
+        try {
+            const response = await fetch(`/api/members/${editMember.id}`, {
+                method: 'PATCH',
+                credentials: 'same-origin',
+                headers: {
+                    Accept: 'application/json',
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': getCsrfToken(),
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+                body: JSON.stringify(editForm),
+            });
+
+            if (response.status === 422) {
+                const data = (await response.json()) as ValidationErrorResponse;
+
+                setEditErrors(data.errors ?? {});
+                setEditError(data.message ?? 'Please check the form.');
+
+                return;
+            }
+
+            if (!response.ok) {
+                throw new Error('Unable to update member.');
+            }
+
+            const data = (await response.json()) as UpdateMemberResponse;
+
+            setMembers((currentMembers) =>
+                currentMembers.map((member) =>
+                    member.id === data.member.id ? data.member : member,
+                ),
+            );
+            setSelectedMember((currentMember) =>
+                currentMember?.id === data.member.id
+                    ? data.member
+                    : currentMember,
+            );
+            setEditMember(null);
+        } catch {
+            setEditError(
+                'Unable to update member. Please check the form and try again.',
+            );
+        } finally {
+            setIsUpdatingMember(false);
+        }
     };
 
     return (
@@ -542,6 +599,12 @@ export default function MembersIndex({ members: initialMembers }: Props) {
                             Swimmer Info
                         </Typography>
 
+                        {editError && (
+                            <Typography color="error" variant="body2">
+                                {editError}
+                            </Typography>
+                        )}
+
                         <Input
                             placeholder="Full name"
                             value={editForm.name}
@@ -556,6 +619,11 @@ export default function MembersIndex({ members: initialMembers }: Props) {
                             inputProps={{ 'aria-label': 'member name' }}
                             sx={inputSx}
                         />
+                        {editErrors.name?.[0] && (
+                            <Typography color="error" variant="caption">
+                                {editErrors.name[0]}
+                            </Typography>
+                        )}
 
                         <FormControl fullWidth>
                             <InputLabel
@@ -586,6 +654,16 @@ export default function MembersIndex({ members: initialMembers }: Props) {
                                 <MenuItem value="small">Small Pool</MenuItem>
                             </Select>
                         </FormControl>
+                        {editErrors.pool?.[0] && (
+                            <Typography color="error" variant="caption">
+                                {editErrors.pool[0]}
+                            </Typography>
+                        )}
+                        {editErrors.status?.[0] && (
+                            <Typography color="error" variant="caption">
+                                {editErrors.status[0]}
+                            </Typography>
+                        )}
 
                         <Divider />
 
@@ -614,6 +692,11 @@ export default function MembersIndex({ members: initialMembers }: Props) {
                             inputProps={{ 'aria-label': 'parent name' }}
                             sx={inputSx}
                         />
+                        {editErrors.parent_name?.[0] && (
+                            <Typography color="error" variant="caption">
+                                {editErrors.parent_name[0]}
+                            </Typography>
+                        )}
 
                         <Input
                             type="email"
@@ -629,6 +712,11 @@ export default function MembersIndex({ members: initialMembers }: Props) {
                             inputProps={{ 'aria-label': 'parent email' }}
                             sx={inputSx}
                         />
+                        {editErrors.parent_email?.[0] && (
+                            <Typography color="error" variant="caption">
+                                {editErrors.parent_email[0]}
+                            </Typography>
+                        )}
 
                         <Input
                             placeholder="Parent phone"
@@ -644,6 +732,11 @@ export default function MembersIndex({ members: initialMembers }: Props) {
                             inputProps={{ 'aria-label': 'parent phone' }}
                             sx={inputSx}
                         />
+                        {editErrors.parent_phone?.[0] && (
+                            <Typography color="error" variant="caption">
+                                {editErrors.parent_phone[0]}
+                            </Typography>
+                        )}
 
                         <div className="flex gap-3">
                             <Button
@@ -651,9 +744,11 @@ export default function MembersIndex({ members: initialMembers }: Props) {
                                 variant="contained"
                                 fullWidth
                                 size="medium"
-                                disabled={!hasEditChanges}
+                                disabled={!hasEditChanges || isUpdatingMember}
                             >
-                                Save Changes
+                                {isUpdatingMember
+                                    ? 'Saving...'
+                                    : 'Save Changes'}
                             </Button>
                             <Button
                                 type="button"
