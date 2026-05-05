@@ -13,11 +13,7 @@ class MemberController extends Controller
 {
     public function index()
     {
-        $members = Member::with('parent')->get();
-
-        return inertia('members/index', [
-            'members' => $members,
-        ]);
+        return inertia('members/index');
     }
 
     public function create()
@@ -53,8 +49,8 @@ class MemberController extends Controller
 
             foreach ($admins as $admin) {
                 $admin->notify(new MemberChangedNotification(
-                    Auth::user()->name . ' added a new member ' . $member->name,
-                    '/members?member=' . $member->id
+                    Auth::user()->name.' added a new member '.$member->name,
+                    '/members?member='.$member->id
                 ));
             }
         }
@@ -129,8 +125,8 @@ class MemberController extends Controller
 
             foreach ($admins as $admin) {
                 $admin->notify(new MemberChangedNotification(
-                    Auth::user()->name . ' updated ' . $changeSummary . ' for ' . $member->name,
-                    '/members?member=' . $member->id
+                    Auth::user()->name.' updated '.$changeSummary.' for '.$member->name,
+                    '/members?member='.$member->id
                 ));
             }
         }

@@ -43,7 +43,7 @@ interface Member {
 }
 
 interface Props {
-    members: Member[];
+    members?: Member[];
 }
 
 interface ListMembersResponse {
@@ -73,7 +73,7 @@ const inputSx = {
     '& input::placeholder': { color: 'rgba(255,255,255,0.5)' },
 };
 
-export default function MembersIndex({ members: initialMembers }: Props) {
+export default function MembersIndex({ members: initialMembers = [] }: Props) {
     const [members, setMembers] = useState(initialMembers);
     const [showAddModal, setShowAddModal] = useState(false);
     const [selectedMember, setSelectedMember] = useState<Member | null>(null);
