@@ -45,6 +45,10 @@ interface Props {
     members: Member[];
 }
 
+interface ListMembersResponse {
+    members: Member[];
+}
+
 interface StoreMemberResponse {
     message: string;
     member: Member;
@@ -90,6 +94,8 @@ export default function MembersIndex({ members: initialMembers }: Props) {
     const [editError, setEditError] = useState<string | null>(null);
     const [editErrors, setEditErrors] = useState<Record<string, string[]>>({});
     const [isUpdatingMember, setIsUpdatingMember] = useState(false);
+    const [isLoadingMembers, setIsLoadingMembers] = useState(false);
+    const [membersError, setMembersError] = useState<string | null>(null);
     const [form, setForm] = useState({
         name: '',
         pool: 'big',
@@ -111,6 +117,38 @@ export default function MembersIndex({ members: initialMembers }: Props) {
     useEffect(() => {
         setMembers(initialMembers);
     }, [initialMembers]);
+
+    useEffect(() => {
+        const loadMembers = async () => {
+            setIsLoadingMembers(true);
+            setMembersError(null);
+
+            try {
+                const response = await fetch('/api/members', {
+                    method: 'GET',
+                    credentials: 'same-origin',
+                    headers: {
+                        Accept: 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest',
+                    },
+                });
+
+                if (!response.ok) {
+                    throw new Error('Unable to load members.');
+                }
+
+                const data = (await response.json()) as ListMembersResponse;
+
+                setMembers(data.members);
+            } catch {
+                setMembersError('Unable to refresh members right now.');
+            } finally {
+                setIsLoadingMembers(false);
+            }
+        };
+
+        void loadMembers();
+    }, []);
 
     useEffect(() => {
         const memberId = new URLSearchParams(window.location.search).get(
@@ -342,7 +380,25 @@ export default function MembersIndex({ members: initialMembers }: Props) {
 
                 {/* Members List */}
                 <DialogContent sx={{ p: 0, overflowY: 'auto' }}>
-                    {filteredMembers.length === 0 ? (
+                    {membersError && (
+                        <Typography
+                            variant="body2"
+                            color="error"
+                            sx={{ textAlign: 'center', mt: 2 }}
+                        >
+                            {membersError}
+                        </Typography>
+                    )}
+
+                    {isLoadingMembers ? (
+                        <Typography
+                            variant="body2"
+                            color="text.secondary"
+                            sx={{ textAlign: 'center', mt: 6 }}
+                        >
+                            Loading members...
+                        </Typography>
+                    ) : filteredMembers.length === 0 ? (
                         <Typography
                             variant="body2"
                             color="text.secondary"

@@ -13,6 +13,13 @@ use Illuminate\Support\Facades\Auth;
 
 class MemberController extends Controller
 {
+    public function index(): JsonResponse
+    {
+        return response()->json([
+            'members' => Member::with('parent')->get(),
+        ]);
+    }
+
     public function store(Request $request): JsonResponse
     {
         $validated = $request->validate([
