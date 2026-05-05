@@ -36,13 +36,18 @@ interface Member {
     parent: {
         id: number;
         name: string;
-        email: string;
+        email: string | null;
         phone: string;
     };
 }
 
 interface Props {
     members: Member[];
+}
+
+interface StoreMemberResponse {
+    message: string;
+    member: Member;
 }
 
 const darkTheme = createTheme({
@@ -58,11 +63,19 @@ const inputSx = {
     '& input::placeholder': { color: 'rgba(255,255,255,0.5)' },
 };
 
-export default function MembersIndex({ members }: Props) {
+const getCsrfToken = () =>
+    document
+        .querySelector<HTMLMetaElement>('meta[name="csrf-token"]')
+        ?.getAttribute('content') ?? '';
+
+export default function MembersIndex({ members: initialMembers }: Props) {
+    const [members, setMembers] = useState(initialMembers);
     const [showAddModal, setShowAddModal] = useState(false);
     const [selectedMember, setSelectedMember] = useState<Member | null>(null);
     const [editMember, setEditMember] = useState<Member | null>(null);
     const [search, setSearch] = useState('');
+    const [addError, setAddError] = useState<string | null>(null);
+    const [isAddingMember, setIsAddingMember] = useState(false);
     const [form, setForm] = useState({
         name: '',
         pool: 'big',
@@ -80,6 +93,10 @@ export default function MembersIndex({ members }: Props) {
         parent_email: '',
         parent_phone: '',
     });
+
+    useEffect(() => {
+        setMembers(initialMembers);
+    }, [initialMembers]);
 
     useEffect(() => {
         const memberId = new URLSearchParams(window.location.search).get(
@@ -120,21 +137,47 @@ export default function MembersIndex({ members }: Props) {
             .toUpperCase()
             .slice(0, 2);
 
-    const handleAddSubmit = (e: React.FormEvent) => {
+    const handleAddSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        router.post('/members', form, {
-            onSuccess: () => {
-                setShowAddModal(false);
-                setForm({
-                    name: '',
-                    pool: 'big',
-                    status: 'active',
-                    parent_name: '',
-                    parent_email: '',
-                    parent_phone: '',
-                });
-            },
-        });
+        setAddError(null);
+        setIsAddingMember(true);
+
+        try {
+            const response = await fetch('/api/members', {
+                method: 'POST',
+                credentials: 'same-origin',
+                headers: {
+                    Accept: 'application/json',
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': getCsrfToken(),
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+                body: JSON.stringify(form),
+            });
+
+            if (!response.ok) {
+                throw new Error('Unable to save member.');
+            }
+
+            const data = (await response.json()) as StoreMemberResponse;
+
+            setMembers((currentMembers) => [...currentMembers, data.member]);
+            setShowAddModal(false);
+            setForm({
+                name: '',
+                pool: 'big',
+                status: 'active',
+                parent_name: '',
+                parent_email: '',
+                parent_phone: '',
+            });
+        } catch {
+            setAddError(
+                'Unable to save member. Please check the form and try again.',
+            );
+        } finally {
+            setIsAddingMember(false);
+        }
     };
 
     const handleEditClick = (e: React.MouseEvent, member: Member) => {
@@ -726,6 +769,12 @@ export default function MembersIndex({ members }: Props) {
                                 Parent Info
                             </Typography>
 
+                            {addError && (
+                                <Typography color="error" variant="body2">
+                                    {addError}
+                                </Typography>
+                            )}
+
                             <Input
                                 placeholder="Enter parent's full name"
                                 value={form.parent_name}
@@ -775,8 +824,11 @@ export default function MembersIndex({ members }: Props) {
                                     variant="contained"
                                     fullWidth
                                     size="medium"
+                                    disabled={isAddingMember}
                                 >
-                                    Save Member
+                                    {isAddingMember
+                                        ? 'Saving...'
+                                        : 'Save Member'}
                                 </Button>
                                 <Button
                                     type="button"
