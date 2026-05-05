@@ -50,6 +50,11 @@ interface StoreMemberResponse {
     member: Member;
 }
 
+interface ValidationErrorResponse {
+    message?: string;
+    errors?: Record<string, string[]>;
+}
+
 const darkTheme = createTheme({
     palette: { mode: 'dark' },
 });
@@ -75,6 +80,7 @@ export default function MembersIndex({ members: initialMembers }: Props) {
     const [editMember, setEditMember] = useState<Member | null>(null);
     const [search, setSearch] = useState('');
     const [addError, setAddError] = useState<string | null>(null);
+    const [addErrors, setAddErrors] = useState<Record<string, string[]>>({});
     const [isAddingMember, setIsAddingMember] = useState(false);
     const [form, setForm] = useState({
         name: '',
@@ -140,6 +146,7 @@ export default function MembersIndex({ members: initialMembers }: Props) {
     const handleAddSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setAddError(null);
+        setAddErrors({});
         setIsAddingMember(true);
 
         try {
@@ -154,6 +161,15 @@ export default function MembersIndex({ members: initialMembers }: Props) {
                 },
                 body: JSON.stringify(form),
             });
+
+            if (response.status === 422) {
+                const data = (await response.json()) as ValidationErrorResponse;
+
+                setAddErrors(data.errors ?? {});
+                setAddError(data.message ?? 'Please check the form.');
+
+                return;
+            }
 
             if (!response.ok) {
                 throw new Error('Unable to save member.');
@@ -720,6 +736,11 @@ export default function MembersIndex({ members: initialMembers }: Props) {
                                 inputProps={{ 'aria-label': 'swimmer name' }}
                                 sx={inputSx}
                             />
+                            {addErrors.name?.[0] && (
+                                <Typography color="error" variant="caption">
+                                    {addErrors.name[0]}
+                                </Typography>
+                            )}
 
                             <FormControl fullWidth>
                                 <InputLabel
@@ -755,6 +776,11 @@ export default function MembersIndex({ members: initialMembers }: Props) {
                                     </MenuItem>
                                 </Select>
                             </FormControl>
+                            {addErrors.pool?.[0] && (
+                                <Typography color="error" variant="caption">
+                                    {addErrors.pool[0]}
+                                </Typography>
+                            )}
 
                             <Divider />
 
@@ -789,6 +815,11 @@ export default function MembersIndex({ members: initialMembers }: Props) {
                                 inputProps={{ 'aria-label': 'parent name' }}
                                 sx={inputSx}
                             />
+                            {addErrors.parent_name?.[0] && (
+                                <Typography color="error" variant="caption">
+                                    {addErrors.parent_name[0]}
+                                </Typography>
+                            )}
                             <Input
                                 type="email"
                                 placeholder="Enter parent's email (optional)"
@@ -803,6 +834,11 @@ export default function MembersIndex({ members: initialMembers }: Props) {
                                 inputProps={{ 'aria-label': 'parent email' }}
                                 sx={inputSx}
                             />
+                            {addErrors.parent_email?.[0] && (
+                                <Typography color="error" variant="caption">
+                                    {addErrors.parent_email[0]}
+                                </Typography>
+                            )}
                             <Input
                                 placeholder="Enter parent's phone number"
                                 value={form.parent_phone}
@@ -817,6 +853,11 @@ export default function MembersIndex({ members: initialMembers }: Props) {
                                 inputProps={{ 'aria-label': 'parent phone' }}
                                 sx={inputSx}
                             />
+                            {addErrors.parent_phone?.[0] && (
+                                <Typography color="error" variant="caption">
+                                    {addErrors.parent_phone[0]}
+                                </Typography>
+                            )}
 
                             <div className="flex gap-3">
                                 <Button
