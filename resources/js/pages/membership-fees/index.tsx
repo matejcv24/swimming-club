@@ -27,6 +27,7 @@ import Typography from '@mui/material/Typography';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
+import { apiRequest } from '@/lib/api';
 import dayjs from 'dayjs';
 import type { Dayjs } from 'dayjs';
 import { useCallback, useEffect, useMemo, useState } from 'react';
@@ -63,9 +64,19 @@ interface MonthGroup {
 }
 
 interface Props {
+    members?: Member[];
+    allFees?: Fee[];
+    userRole?: 'admin' | 'coach';
+}
+
+interface ListMembershipFeesResponse {
     members: Member[];
     allFees: Fee[];
     userRole: 'admin' | 'coach';
+}
+
+interface MemberFeesResponse {
+    fees: Fee[];
 }
 
 const darkTheme = createTheme({
@@ -123,13 +134,18 @@ const formatCurrency = (value: number): string => {
 };
 
 export default function MembershipFeesIndex({
-    members,
-    allFees,
-    userRole,
+    members: initialMembers = [],
+    allFees: initialAllFees = [],
+    userRole: initialUserRole = 'coach',
 }: Props) {
+    const [members, setMembers] = useState(initialMembers);
+    const [allFees, setAllFees] = useState(initialAllFees);
+    const [userRole, setUserRole] = useState(initialUserRole);
     const [selectedMember, setSelectedMember] = useState<Member | null>(null);
     const [fees, setFees] = useState<Fee[]>([]);
     const [loadingFees, setLoadingFees] = useState(false);
+    const [loadingPageData, setLoadingPageData] = useState(false);
+    const [pageDataError, setPageDataError] = useState<string | null>(null);
     const [amount, setAmount] = useState('');
     const [paymentMethod, setPaymentMethod] = useState<'cash' | 'card'>('cash');
     const [startDate, setStartDate] = useState<Dayjs | null>(null);
@@ -205,6 +221,29 @@ export default function MembershipFeesIndex({
         ? groupedFeesByMonth[selectedMonth]
         : null;
 
+    useEffect(() => {
+        const loadPageData = async () => {
+            setLoadingPageData(true);
+            setPageDataError(null);
+
+            try {
+                const data = await apiRequest<ListMembershipFeesResponse>(
+                    '/api/membership-fees',
+                );
+
+                setMembers(data.members);
+                setAllFees(data.allFees);
+                setUserRole(data.userRole);
+            } catch {
+                setPageDataError('Unable to refresh membership fee data.');
+            } finally {
+                setLoadingPageData(false);
+            }
+        };
+
+        void loadPageData();
+    }, []);
+
     const handleMemberSelect = useCallback(async (member: Member | null) => {
         setSelectedMember(member);
         setFees([]);
@@ -216,10 +255,9 @@ export default function MembershipFeesIndex({
         setLoadingFees(true);
 
         try {
-            const response = await fetch(
-                `/membership-fees/by-member/${member.id}`,
+            const data = await apiRequest<MemberFeesResponse>(
+                `/api/membership-fees/by-member/${member.id}`,
             );
-            const data = await response.json();
             setFees(data.fees ?? []);
         } catch {
             setFees([]);
@@ -318,6 +356,18 @@ export default function MembershipFeesIndex({
 
                 <DialogContent sx={{ overflowY: 'auto' }}>
                     <div className="flex flex-col gap-6 py-4">
+                        {pageDataError && (
+                            <Typography color="error" variant="body2">
+                                {pageDataError}
+                            </Typography>
+                        )}
+
+                        {loadingPageData && (
+                            <Typography variant="body2" color="text.secondary">
+                                Loading membership data...
+                            </Typography>
+                        )}
+
                         <Autocomplete
                             options={members}
                             getOptionLabel={(m) => m.name}
