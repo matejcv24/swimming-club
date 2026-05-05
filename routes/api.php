@@ -26,6 +26,7 @@ Route::middleware(['web', 'auth', 'verified'])->group(function () {
 Route::middleware(['web', 'auth'])->group(function () {
     Route::get('/settings/profile', [ProfileController::class, 'show'])->name('api.profile.show');
     Route::patch('/settings/profile', [ProfileController::class, 'update'])->name('api.profile.update');
+    Route::delete('/settings/profile', [ProfileController::class, 'destroy'])->name('api.profile.destroy');
 });
 
 Route::middleware(['web', 'auth', 'verified'])->group(function () {
