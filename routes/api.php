@@ -5,6 +5,7 @@ use App\Http\Controllers\Api\InvoiceController;
 use App\Http\Controllers\Api\MemberController;
 use App\Http\Controllers\Api\MembershipFeeController;
 use App\Http\Controllers\Api\NotificationController;
+use App\Http\Controllers\Api\ProfitController;
 use App\Http\Controllers\Api\SalaryController;
 use App\Http\Controllers\Api\StaffController;
 use App\Http\Controllers\Api\TrainingController;
@@ -29,6 +30,8 @@ Route::middleware(['web', 'auth', 'verified', 'role:admin'])->group(function () 
     Route::get('/invoices/by-month/{month}', [InvoiceController::class, 'getByMonth'])->name('api.invoices.byMonth');
     Route::put('/invoices/{invoice}', [InvoiceController::class, 'update'])->name('api.invoices.update');
     Route::delete('/invoices/{invoice}', [InvoiceController::class, 'destroy'])->name('api.invoices.destroy');
+
+    Route::get('/profit', [ProfitController::class, 'index'])->name('api.profit.index');
 });
 
 Route::middleware(['web', 'auth', 'verified', 'role:admin,coach'])->group(function () {

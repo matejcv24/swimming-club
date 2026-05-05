@@ -3,11 +3,11 @@ import {
     type RouteQueryOptions,
     type RouteDefinition,
     type RouteFormDefinition,
-} from './../../../../wayfinder';
+} from './../../../../../wayfinder';
 /**
- * @see \App\Http\Controllers\ProfitController::index
- * @see app/Http/Controllers/ProfitController.php:7
- * @route '/profit'
+ * @see \App\Http\Controllers\Api\ProfitController::index
+ * @see app/Http/Controllers/Api/ProfitController.php:14
+ * @route '/api/profit'
  */
 export const index = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
     url: index.url(options),
@@ -16,31 +16,31 @@ export const index = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
 
 index.definition = {
     methods: ['get', 'head'],
-    url: '/profit',
+    url: '/api/profit',
 } satisfies RouteDefinition<['get', 'head']>;
 
 /**
- * @see \App\Http\Controllers\ProfitController::index
- * @see app/Http/Controllers/ProfitController.php:7
- * @route '/profit'
+ * @see \App\Http\Controllers\Api\ProfitController::index
+ * @see app/Http/Controllers/Api/ProfitController.php:14
+ * @route '/api/profit'
  */
 index.url = (options?: RouteQueryOptions) => {
     return index.definition.url + queryParams(options);
 };
 
 /**
- * @see \App\Http\Controllers\ProfitController::index
- * @see app/Http/Controllers/ProfitController.php:7
- * @route '/profit'
+ * @see \App\Http\Controllers\Api\ProfitController::index
+ * @see app/Http/Controllers/Api/ProfitController.php:14
+ * @route '/api/profit'
  */
 index.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
     url: index.url(options),
     method: 'get',
 });
 /**
- * @see \App\Http\Controllers\ProfitController::index
- * @see app/Http/Controllers/ProfitController.php:7
- * @route '/profit'
+ * @see \App\Http\Controllers\Api\ProfitController::index
+ * @see app/Http/Controllers/Api/ProfitController.php:14
+ * @route '/api/profit'
  */
 index.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     url: index.url(options),
@@ -48,9 +48,9 @@ index.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 });
 
 /**
- * @see \App\Http\Controllers\ProfitController::index
- * @see app/Http/Controllers/ProfitController.php:7
- * @route '/profit'
+ * @see \App\Http\Controllers\Api\ProfitController::index
+ * @see app/Http/Controllers/Api/ProfitController.php:14
+ * @route '/api/profit'
  */
 const indexForm = (
     options?: RouteQueryOptions,
@@ -60,18 +60,18 @@ const indexForm = (
 });
 
 /**
- * @see \App\Http\Controllers\ProfitController::index
- * @see app/Http/Controllers/ProfitController.php:7
- * @route '/profit'
+ * @see \App\Http\Controllers\Api\ProfitController::index
+ * @see app/Http/Controllers/Api/ProfitController.php:14
+ * @route '/api/profit'
  */
 indexForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
     action: index.url(options),
     method: 'get',
 });
 /**
- * @see \App\Http\Controllers\ProfitController::index
- * @see app/Http/Controllers/ProfitController.php:7
- * @route '/profit'
+ * @see \App\Http\Controllers\Api\ProfitController::index
+ * @see app/Http/Controllers/Api/ProfitController.php:14
+ * @route '/api/profit'
  */
 indexForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
     action: index.url({

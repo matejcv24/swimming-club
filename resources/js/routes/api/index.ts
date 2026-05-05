@@ -2,6 +2,7 @@ import notifications from './notifications';
 import staff from './staff';
 import salaries from './salaries';
 import invoices from './invoices';
+import profit from './profit';
 import attendance from './attendance';
 import members from './members';
 import membershipFees from './membership-fees';
@@ -12,6 +13,7 @@ const api = {
     staff: Object.assign(staff, staff),
     salaries: Object.assign(salaries, salaries),
     invoices: Object.assign(invoices, invoices),
+    profit: Object.assign(profit, profit),
     attendance: Object.assign(attendance, attendance),
     members: Object.assign(members, members),
     membershipFees: Object.assign(membershipFees, membershipFees),

@@ -10,8 +10,9 @@ import List from '@mui/material/List';
 import ListItem from '@mui/material/ListItem';
 import { createTheme, ThemeProvider } from '@mui/material/styles';
 import Typography from '@mui/material/Typography';
+import { apiRequest } from '@/lib/api';
 import dayjs from 'dayjs';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 interface ProfitRow {
     month: string;
@@ -22,6 +23,10 @@ interface ProfitRow {
 }
 
 interface Props {
+    profits?: ProfitRow[];
+}
+
+interface ListProfitsResponse {
     profits: ProfitRow[];
 }
 
@@ -44,10 +49,33 @@ const formatCurrency = (value: number): string => {
     }).format(value);
 };
 
-export default function ProfitIndex({ profits }: Props) {
+export default function ProfitIndex({ profits: initialProfits = [] }: Props) {
+    const [profits, setProfits] = useState(initialProfits);
     const [showHistoryModal, setShowHistoryModal] = useState(false);
     const [showYearDetailModal, setShowYearDetailModal] = useState(false);
     const [selectedYear, setSelectedYear] = useState<string | null>(null);
+    const [isLoadingProfits, setIsLoadingProfits] = useState(false);
+    const [profitError, setProfitError] = useState<string | null>(null);
+
+    useEffect(() => {
+        const loadProfits = async () => {
+            setIsLoadingProfits(true);
+            setProfitError(null);
+
+            try {
+                const data =
+                    await apiRequest<ListProfitsResponse>('/api/profit');
+
+                setProfits(data.profits);
+            } catch {
+                setProfitError('Unable to refresh profit data right now.');
+            } finally {
+                setIsLoadingProfits(false);
+            }
+        };
+
+        void loadProfits();
+    }, []);
 
     const groupedProfits: Record<string, ProfitRow> = {};
     profits.forEach((row) => {
@@ -144,7 +172,20 @@ export default function ProfitIndex({ profits }: Props) {
                                 Profit History By Month
                             </Typography>
 
-                            {currentYearLastProfit ? (
+                            {profitError && (
+                                <Typography variant="body2" color="error">
+                                    {profitError}
+                                </Typography>
+                            )}
+
+                            {isLoadingProfits ? (
+                                <Typography
+                                    variant="body2"
+                                    color="text.secondary"
+                                >
+                                    Loading profit...
+                                </Typography>
+                            ) : currentYearLastProfit ? (
                                 <List disablePadding>
                                     <ListItem
                                         divider
@@ -258,7 +299,14 @@ export default function ProfitIndex({ profits }: Props) {
                                 Profit History By Year
                             </Typography>
 
-                            {sortedYears.length > 0 ? (
+                            {isLoadingProfits ? (
+                                <Typography
+                                    variant="body2"
+                                    color="text.secondary"
+                                >
+                                    Loading profit...
+                                </Typography>
+                            ) : sortedYears.length > 0 ? (
                                 <List disablePadding>
                                     {sortedYears.map((year) => (
                                         <ListItem
