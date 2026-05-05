@@ -3,7 +3,6 @@ import StaffController from './StaffController';
 import AdminController from './AdminController';
 import NotificationController from './NotificationController';
 import MemberController from './MemberController';
-import ClubParentController from './ClubParentController';
 import AttendanceController from './AttendanceController';
 import TrainingController from './TrainingController';
 import MembershipFeeController from './MembershipFeeController';
@@ -19,10 +18,6 @@ const Controllers = {
         NotificationController,
     ),
     MemberController: Object.assign(MemberController, MemberController),
-    ClubParentController: Object.assign(
-        ClubParentController,
-        ClubParentController,
-    ),
     AttendanceController: Object.assign(
         AttendanceController,
         AttendanceController,
