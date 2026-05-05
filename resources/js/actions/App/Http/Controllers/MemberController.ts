@@ -1,600 +1,89 @@
-import { queryParams, type RouteQueryOptions, type RouteDefinition, type RouteFormDefinition, applyUrlDefaults } from './../../../../wayfinder'
+import {
+    queryParams,
+    type RouteQueryOptions,
+    type RouteDefinition,
+    type RouteFormDefinition,
+} from './../../../../wayfinder';
 /**
-* @see \App\Http\Controllers\MemberController::index
- * @see app/Http/Controllers/MemberController.php:12
+ * @see \App\Http\Controllers\MemberController::index
+ * @see app/Http/Controllers/MemberController.php:7
  * @route '/members'
  */
 export const index = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
     url: index.url(options),
     method: 'get',
-})
+});
 
 index.definition = {
-    methods: ["get","head"],
+    methods: ['get', 'head'],
     url: '/members',
-} satisfies RouteDefinition<["get","head"]>
+} satisfies RouteDefinition<['get', 'head']>;
 
 /**
-* @see \App\Http\Controllers\MemberController::index
- * @see app/Http/Controllers/MemberController.php:12
+ * @see \App\Http\Controllers\MemberController::index
+ * @see app/Http/Controllers/MemberController.php:7
  * @route '/members'
  */
 index.url = (options?: RouteQueryOptions) => {
-    return index.definition.url + queryParams(options)
-}
+    return index.definition.url + queryParams(options);
+};
 
 /**
-* @see \App\Http\Controllers\MemberController::index
- * @see app/Http/Controllers/MemberController.php:12
+ * @see \App\Http\Controllers\MemberController::index
+ * @see app/Http/Controllers/MemberController.php:7
  * @route '/members'
  */
 index.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
     url: index.url(options),
     method: 'get',
-})
+});
 /**
-* @see \App\Http\Controllers\MemberController::index
- * @see app/Http/Controllers/MemberController.php:12
+ * @see \App\Http\Controllers\MemberController::index
+ * @see app/Http/Controllers/MemberController.php:7
  * @route '/members'
  */
 index.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     url: index.url(options),
     method: 'head',
-})
+});
 
-    /**
-* @see \App\Http\Controllers\MemberController::index
- * @see app/Http/Controllers/MemberController.php:12
- * @route '/members'
- */
-    const indexForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
-        action: index.url(options),
-        method: 'get',
-    })
-
-            /**
-* @see \App\Http\Controllers\MemberController::index
- * @see app/Http/Controllers/MemberController.php:12
- * @route '/members'
- */
-        indexForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
-            action: index.url(options),
-            method: 'get',
-        })
-            /**
-* @see \App\Http\Controllers\MemberController::index
- * @see app/Http/Controllers/MemberController.php:12
- * @route '/members'
- */
-        indexForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
-            action: index.url({
-                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
-                            _method: 'HEAD',
-                            ...(options?.query ?? options?.mergeQuery ?? {}),
-                        }
-                    }),
-            method: 'get',
-        })
-    
-    index.form = indexForm
 /**
-* @see \App\Http\Controllers\MemberController::create
- * @see app/Http/Controllers/MemberController.php:20
- * @route '/members/create'
+ * @see \App\Http\Controllers\MemberController::index
+ * @see app/Http/Controllers/MemberController.php:7
+ * @route '/members'
  */
-export const create = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
-    url: create.url(options),
+const indexForm = (
+    options?: RouteQueryOptions,
+): RouteFormDefinition<'get'> => ({
+    action: index.url(options),
     method: 'get',
-})
-
-create.definition = {
-    methods: ["get","head"],
-    url: '/members/create',
-} satisfies RouteDefinition<["get","head"]>
+});
 
 /**
-* @see \App\Http\Controllers\MemberController::create
- * @see app/Http/Controllers/MemberController.php:20
- * @route '/members/create'
- */
-create.url = (options?: RouteQueryOptions) => {
-    return create.definition.url + queryParams(options)
-}
-
-/**
-* @see \App\Http\Controllers\MemberController::create
- * @see app/Http/Controllers/MemberController.php:20
- * @route '/members/create'
- */
-create.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
-    url: create.url(options),
-    method: 'get',
-})
-/**
-* @see \App\Http\Controllers\MemberController::create
- * @see app/Http/Controllers/MemberController.php:20
- * @route '/members/create'
- */
-create.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
-    url: create.url(options),
-    method: 'head',
-})
-
-    /**
-* @see \App\Http\Controllers\MemberController::create
- * @see app/Http/Controllers/MemberController.php:20
- * @route '/members/create'
- */
-    const createForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
-        action: create.url(options),
-        method: 'get',
-    })
-
-            /**
-* @see \App\Http\Controllers\MemberController::create
- * @see app/Http/Controllers/MemberController.php:20
- * @route '/members/create'
- */
-        createForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
-            action: create.url(options),
-            method: 'get',
-        })
-            /**
-* @see \App\Http\Controllers\MemberController::create
- * @see app/Http/Controllers/MemberController.php:20
- * @route '/members/create'
- */
-        createForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
-            action: create.url({
-                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
-                            _method: 'HEAD',
-                            ...(options?.query ?? options?.mergeQuery ?? {}),
-                        }
-                    }),
-            method: 'get',
-        })
-    
-    create.form = createForm
-/**
-* @see \App\Http\Controllers\MemberController::store
- * @see app/Http/Controllers/MemberController.php:28
+ * @see \App\Http\Controllers\MemberController::index
+ * @see app/Http/Controllers/MemberController.php:7
  * @route '/members'
  */
-export const store = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
-    url: store.url(options),
-    method: 'post',
-})
-
-store.definition = {
-    methods: ["post"],
-    url: '/members',
-} satisfies RouteDefinition<["post"]>
-
+indexForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+    action: index.url(options),
+    method: 'get',
+});
 /**
-* @see \App\Http\Controllers\MemberController::store
- * @see app/Http/Controllers/MemberController.php:28
+ * @see \App\Http\Controllers\MemberController::index
+ * @see app/Http/Controllers/MemberController.php:7
  * @route '/members'
  */
-store.url = (options?: RouteQueryOptions) => {
-    return store.definition.url + queryParams(options)
-}
-
-/**
-* @see \App\Http\Controllers\MemberController::store
- * @see app/Http/Controllers/MemberController.php:28
- * @route '/members'
- */
-store.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
-    url: store.url(options),
-    method: 'post',
-})
-
-    /**
-* @see \App\Http\Controllers\MemberController::store
- * @see app/Http/Controllers/MemberController.php:28
- * @route '/members'
- */
-    const storeForm = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
-        action: store.url(options),
-        method: 'post',
-    })
-
-            /**
-* @see \App\Http\Controllers\MemberController::store
- * @see app/Http/Controllers/MemberController.php:28
- * @route '/members'
- */
-        storeForm.post = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
-            action: store.url(options),
-            method: 'post',
-        })
-    
-    store.form = storeForm
-/**
-* @see \App\Http\Controllers\MemberController::show
- * @see app/Http/Controllers/MemberController.php:36
- * @route '/members/{member}'
- */
-export const show = (args: { member: string | number } | [member: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
-    url: show.url(args, options),
+indexForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+    action: index.url({
+        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+            _method: 'HEAD',
+            ...(options?.query ?? options?.mergeQuery ?? {}),
+        },
+    }),
     method: 'get',
-})
+});
 
-show.definition = {
-    methods: ["get","head"],
-    url: '/members/{member}',
-} satisfies RouteDefinition<["get","head"]>
+index.form = indexForm;
+const MemberController = { index };
 
-/**
-* @see \App\Http\Controllers\MemberController::show
- * @see app/Http/Controllers/MemberController.php:36
- * @route '/members/{member}'
- */
-show.url = (args: { member: string | number } | [member: string | number ] | string | number, options?: RouteQueryOptions) => {
-    if (typeof args === 'string' || typeof args === 'number') {
-        args = { member: args }
-    }
-
-    
-    if (Array.isArray(args)) {
-        args = {
-                    member: args[0],
-                }
-    }
-
-    args = applyUrlDefaults(args)
-
-    const parsedArgs = {
-                        member: args.member,
-                }
-
-    return show.definition.url
-            .replace('{member}', parsedArgs.member.toString())
-            .replace(/\/+$/, '') + queryParams(options)
-}
-
-/**
-* @see \App\Http\Controllers\MemberController::show
- * @see app/Http/Controllers/MemberController.php:36
- * @route '/members/{member}'
- */
-show.get = (args: { member: string | number } | [member: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
-    url: show.url(args, options),
-    method: 'get',
-})
-/**
-* @see \App\Http\Controllers\MemberController::show
- * @see app/Http/Controllers/MemberController.php:36
- * @route '/members/{member}'
- */
-show.head = (args: { member: string | number } | [member: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'head'> => ({
-    url: show.url(args, options),
-    method: 'head',
-})
-
-    /**
-* @see \App\Http\Controllers\MemberController::show
- * @see app/Http/Controllers/MemberController.php:36
- * @route '/members/{member}'
- */
-    const showForm = (args: { member: string | number } | [member: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
-        action: show.url(args, options),
-        method: 'get',
-    })
-
-            /**
-* @see \App\Http\Controllers\MemberController::show
- * @see app/Http/Controllers/MemberController.php:36
- * @route '/members/{member}'
- */
-        showForm.get = (args: { member: string | number } | [member: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
-            action: show.url(args, options),
-            method: 'get',
-        })
-            /**
-* @see \App\Http\Controllers\MemberController::show
- * @see app/Http/Controllers/MemberController.php:36
- * @route '/members/{member}'
- */
-        showForm.head = (args: { member: string | number } | [member: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
-            action: show.url(args, {
-                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
-                            _method: 'HEAD',
-                            ...(options?.query ?? options?.mergeQuery ?? {}),
-                        }
-                    }),
-            method: 'get',
-        })
-    
-    show.form = showForm
-/**
-* @see \App\Http\Controllers\MemberController::edit
- * @see app/Http/Controllers/MemberController.php:44
- * @route '/members/{member}/edit'
- */
-export const edit = (args: { member: string | number } | [member: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
-    url: edit.url(args, options),
-    method: 'get',
-})
-
-edit.definition = {
-    methods: ["get","head"],
-    url: '/members/{member}/edit',
-} satisfies RouteDefinition<["get","head"]>
-
-/**
-* @see \App\Http\Controllers\MemberController::edit
- * @see app/Http/Controllers/MemberController.php:44
- * @route '/members/{member}/edit'
- */
-edit.url = (args: { member: string | number } | [member: string | number ] | string | number, options?: RouteQueryOptions) => {
-    if (typeof args === 'string' || typeof args === 'number') {
-        args = { member: args }
-    }
-
-    
-    if (Array.isArray(args)) {
-        args = {
-                    member: args[0],
-                }
-    }
-
-    args = applyUrlDefaults(args)
-
-    const parsedArgs = {
-                        member: args.member,
-                }
-
-    return edit.definition.url
-            .replace('{member}', parsedArgs.member.toString())
-            .replace(/\/+$/, '') + queryParams(options)
-}
-
-/**
-* @see \App\Http\Controllers\MemberController::edit
- * @see app/Http/Controllers/MemberController.php:44
- * @route '/members/{member}/edit'
- */
-edit.get = (args: { member: string | number } | [member: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
-    url: edit.url(args, options),
-    method: 'get',
-})
-/**
-* @see \App\Http\Controllers\MemberController::edit
- * @see app/Http/Controllers/MemberController.php:44
- * @route '/members/{member}/edit'
- */
-edit.head = (args: { member: string | number } | [member: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'head'> => ({
-    url: edit.url(args, options),
-    method: 'head',
-})
-
-    /**
-* @see \App\Http\Controllers\MemberController::edit
- * @see app/Http/Controllers/MemberController.php:44
- * @route '/members/{member}/edit'
- */
-    const editForm = (args: { member: string | number } | [member: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
-        action: edit.url(args, options),
-        method: 'get',
-    })
-
-            /**
-* @see \App\Http\Controllers\MemberController::edit
- * @see app/Http/Controllers/MemberController.php:44
- * @route '/members/{member}/edit'
- */
-        editForm.get = (args: { member: string | number } | [member: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
-            action: edit.url(args, options),
-            method: 'get',
-        })
-            /**
-* @see \App\Http\Controllers\MemberController::edit
- * @see app/Http/Controllers/MemberController.php:44
- * @route '/members/{member}/edit'
- */
-        editForm.head = (args: { member: string | number } | [member: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
-            action: edit.url(args, {
-                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
-                            _method: 'HEAD',
-                            ...(options?.query ?? options?.mergeQuery ?? {}),
-                        }
-                    }),
-            method: 'get',
-        })
-    
-    edit.form = editForm
-/**
-* @see \App\Http\Controllers\MemberController::update
- * @see app/Http/Controllers/MemberController.php:52
- * @route '/members/{member}'
- */
-export const update = (args: { member: string | number } | [member: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'put'> => ({
-    url: update.url(args, options),
-    method: 'put',
-})
-
-update.definition = {
-    methods: ["put","patch"],
-    url: '/members/{member}',
-} satisfies RouteDefinition<["put","patch"]>
-
-/**
-* @see \App\Http\Controllers\MemberController::update
- * @see app/Http/Controllers/MemberController.php:52
- * @route '/members/{member}'
- */
-update.url = (args: { member: string | number } | [member: string | number ] | string | number, options?: RouteQueryOptions) => {
-    if (typeof args === 'string' || typeof args === 'number') {
-        args = { member: args }
-    }
-
-    
-    if (Array.isArray(args)) {
-        args = {
-                    member: args[0],
-                }
-    }
-
-    args = applyUrlDefaults(args)
-
-    const parsedArgs = {
-                        member: args.member,
-                }
-
-    return update.definition.url
-            .replace('{member}', parsedArgs.member.toString())
-            .replace(/\/+$/, '') + queryParams(options)
-}
-
-/**
-* @see \App\Http\Controllers\MemberController::update
- * @see app/Http/Controllers/MemberController.php:52
- * @route '/members/{member}'
- */
-update.put = (args: { member: string | number } | [member: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'put'> => ({
-    url: update.url(args, options),
-    method: 'put',
-})
-/**
-* @see \App\Http\Controllers\MemberController::update
- * @see app/Http/Controllers/MemberController.php:52
- * @route '/members/{member}'
- */
-update.patch = (args: { member: string | number } | [member: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'patch'> => ({
-    url: update.url(args, options),
-    method: 'patch',
-})
-
-    /**
-* @see \App\Http\Controllers\MemberController::update
- * @see app/Http/Controllers/MemberController.php:52
- * @route '/members/{member}'
- */
-    const updateForm = (args: { member: string | number } | [member: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
-        action: update.url(args, {
-                    [options?.mergeQuery ? 'mergeQuery' : 'query']: {
-                        _method: 'PUT',
-                        ...(options?.query ?? options?.mergeQuery ?? {}),
-                    }
-                }),
-        method: 'post',
-    })
-
-            /**
-* @see \App\Http\Controllers\MemberController::update
- * @see app/Http/Controllers/MemberController.php:52
- * @route '/members/{member}'
- */
-        updateForm.put = (args: { member: string | number } | [member: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
-            action: update.url(args, {
-                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
-                            _method: 'PUT',
-                            ...(options?.query ?? options?.mergeQuery ?? {}),
-                        }
-                    }),
-            method: 'post',
-        })
-            /**
-* @see \App\Http\Controllers\MemberController::update
- * @see app/Http/Controllers/MemberController.php:52
- * @route '/members/{member}'
- */
-        updateForm.patch = (args: { member: string | number } | [member: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
-            action: update.url(args, {
-                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
-                            _method: 'PATCH',
-                            ...(options?.query ?? options?.mergeQuery ?? {}),
-                        }
-                    }),
-            method: 'post',
-        })
-    
-    update.form = updateForm
-/**
-* @see \App\Http\Controllers\MemberController::destroy
- * @see app/Http/Controllers/MemberController.php:60
- * @route '/members/{member}'
- */
-export const destroy = (args: { member: string | number } | [member: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'delete'> => ({
-    url: destroy.url(args, options),
-    method: 'delete',
-})
-
-destroy.definition = {
-    methods: ["delete"],
-    url: '/members/{member}',
-} satisfies RouteDefinition<["delete"]>
-
-/**
-* @see \App\Http\Controllers\MemberController::destroy
- * @see app/Http/Controllers/MemberController.php:60
- * @route '/members/{member}'
- */
-destroy.url = (args: { member: string | number } | [member: string | number ] | string | number, options?: RouteQueryOptions) => {
-    if (typeof args === 'string' || typeof args === 'number') {
-        args = { member: args }
-    }
-
-    
-    if (Array.isArray(args)) {
-        args = {
-                    member: args[0],
-                }
-    }
-
-    args = applyUrlDefaults(args)
-
-    const parsedArgs = {
-                        member: args.member,
-                }
-
-    return destroy.definition.url
-            .replace('{member}', parsedArgs.member.toString())
-            .replace(/\/+$/, '') + queryParams(options)
-}
-
-/**
-* @see \App\Http\Controllers\MemberController::destroy
- * @see app/Http/Controllers/MemberController.php:60
- * @route '/members/{member}'
- */
-destroy.delete = (args: { member: string | number } | [member: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'delete'> => ({
-    url: destroy.url(args, options),
-    method: 'delete',
-})
-
-    /**
-* @see \App\Http\Controllers\MemberController::destroy
- * @see app/Http/Controllers/MemberController.php:60
- * @route '/members/{member}'
- */
-    const destroyForm = (args: { member: string | number } | [member: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
-        action: destroy.url(args, {
-                    [options?.mergeQuery ? 'mergeQuery' : 'query']: {
-                        _method: 'DELETE',
-                        ...(options?.query ?? options?.mergeQuery ?? {}),
-                    }
-                }),
-        method: 'post',
-    })
-
-            /**
-* @see \App\Http\Controllers\MemberController::destroy
- * @see app/Http/Controllers/MemberController.php:60
- * @route '/members/{member}'
- */
-        destroyForm.delete = (args: { member: string | number } | [member: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
-            action: destroy.url(args, {
-                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
-                            _method: 'DELETE',
-                            ...(options?.query ?? options?.mergeQuery ?? {}),
-                        }
-                    }),
-            method: 'post',
-        })
-    
-    destroy.form = destroyForm
-const MemberController = { index, create, store, show, edit, update, destroy }
-
-export default MemberController
+export default MemberController;
