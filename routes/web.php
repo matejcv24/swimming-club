@@ -38,8 +38,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('/parents', [ClubParentController::class, 'store'])->name('parents.store');
         Route::get('/attendance', [AttendanceController::class, 'index'])->name('attendance.index');
 
-        Route::get('/trainings/by-date', [TrainingController::class, 'getByDate'])->name('trainings.byDate');
-        Route::resource('trainings', TrainingController::class);
+        Route::get('/trainings', [TrainingController::class, 'index'])->name('trainings.index');
 
         Route::get('/membership-fees', [MembershipFeeController::class, 'index'])->name('membership-fees.index');
 
