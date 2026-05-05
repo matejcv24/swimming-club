@@ -4,9 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Mail\CoachInviteMail;
 use App\Models\User;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\URL;
 use Inertia\Inertia;
@@ -53,35 +52,11 @@ class StaffController extends Controller
             'coachName' => $coach->name,
             'coachEmail' => $coach->email,
             'coachId' => $coach->id,
-            'signature' => $request->query('signature'),
-            'expires' => $request->query('expires'),
+            'claimUrl' => URL::temporarySignedRoute(
+                'api.claim-coach-account.store',
+                Carbon::createFromTimestamp((int) $request->query('expires')),
+                ['coach' => $coach->id]
+            ),
         ]);
-    }
-
-    public function claimAccount(Request $request, User $coach)
-    {
-        if ($coach->role !== 'coach') {
-            abort(403);
-        }
-
-        $validated = $request->validate([
-            'password' => ['required', 'string', 'min:8', 'confirmed'],
-        ]);
-
-        if ($coach->password) {
-            return redirect()
-                ->route('login')
-                ->with('status', 'This account has already been activated.');
-        }
-
-        $coach->update([
-            'password' => Hash::make($validated['password']),
-            'email_verified_at' => now(),
-        ]);
-
-        Auth::login($coach);
-        $request->session()->regenerate();
-
-        return redirect()->route('dashboard');
     }
 }

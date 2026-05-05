@@ -6,7 +6,7 @@ import {
 } from './../../wayfinder';
 /**
  * @see \App\Http\Controllers\StaffController::index
- * @see app/Http/Controllers/StaffController.php:16
+ * @see app/Http/Controllers/StaffController.php:15
  * @route '/staff'
  */
 export const index = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -21,7 +21,7 @@ index.definition = {
 
 /**
  * @see \App\Http\Controllers\StaffController::index
- * @see app/Http/Controllers/StaffController.php:16
+ * @see app/Http/Controllers/StaffController.php:15
  * @route '/staff'
  */
 index.url = (options?: RouteQueryOptions) => {
@@ -30,7 +30,7 @@ index.url = (options?: RouteQueryOptions) => {
 
 /**
  * @see \App\Http\Controllers\StaffController::index
- * @see app/Http/Controllers/StaffController.php:16
+ * @see app/Http/Controllers/StaffController.php:15
  * @route '/staff'
  */
 index.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -39,7 +39,7 @@ index.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
 });
 /**
  * @see \App\Http\Controllers\StaffController::index
- * @see app/Http/Controllers/StaffController.php:16
+ * @see app/Http/Controllers/StaffController.php:15
  * @route '/staff'
  */
 index.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -49,7 +49,7 @@ index.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
 /**
  * @see \App\Http\Controllers\StaffController::index
- * @see app/Http/Controllers/StaffController.php:16
+ * @see app/Http/Controllers/StaffController.php:15
  * @route '/staff'
  */
 const indexForm = (
@@ -61,7 +61,7 @@ const indexForm = (
 
 /**
  * @see \App\Http\Controllers\StaffController::index
- * @see app/Http/Controllers/StaffController.php:16
+ * @see app/Http/Controllers/StaffController.php:15
  * @route '/staff'
  */
 indexForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -70,7 +70,7 @@ indexForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
 });
 /**
  * @see \App\Http\Controllers\StaffController::index
- * @see app/Http/Controllers/StaffController.php:16
+ * @see app/Http/Controllers/StaffController.php:15
  * @route '/staff'
  */
 indexForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -86,7 +86,7 @@ indexForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
 index.form = indexForm;
 /**
  * @see \App\Http\Controllers\StaffController::store
- * @see app/Http/Controllers/StaffController.php:21
+ * @see app/Http/Controllers/StaffController.php:20
  * @route '/staff'
  */
 export const store = (
@@ -103,7 +103,7 @@ store.definition = {
 
 /**
  * @see \App\Http\Controllers\StaffController::store
- * @see app/Http/Controllers/StaffController.php:21
+ * @see app/Http/Controllers/StaffController.php:20
  * @route '/staff'
  */
 store.url = (options?: RouteQueryOptions) => {
@@ -112,7 +112,7 @@ store.url = (options?: RouteQueryOptions) => {
 
 /**
  * @see \App\Http\Controllers\StaffController::store
- * @see app/Http/Controllers/StaffController.php:21
+ * @see app/Http/Controllers/StaffController.php:20
  * @route '/staff'
  */
 store.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -122,7 +122,7 @@ store.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
 
 /**
  * @see \App\Http\Controllers\StaffController::store
- * @see app/Http/Controllers/StaffController.php:21
+ * @see app/Http/Controllers/StaffController.php:20
  * @route '/staff'
  */
 const storeForm = (
@@ -134,7 +134,7 @@ const storeForm = (
 
 /**
  * @see \App\Http\Controllers\StaffController::store
- * @see app/Http/Controllers/StaffController.php:21
+ * @see app/Http/Controllers/StaffController.php:20
  * @route '/staff'
  */
 storeForm.post = (

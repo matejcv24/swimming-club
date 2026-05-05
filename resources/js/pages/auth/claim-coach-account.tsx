@@ -1,36 +1,60 @@
 import { Head, router } from '@inertiajs/react';
 import { useState } from 'react';
+import { ApiValidationError, apiRequest } from '@/lib/api';
 
 interface Props {
     coachName: string;
     coachEmail: string;
     coachId: number;
-    signature: string;
-    expires: string;
+    claimUrl: string;
+}
+
+interface ClaimCoachAccountResponse {
+    redirect: string;
 }
 
 export default function ClaimCoachAccount({
     coachName,
     coachEmail,
-    coachId,
-    signature,
-    expires,
+    claimUrl,
 }: Props) {
     const [form, setForm] = useState({
         password: '',
         password_confirmation: '',
     });
-    const [errors, setErrors] = useState<Record<string, string>>({});
+    const [errors, setErrors] = useState<Record<string, string[]>>({});
+    const [claimError, setClaimError] = useState<string | null>(null);
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        router.post(
-            `/claim-coach-account/${coachId}?expires=${expires}&signature=${signature}`,
-            form,
-            {
-                onError: (errors) => setErrors(errors),
-            },
-        );
+        setErrors({});
+        setClaimError(null);
+        setIsSubmitting(true);
+
+        try {
+            const data = await apiRequest<ClaimCoachAccountResponse>(claimUrl, {
+                method: 'POST',
+                body: form,
+            });
+
+            router.visit(data.redirect);
+        } catch (error) {
+            if (error instanceof ApiValidationError) {
+                setErrors(error.errors);
+                setClaimError(error.message);
+
+                return;
+            }
+
+            setClaimError(
+                error instanceof Error
+                    ? error.message
+                    : 'Unable to activate account. Please try again.',
+            );
+        } finally {
+            setIsSubmitting(false);
+        }
     };
 
     return (
@@ -72,9 +96,9 @@ export default function ClaimCoachAccount({
                                 }
                                 required
                             />
-                            {errors.password && (
+                            {errors.password?.[0] && (
                                 <p className="mt-1 text-sm text-red-500">
-                                    {errors.password}
+                                    {errors.password[0]}
                                 </p>
                             )}
                         </div>
@@ -96,18 +120,25 @@ export default function ClaimCoachAccount({
                                 }
                                 required
                             />
-                            {errors.password_confirmation && (
+                            {errors.password_confirmation?.[0] && (
                                 <p className="mt-1 text-sm text-red-500">
-                                    {errors.password_confirmation}
+                                    {errors.password_confirmation[0]}
                                 </p>
                             )}
                         </div>
 
+                        {claimError && (
+                            <p className="text-sm text-red-500">{claimError}</p>
+                        )}
+
                         <button
                             type="submit"
+                            disabled={isSubmitting}
                             className="btn btn-primary mt-2 w-full"
                         >
-                            Activate My Account
+                            {isSubmitting
+                                ? 'Activating...'
+                                : 'Activate My Account'}
                         </button>
                     </form>
                 </div>

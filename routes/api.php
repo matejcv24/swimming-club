@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\AttendanceController;
+use App\Http\Controllers\Api\CoachAccountClaimController;
 use App\Http\Controllers\Api\DashboardController;
 use App\Http\Controllers\Api\InvoiceController;
 use App\Http\Controllers\Api\MemberController;
@@ -14,6 +15,10 @@ use App\Http\Controllers\Api\StaffController;
 use App\Http\Controllers\Api\TrainingController;
 use App\Http\Controllers\Api\UnpaidFeeController;
 use Illuminate\Support\Facades\Route;
+
+Route::post('/claim-coach-account/{coach}', [CoachAccountClaimController::class, 'store'])
+    ->middleware(['web', 'signed'])
+    ->name('api.claim-coach-account.store');
 
 Route::middleware(['web', 'auth', 'verified'])->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('api.dashboard.index');

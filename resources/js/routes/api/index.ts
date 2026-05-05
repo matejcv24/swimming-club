@@ -1,3 +1,4 @@
+import claimCoachAccount from './claim-coach-account';
 import dashboard from './dashboard';
 import notifications from './notifications';
 import profile from './profile';
@@ -13,6 +14,7 @@ import membershipFees from './membership-fees';
 import trainings from './trainings';
 import unpaidFees from './unpaid-fees';
 const api = {
+    claimCoachAccount: Object.assign(claimCoachAccount, claimCoachAccount),
     dashboard: Object.assign(dashboard, dashboard),
     notifications: Object.assign(notifications, notifications),
     profile: Object.assign(profile, profile),

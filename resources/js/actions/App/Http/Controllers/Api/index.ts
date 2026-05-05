@@ -1,3 +1,4 @@
+import CoachAccountClaimController from './CoachAccountClaimController';
 import DashboardController from './DashboardController';
 import NotificationController from './NotificationController';
 import Settings from './Settings';
@@ -11,6 +12,10 @@ import MembershipFeeController from './MembershipFeeController';
 import TrainingController from './TrainingController';
 import UnpaidFeeController from './UnpaidFeeController';
 const Api = {
+    CoachAccountClaimController: Object.assign(
+        CoachAccountClaimController,
+        CoachAccountClaimController,
+    ),
     DashboardController: Object.assign(
         DashboardController,
         DashboardController,

@@ -21,10 +21,6 @@ Route::get('/claim-coach-account/{coach}', [StaffController::class, 'showClaimFo
     ->name('claim-coach-account')
     ->middleware('signed');
 
-Route::post('/claim-coach-account/{coach}', [StaffController::class, 'claimAccount'])
-    ->name('claim-coach-account.store')
-    ->middleware('signed');
-
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/dashboard', [AdminController::class, 'index'])->name('dashboard');
     Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications.index');
