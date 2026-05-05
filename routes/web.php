@@ -41,9 +41,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('/trainings/by-date', [TrainingController::class, 'getByDate'])->name('trainings.byDate');
         Route::resource('trainings', TrainingController::class);
 
-        Route::get('/membership-fees/by-member/{member}', [MembershipFeeController::class, 'getByMember'])
-            ->name('membership-fees.byMember');
-        Route::resource('membership-fees', MembershipFeeController::class);
+        Route::get('/membership-fees', [MembershipFeeController::class, 'index'])->name('membership-fees.index');
 
         Route::get('/unpaid-fees', [UnpaidFeeController::class, 'index'])->name('unpaid-fees.index');
     });
