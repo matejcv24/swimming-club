@@ -2,14 +2,12 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Actions\Members\CreateMember;
+use App\Actions\Members\UpdateMember;
 use App\Http\Controllers\Controller;
-use App\Models\ClubParent;
 use App\Models\Member;
-use App\Models\User;
-use App\Notifications\MemberChangedNotification;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 
 class MemberController extends Controller
 {
@@ -20,7 +18,7 @@ class MemberController extends Controller
         ]);
     }
 
-    public function store(Request $request): JsonResponse
+    public function store(Request $request, CreateMember $createMember): JsonResponse
     {
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
@@ -30,37 +28,15 @@ class MemberController extends Controller
             'parent_phone' => ['required', 'string', 'max:20'],
         ]);
 
-        $parent = ClubParent::create([
-            'name' => $validated['parent_name'],
-            'email' => $validated['parent_email'] ?? null,
-            'phone' => $validated['parent_phone'],
-        ]);
-
-        $member = Member::create([
-            'name' => $validated['name'],
-            'pool' => $validated['pool'],
-            'status' => 'active',
-            'parent_id' => $parent->id,
-        ]);
-
-        if (Auth::user()?->role === 'coach') {
-            $admins = User::where('role', 'admin')->get();
-
-            foreach ($admins as $admin) {
-                $admin->notify(new MemberChangedNotification(
-                    Auth::user()->name.' added a new member '.$member->name,
-                    '/members?member='.$member->id
-                ));
-            }
-        }
+        $member = $createMember->handle($validated, $request->user());
 
         return response()->json([
             'message' => 'Member added successfully!',
-            'member' => $member->load('parent'),
+            'member' => $member,
         ], 201);
     }
 
-    public function update(Request $request, Member $member): JsonResponse
+    public function update(Request $request, Member $member, UpdateMember $updateMember): JsonResponse
     {
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
@@ -71,61 +47,11 @@ class MemberController extends Controller
             'parent_phone' => ['required', 'string', 'max:20'],
         ]);
 
-        $changes = [];
-
-        if ($member->name !== $validated['name']) {
-            $changes[] = 'name';
-        }
-
-        if ($member->pool !== $validated['pool']) {
-            $changes[] = 'pool';
-        }
-
-        if ($member->status !== $validated['status']) {
-            $changes[] = 'status';
-        }
-
-        if (($member->parent?->name ?? '') !== $validated['parent_name']) {
-            $changes[] = 'parent name';
-        }
-
-        if (($member->parent?->email ?? '') !== ($validated['parent_email'] ?? null)) {
-            $changes[] = 'parent email';
-        }
-
-        if (($member->parent?->phone ?? '') !== $validated['parent_phone']) {
-            $changes[] = 'parent phone';
-        }
-
-        $member->update([
-            'name' => $validated['name'],
-            'pool' => $validated['pool'],
-            'status' => $validated['status'],
-        ]);
-
-        if ($member->parent) {
-            $member->parent->update([
-                'name' => $validated['parent_name'],
-                'email' => $validated['parent_email'] ?? null,
-                'phone' => $validated['parent_phone'],
-            ]);
-        }
-
-        if (Auth::user()?->role === 'coach' && count($changes) > 0) {
-            $admins = User::where('role', 'admin')->get();
-            $changeSummary = implode(', ', $changes);
-
-            foreach ($admins as $admin) {
-                $admin->notify(new MemberChangedNotification(
-                    Auth::user()->name.' updated '.$changeSummary.' for '.$member->name,
-                    '/members?member='.$member->id
-                ));
-            }
-        }
+        $member = $updateMember->handle($member, $validated, $request->user());
 
         return response()->json([
             'message' => 'Member updated!',
-            'member' => $member->load('parent'),
+            'member' => $member,
         ]);
     }
 }
