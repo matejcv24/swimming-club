@@ -3,11 +3,11 @@ import {
     type RouteQueryOptions,
     type RouteDefinition,
     type RouteFormDefinition,
-} from './../../../../wayfinder';
+} from './../../../../../wayfinder';
 /**
- * @see \App\Http\Controllers\UnpaidFeeController::index
- * @see app/Http/Controllers/UnpaidFeeController.php:7
- * @route '/unpaid-fees'
+ * @see \App\Http\Controllers\Api\UnpaidFeeController::index
+ * @see app/Http/Controllers/Api/UnpaidFeeController.php:12
+ * @route '/api/unpaid-fees'
  */
 export const index = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
     url: index.url(options),
@@ -16,31 +16,31 @@ export const index = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
 
 index.definition = {
     methods: ['get', 'head'],
-    url: '/unpaid-fees',
+    url: '/api/unpaid-fees',
 } satisfies RouteDefinition<['get', 'head']>;
 
 /**
- * @see \App\Http\Controllers\UnpaidFeeController::index
- * @see app/Http/Controllers/UnpaidFeeController.php:7
- * @route '/unpaid-fees'
+ * @see \App\Http\Controllers\Api\UnpaidFeeController::index
+ * @see app/Http/Controllers/Api/UnpaidFeeController.php:12
+ * @route '/api/unpaid-fees'
  */
 index.url = (options?: RouteQueryOptions) => {
     return index.definition.url + queryParams(options);
 };
 
 /**
- * @see \App\Http\Controllers\UnpaidFeeController::index
- * @see app/Http/Controllers/UnpaidFeeController.php:7
- * @route '/unpaid-fees'
+ * @see \App\Http\Controllers\Api\UnpaidFeeController::index
+ * @see app/Http/Controllers/Api/UnpaidFeeController.php:12
+ * @route '/api/unpaid-fees'
  */
 index.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
     url: index.url(options),
     method: 'get',
 });
 /**
- * @see \App\Http\Controllers\UnpaidFeeController::index
- * @see app/Http/Controllers/UnpaidFeeController.php:7
- * @route '/unpaid-fees'
+ * @see \App\Http\Controllers\Api\UnpaidFeeController::index
+ * @see app/Http/Controllers/Api/UnpaidFeeController.php:12
+ * @route '/api/unpaid-fees'
  */
 index.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     url: index.url(options),
@@ -48,9 +48,9 @@ index.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 });
 
 /**
- * @see \App\Http\Controllers\UnpaidFeeController::index
- * @see app/Http/Controllers/UnpaidFeeController.php:7
- * @route '/unpaid-fees'
+ * @see \App\Http\Controllers\Api\UnpaidFeeController::index
+ * @see app/Http/Controllers/Api/UnpaidFeeController.php:12
+ * @route '/api/unpaid-fees'
  */
 const indexForm = (
     options?: RouteQueryOptions,
@@ -60,18 +60,18 @@ const indexForm = (
 });
 
 /**
- * @see \App\Http\Controllers\UnpaidFeeController::index
- * @see app/Http/Controllers/UnpaidFeeController.php:7
- * @route '/unpaid-fees'
+ * @see \App\Http\Controllers\Api\UnpaidFeeController::index
+ * @see app/Http/Controllers/Api/UnpaidFeeController.php:12
+ * @route '/api/unpaid-fees'
  */
 indexForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
     action: index.url(options),
     method: 'get',
 });
 /**
- * @see \App\Http\Controllers\UnpaidFeeController::index
- * @see app/Http/Controllers/UnpaidFeeController.php:7
- * @route '/unpaid-fees'
+ * @see \App\Http\Controllers\Api\UnpaidFeeController::index
+ * @see app/Http/Controllers/Api/UnpaidFeeController.php:12
+ * @route '/api/unpaid-fees'
  */
 indexForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
     action: index.url({

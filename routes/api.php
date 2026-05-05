@@ -3,6 +3,7 @@
 use App\Http\Controllers\Api\MemberController;
 use App\Http\Controllers\Api\MembershipFeeController;
 use App\Http\Controllers\Api\TrainingController;
+use App\Http\Controllers\Api\UnpaidFeeController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware(['web', 'auth', 'verified', 'role:admin,coach'])->group(function () {
@@ -17,4 +18,6 @@ Route::middleware(['web', 'auth', 'verified', 'role:admin,coach'])->group(functi
     Route::get('/trainings', [TrainingController::class, 'index'])->name('api.trainings.index');
     Route::post('/trainings', [TrainingController::class, 'store'])->name('api.trainings.store');
     Route::get('/trainings/by-date', [TrainingController::class, 'getByDate'])->name('api.trainings.by-date');
+
+    Route::get('/unpaid-fees', [UnpaidFeeController::class, 'index'])->name('api.unpaid-fees.index');
 });

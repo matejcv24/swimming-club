@@ -14,8 +14,9 @@ import { createTheme, ThemeProvider } from '@mui/material/styles';
 import Tab from '@mui/material/Tab';
 import Tabs from '@mui/material/Tabs';
 import Typography from '@mui/material/Typography';
+import { apiRequest } from '@/lib/api';
 import dayjs from 'dayjs';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 interface UnpaidMember {
     id: number;
@@ -27,6 +28,11 @@ interface UnpaidMember {
 }
 
 interface Props {
+    bigPoolMembers?: UnpaidMember[];
+    smallPoolMembers?: UnpaidMember[];
+}
+
+interface ListUnpaidFeesResponse {
     bigPoolMembers: UnpaidMember[];
     smallPoolMembers: UnpaidMember[];
 }
@@ -38,12 +44,41 @@ const darkTheme = createTheme({
 const DARK_BG = '#1d232a';
 
 export default function UnpaidFeesIndex({
-    bigPoolMembers,
-    smallPoolMembers,
+    bigPoolMembers: initialBigPoolMembers = [],
+    smallPoolMembers: initialSmallPoolMembers = [],
 }: Props) {
     const [tab, setTab] = useState(0);
+    const [bigPoolMembers, setBigPoolMembers] = useState(initialBigPoolMembers);
+    const [smallPoolMembers, setSmallPoolMembers] = useState(
+        initialSmallPoolMembers,
+    );
+    const [loadingUnpaidFees, setLoadingUnpaidFees] = useState(false);
+    const [unpaidFeesError, setUnpaidFeesError] = useState<string | null>(null);
 
     const members = tab === 0 ? bigPoolMembers : smallPoolMembers;
+
+    useEffect(() => {
+        const loadUnpaidFees = async () => {
+            setLoadingUnpaidFees(true);
+            setUnpaidFeesError(null);
+
+            try {
+                const data =
+                    await apiRequest<ListUnpaidFeesResponse>(
+                        '/api/unpaid-fees',
+                    );
+
+                setBigPoolMembers(data.bigPoolMembers);
+                setSmallPoolMembers(data.smallPoolMembers);
+            } catch {
+                setUnpaidFeesError('Unable to refresh unpaid fees.');
+            } finally {
+                setLoadingUnpaidFees(false);
+            }
+        };
+
+        void loadUnpaidFees();
+    }, []);
 
     const getInitials = (name: string) =>
         name
@@ -100,7 +135,25 @@ export default function UnpaidFeesIndex({
                 </DialogTitle>
 
                 <DialogContent sx={{ p: 0, overflowY: 'auto', flex: 1 }}>
-                    {members.length === 0 ? (
+                    {unpaidFeesError && (
+                        <Typography
+                            variant="body2"
+                            color="error"
+                            sx={{ textAlign: 'center', mt: 2 }}
+                        >
+                            {unpaidFeesError}
+                        </Typography>
+                    )}
+
+                    {loadingUnpaidFees ? (
+                        <Typography
+                            variant="body2"
+                            color="text.secondary"
+                            sx={{ textAlign: 'center', mt: 6 }}
+                        >
+                            Loading unpaid fees...
+                        </Typography>
+                    ) : members.length === 0 ? (
                         <Typography
                             variant="body2"
                             color="text.secondary"
