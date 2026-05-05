@@ -1,10 +1,21 @@
 import { Head, router } from '@inertiajs/react';
 import { X } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { apiRequest } from '@/lib/api';
 import type { AppNotification } from '@/types';
 
 type Props = {
+    unreadNotifications?: AppNotification[];
+    allNotifications?: AppNotification[];
+};
+
+type ListNotificationsResponse = {
     unreadNotifications: AppNotification[];
     allNotifications: AppNotification[];
+};
+
+type ReadNotificationResponse = {
+    url: string;
 };
 
 function formatNotificationDate(value: string | null) {
@@ -19,11 +30,56 @@ function formatNotificationDate(value: string | null) {
 }
 
 export default function NotificationsIndex({
-    unreadNotifications,
-    allNotifications,
+    unreadNotifications: initialUnreadNotifications = [],
+    allNotifications: initialAllNotifications = [],
 }: Props) {
-    const openNotification = (notification: AppNotification) => {
-        router.post(`/notifications/${notification.id}/read`);
+    const [unreadNotifications, setUnreadNotifications] = useState(
+        initialUnreadNotifications,
+    );
+    const [allNotifications, setAllNotifications] = useState(
+        initialAllNotifications,
+    );
+    const [loadingNotifications, setLoadingNotifications] = useState(false);
+    const [notificationError, setNotificationError] = useState<string | null>(
+        null,
+    );
+
+    useEffect(() => {
+        const loadNotifications = async () => {
+            setLoadingNotifications(true);
+            setNotificationError(null);
+
+            try {
+                const data =
+                    await apiRequest<ListNotificationsResponse>(
+                        '/api/notifications',
+                    );
+
+                setUnreadNotifications(data.unreadNotifications);
+                setAllNotifications(data.allNotifications);
+            } catch {
+                setNotificationError('Unable to load notifications.');
+            } finally {
+                setLoadingNotifications(false);
+            }
+        };
+
+        void loadNotifications();
+    }, []);
+
+    const openNotification = async (notification: AppNotification) => {
+        try {
+            const data = await apiRequest<ReadNotificationResponse>(
+                `/api/notifications/${notification.id}/read`,
+                {
+                    method: 'POST',
+                },
+            );
+
+            router.visit(data.url);
+        } catch {
+            setNotificationError('Unable to open notification.');
+        }
     };
 
     return (
@@ -50,7 +106,17 @@ export default function NotificationsIndex({
                 </div>
 
                 <div className="overflow-hidden rounded-lg border border-sidebar-border/70 bg-white dark:bg-neutral-900">
-                    {allNotifications.length === 0 ? (
+                    {notificationError && (
+                        <div className="border-b border-sidebar-border/70 px-6 py-3 text-sm text-red-600">
+                            {notificationError}
+                        </div>
+                    )}
+
+                    {loadingNotifications ? (
+                        <div className="px-6 py-12 text-center text-sm text-muted-foreground">
+                            Loading notifications...
+                        </div>
+                    ) : allNotifications.length === 0 ? (
                         <div className="px-6 py-12 text-center text-sm text-muted-foreground">
                             You have not received any notifications yet.
                         </div>

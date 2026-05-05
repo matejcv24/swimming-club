@@ -3,9 +3,16 @@
 use App\Http\Controllers\Api\AttendanceController;
 use App\Http\Controllers\Api\MemberController;
 use App\Http\Controllers\Api\MembershipFeeController;
+use App\Http\Controllers\Api\NotificationController;
 use App\Http\Controllers\Api\TrainingController;
 use App\Http\Controllers\Api\UnpaidFeeController;
 use Illuminate\Support\Facades\Route;
+
+Route::middleware(['web', 'auth', 'verified'])->group(function () {
+    Route::get('/notifications', [NotificationController::class, 'index'])->name('api.notifications.index');
+    Route::post('/notifications/read-all', [NotificationController::class, 'markAllAsRead'])->name('api.notifications.read-all');
+    Route::post('/notifications/{notification}/read', [NotificationController::class, 'markAsRead'])->name('api.notifications.read');
+});
 
 Route::middleware(['web', 'auth', 'verified', 'role:admin,coach'])->group(function () {
     Route::get('/attendance', [AttendanceController::class, 'index'])->name('api.attendance.index');

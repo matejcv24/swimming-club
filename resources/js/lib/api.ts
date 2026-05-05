@@ -38,9 +38,12 @@ export async function apiRequest<T>(
         headers,
     };
 
+    if (request.method !== 'GET') {
+        headers['X-CSRF-TOKEN'] = getCsrfToken();
+    }
+
     if (options.body !== undefined) {
         headers['Content-Type'] = 'application/json';
-        headers['X-CSRF-TOKEN'] = getCsrfToken();
         request.body = JSON.stringify(options.body);
     }
 

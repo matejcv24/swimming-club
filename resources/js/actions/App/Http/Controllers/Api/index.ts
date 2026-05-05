@@ -1,9 +1,14 @@
+import NotificationController from './NotificationController';
 import AttendanceController from './AttendanceController';
 import MemberController from './MemberController';
 import MembershipFeeController from './MembershipFeeController';
 import TrainingController from './TrainingController';
 import UnpaidFeeController from './UnpaidFeeController';
 const Api = {
+    NotificationController: Object.assign(
+        NotificationController,
+        NotificationController,
+    ),
     AttendanceController: Object.assign(
         AttendanceController,
         AttendanceController,

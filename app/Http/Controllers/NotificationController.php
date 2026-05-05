@@ -10,26 +10,7 @@ class NotificationController extends Controller
 {
     public function index(Request $request)
     {
-        $user = $request->user();
-
-        return Inertia::render('notifications/index', [
-            'unreadNotifications' => $user->unreadNotifications()->latest()->get()->map(fn ($notification) => [
-                'id' => $notification->id,
-                'message' => $notification->data['message'] ?? '',
-                'url' => $notification->data['url'] ?? '/dashboard',
-                'type' => $notification->data['type'] ?? '',
-                'created_at' => $notification->created_at?->toDateTimeString(),
-                'read_at' => $notification->read_at?->toDateTimeString(),
-            ])->values(),
-            'allNotifications' => $user->notifications()->latest()->get()->map(fn ($notification) => [
-                'id' => $notification->id,
-                'message' => $notification->data['message'] ?? '',
-                'url' => $notification->data['url'] ?? '/dashboard',
-                'type' => $notification->data['type'] ?? '',
-                'created_at' => $notification->created_at?->toDateTimeString(),
-                'read_at' => $notification->read_at?->toDateTimeString(),
-            ])->values(),
-        ]);
+        return Inertia::render('notifications/index');
     }
 
     public function markAsRead(Request $request, DatabaseNotification $notification)
@@ -40,7 +21,7 @@ class NotificationController extends Controller
             403
         );
 
-        if (!$notification->read_at) {
+        if (! $notification->read_at) {
             $notification->markAsRead();
         }
 
