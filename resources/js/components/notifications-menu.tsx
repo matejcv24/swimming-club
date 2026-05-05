@@ -1,6 +1,6 @@
 import { router, usePage } from '@inertiajs/react';
 import { Bell, X } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -9,7 +9,13 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { apiRequest } from '@/lib/api';
+import type { AppNotification } from '@/types';
 import type { NotificationSharedData } from '@/types';
+
+type ReadAllNotificationsResponse = {
+    unreadNotifications: AppNotification[];
+};
 
 function formatNotificationDate(value: string | null) {
     if (!value) {
@@ -30,27 +36,35 @@ export function NotificationsMenu() {
     const { notifications } = usePage().props as {
         notifications?: NotificationSharedData;
     };
-    const unreadCount = notifications?.unread_count ?? 0;
-    const unreadNotifications = notifications?.unread ?? [];
+    const [unreadNotifications, setUnreadNotifications] = useState(
+        notifications?.unread ?? [],
+    );
+    const unreadCount = unreadNotifications.length;
 
-    const markViewedNotificationsAsRead = (
-        options?: Parameters<typeof router.post>[2],
-    ) => {
+    useEffect(() => {
+        setUnreadNotifications(notifications?.unread ?? []);
+    }, [notifications?.unread]);
+
+    const markViewedNotificationsAsRead = async (afterRead?: () => void) => {
         if (!hasViewedUnread) {
             return;
         }
 
-        router.post(
-            '/notifications/read-all',
-            {},
-            {
-                preserveScroll: true,
-                preserveState: true,
-                only: ['notifications'],
-                ...options,
-            },
-        );
-        setHasViewedUnread(false);
+        try {
+            const data = await apiRequest<ReadAllNotificationsResponse>(
+                '/api/notifications/read-all',
+                {
+                    method: 'POST',
+                },
+            );
+
+            setUnreadNotifications(data.unreadNotifications);
+            setHasViewedUnread(false);
+            afterRead?.();
+        } catch {
+            setHasViewedUnread(false);
+            afterRead?.();
+        }
     };
 
     const handleOpenChange = (nextOpen: boolean) => {
@@ -59,7 +73,7 @@ export function NotificationsMenu() {
         }
 
         if (!nextOpen) {
-            markViewedNotificationsAsRead();
+            void markViewedNotificationsAsRead();
         }
 
         setOpen(nextOpen);
@@ -69,9 +83,7 @@ export function NotificationsMenu() {
         setOpen(false);
 
         if (hasViewedUnread) {
-            markViewedNotificationsAsRead({
-                onSuccess: () => router.visit(url),
-            });
+            void markViewedNotificationsAsRead(() => router.visit(url));
 
             return;
         }
