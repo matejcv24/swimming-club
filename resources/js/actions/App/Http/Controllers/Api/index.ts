@@ -1,5 +1,6 @@
 import DashboardController from './DashboardController';
 import NotificationController from './NotificationController';
+import Settings from './Settings';
 import StaffController from './StaffController';
 import SalaryController from './SalaryController';
 import InvoiceController from './InvoiceController';
@@ -18,6 +19,7 @@ const Api = {
         NotificationController,
         NotificationController,
     ),
+    Settings: Object.assign(Settings, Settings),
     StaffController: Object.assign(StaffController, StaffController),
     SalaryController: Object.assign(SalaryController, SalaryController),
     InvoiceController: Object.assign(InvoiceController, InvoiceController),

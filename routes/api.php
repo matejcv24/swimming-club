@@ -8,6 +8,7 @@ use App\Http\Controllers\Api\MembershipFeeController;
 use App\Http\Controllers\Api\NotificationController;
 use App\Http\Controllers\Api\ProfitController;
 use App\Http\Controllers\Api\SalaryController;
+use App\Http\Controllers\Api\Settings\ProfileController;
 use App\Http\Controllers\Api\StaffController;
 use App\Http\Controllers\Api\TrainingController;
 use App\Http\Controllers\Api\UnpaidFeeController;
@@ -19,6 +20,11 @@ Route::middleware(['web', 'auth', 'verified'])->group(function () {
     Route::get('/notifications', [NotificationController::class, 'index'])->name('api.notifications.index');
     Route::post('/notifications/read-all', [NotificationController::class, 'markAllAsRead'])->name('api.notifications.read-all');
     Route::post('/notifications/{notification}/read', [NotificationController::class, 'markAsRead'])->name('api.notifications.read');
+});
+
+Route::middleware(['web', 'auth'])->group(function () {
+    Route::get('/settings/profile', [ProfileController::class, 'show'])->name('api.profile.show');
+    Route::patch('/settings/profile', [ProfileController::class, 'update'])->name('api.profile.update');
 });
 
 Route::middleware(['web', 'auth', 'verified', 'role:admin'])->group(function () {
