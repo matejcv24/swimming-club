@@ -24,6 +24,7 @@ import Typography from '@mui/material/Typography';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import { DateCalendar } from '@mui/x-date-pickers/DateCalendar';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
+import { apiRequest } from '@/lib/api';
 import dayjs from 'dayjs';
 import type { Dayjs } from 'dayjs';
 import { useCallback, useEffect, useState } from 'react';
@@ -35,7 +36,15 @@ interface Member {
 }
 
 interface Props {
+    members?: Member[];
+}
+
+interface ListTrainingsResponse {
     members: Member[];
+}
+
+interface AttendanceByDateResponse {
+    member_ids: number[];
 }
 
 const darkTheme = createTheme({
@@ -44,29 +53,52 @@ const darkTheme = createTheme({
 
 const DARK_BG = '#1d232a';
 
-export default function TrainingsIndex({ members }: Props) {
+export default function TrainingsIndex({
+    members: initialMembers = [],
+}: Props) {
+    const [members, setMembers] = useState(initialMembers);
     const [activeTab, setActiveTab] = useState(0);
     const [selectedDate, setSelectedDate] = useState<Dayjs | null>(null);
     const [showAttendanceModal, setShowAttendanceModal] = useState(false);
     const [checkedIds, setCheckedIds] = useState<number[]>([]);
     const [editMode, setEditMode] = useState(false);
     const [loading, setLoading] = useState(false);
+    const [loadingMembers, setLoadingMembers] = useState(false);
+    const [membersError, setMembersError] = useState<string | null>(null);
     const [attendanceSearch, setAttendanceSearch] = useState('');
 
     const activePool = activeTab === 0 ? 'big' : 'small';
     const poolMembers = members.filter((m) => m.pool === activePool);
+
+    useEffect(() => {
+        const loadMembers = async () => {
+            setLoadingMembers(true);
+            setMembersError(null);
+
+            try {
+                const data =
+                    await apiRequest<ListTrainingsResponse>('/api/trainings');
+
+                setMembers(data.members);
+            } catch {
+                setMembersError('Unable to refresh training members.');
+            } finally {
+                setLoadingMembers(false);
+            }
+        };
+
+        void loadMembers();
+    }, []);
 
     const loadAttendance = useCallback(async (date: Dayjs, pool: string) => {
         setSelectedDate(date);
         setEditMode(false);
         setLoading(true);
 
-        // Fetch existing attendance for this date and pool
         try {
-            const response = await fetch(
-                `/trainings/by-date?date=${date.format('YYYY-MM-DD')}&pool=${pool}`,
+            const data = await apiRequest<AttendanceByDateResponse>(
+                `/api/trainings/by-date?date=${date.format('YYYY-MM-DD')}&pool=${pool}`,
             );
-            const data = await response.json();
             setCheckedIds(data.member_ids ?? []);
         } catch {
             setCheckedIds([]);
@@ -190,6 +222,26 @@ export default function TrainingsIndex({ members }: Props) {
 
                 {/* Date Calendar */}
                 <DialogContent sx={{ p: 0, overflowY: 'auto' }}>
+                    {membersError && (
+                        <Typography
+                            variant="body2"
+                            color="error"
+                            sx={{ textAlign: 'center', mt: 2 }}
+                        >
+                            {membersError}
+                        </Typography>
+                    )}
+
+                    {loadingMembers && (
+                        <Typography
+                            variant="body2"
+                            color="text.secondary"
+                            sx={{ textAlign: 'center', mt: 2 }}
+                        >
+                            Loading members...
+                        </Typography>
+                    )}
+
                     <LocalizationProvider dateAdapter={AdapterDayjs}>
                         <DateCalendar
                             onChange={(date: Dayjs | null) =>
