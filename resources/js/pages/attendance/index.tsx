@@ -19,8 +19,9 @@ import Tab from '@mui/material/Tab';
 import Tabs from '@mui/material/Tabs';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
+import { apiRequest } from '@/lib/api';
 import dayjs from 'dayjs';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 interface Member {
     id: number;
@@ -38,7 +39,11 @@ interface AttendanceRow {
 }
 
 interface Props {
-    userRole: 'admin' | 'coach';
+    members?: Member[];
+    attendanceRows?: AttendanceRow[];
+}
+
+interface ListAttendanceResponse {
     members: Member[];
     attendanceRows: AttendanceRow[];
 }
@@ -55,7 +60,12 @@ const chipSx = {
     justifyContent: 'center',
 };
 
-export default function AttendanceIndex({ members, attendanceRows }: Props) {
+export default function AttendanceIndex({
+    members: initialMembers = [],
+    attendanceRows: initialAttendanceRows = [],
+}: Props) {
+    const [members, setMembers] = useState(initialMembers);
+    const [attendanceRows, setAttendanceRows] = useState(initialAttendanceRows);
     const [activeTab, setActiveTab] = useState(0);
     const [selectedMember, setSelectedMember] = useState<Member | null>(null);
     const [showMemberHistoryModal, setShowMemberHistoryModal] = useState(false);
@@ -66,8 +76,31 @@ export default function AttendanceIndex({ members, attendanceRows }: Props) {
     const [showMonthDatesModal, setShowMonthDatesModal] = useState(false);
     const [selectedMonth, setSelectedMonth] = useState<string | null>(null);
     const [attendanceSearch, setAttendanceSearch] = useState('');
+    const [loadingAttendance, setLoadingAttendance] = useState(false);
+    const [attendanceError, setAttendanceError] = useState<string | null>(null);
 
     const currentPool = activeTab === 0 ? 'big' : 'small';
+
+    useEffect(() => {
+        const loadAttendance = async () => {
+            setLoadingAttendance(true);
+            setAttendanceError(null);
+
+            try {
+                const data =
+                    await apiRequest<ListAttendanceResponse>('/api/attendance');
+
+                setMembers(data.members);
+                setAttendanceRows(data.attendanceRows);
+            } catch {
+                setAttendanceError('Unable to refresh attendance data.');
+            } finally {
+                setLoadingAttendance(false);
+            }
+        };
+
+        void loadAttendance();
+    }, []);
 
     const filteredMembers = members.filter(
         (member) =>
@@ -233,43 +266,65 @@ export default function AttendanceIndex({ members, attendanceRows }: Props) {
                 </DialogTitle>
 
                 <DialogContent sx={{ p: 0, overflowY: 'auto', flex: 1 }}>
-                    <List disablePadding>
-                        {filteredMembers.map((member) => (
-                            <ListItemButton
-                                key={member.id}
-                                divider
-                                onClick={() => {
-                                    setSelectedMember(member);
-                                    setShowMemberHistoryModal(true);
-                                }}
-                            >
-                                <ListItemAvatar>
-                                    <Avatar>{getInitials(member.name)}</Avatar>
-                                </ListItemAvatar>
-                                <ListItemText
-                                    primary={
-                                        <Typography
-                                            variant="body1"
-                                            fontWeight="bold"
-                                        >
-                                            {member.name}
-                                        </Typography>
-                                    }
-                                    secondary={
-                                        <Typography
-                                            variant="body2"
-                                            color="text.secondary"
-                                        >
-                                            Attendances:{' '}
-                                            {
-                                                member.current_month_attendances_count
-                                            }
-                                        </Typography>
-                                    }
-                                />
-                            </ListItemButton>
-                        ))}
-                    </List>
+                    {attendanceError && (
+                        <Typography
+                            variant="body2"
+                            color="error"
+                            sx={{ textAlign: 'center', mt: 2 }}
+                        >
+                            {attendanceError}
+                        </Typography>
+                    )}
+
+                    {loadingAttendance ? (
+                        <Typography
+                            variant="body2"
+                            color="text.secondary"
+                            sx={{ textAlign: 'center', mt: 6 }}
+                        >
+                            Loading attendance...
+                        </Typography>
+                    ) : (
+                        <List disablePadding>
+                            {filteredMembers.map((member) => (
+                                <ListItemButton
+                                    key={member.id}
+                                    divider
+                                    onClick={() => {
+                                        setSelectedMember(member);
+                                        setShowMemberHistoryModal(true);
+                                    }}
+                                >
+                                    <ListItemAvatar>
+                                        <Avatar>
+                                            {getInitials(member.name)}
+                                        </Avatar>
+                                    </ListItemAvatar>
+                                    <ListItemText
+                                        primary={
+                                            <Typography
+                                                variant="body1"
+                                                fontWeight="bold"
+                                            >
+                                                {member.name}
+                                            </Typography>
+                                        }
+                                        secondary={
+                                            <Typography
+                                                variant="body2"
+                                                color="text.secondary"
+                                            >
+                                                Attendances:{' '}
+                                                {
+                                                    member.current_month_attendances_count
+                                                }
+                                            </Typography>
+                                        }
+                                    />
+                                </ListItemButton>
+                            ))}
+                        </List>
+                    )}
                 </DialogContent>
             </Dialog>
 
