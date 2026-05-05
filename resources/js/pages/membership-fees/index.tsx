@@ -27,7 +27,7 @@ import Typography from '@mui/material/Typography';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
-import { apiRequest } from '@/lib/api';
+import { ApiValidationError, apiRequest } from '@/lib/api';
 import dayjs from 'dayjs';
 import type { Dayjs } from 'dayjs';
 import { useCallback, useEffect, useMemo, useState } from 'react';
@@ -77,6 +77,11 @@ interface ListMembershipFeesResponse {
 
 interface MemberFeesResponse {
     fees: Fee[];
+}
+
+interface StoreMembershipFeeResponse {
+    message: string;
+    fee: Fee;
 }
 
 const darkTheme = createTheme({
@@ -150,6 +155,9 @@ export default function MembershipFeesIndex({
     const [paymentMethod, setPaymentMethod] = useState<'cash' | 'card'>('cash');
     const [startDate, setStartDate] = useState<Dayjs | null>(null);
     const [endDate, setEndDate] = useState<Dayjs | null>(null);
+    const [saveError, setSaveError] = useState<string | null>(null);
+    const [saveErrors, setSaveErrors] = useState<Record<string, string[]>>({});
+    const [savingPayment, setSavingPayment] = useState(false);
     const [showHistoryModal, setShowHistoryModal] = useState(false);
 
     const [showYearHistoryModal, setShowYearHistoryModal] = useState(false);
@@ -287,31 +295,55 @@ export default function MembershipFeesIndex({
         }
     }, [handleMemberSelect, members]);
 
-    const handleSave = () => {
+    const handleSave = async () => {
         if (!selectedMember || !startDate || !endDate) {
             return;
         }
 
-        router.post(
-            '/membership-fees',
-            {
-                member_id: selectedMember.id,
-                amount: amount,
-                payment_method: paymentMethod,
-                start_date: startDate.format('YYYY-MM-DD'),
-                end_date: endDate.format('YYYY-MM-DD'),
-            },
-            {
-                onSuccess: () => {
-                    handleMemberSelect(selectedMember);
-                    setAmount('');
-                    setPaymentMethod('cash');
-                    setStartDate(null);
-                    setEndDate(null);
+        setSaveError(null);
+        setSaveErrors({});
+        setSavingPayment(true);
+
+        try {
+            const data = await apiRequest<StoreMembershipFeeResponse>(
+                '/api/membership-fees',
+                {
+                    method: 'POST',
+                    body: {
+                        member_id: selectedMember.id,
+                        amount: amount,
+                        payment_method: paymentMethod,
+                        start_date: startDate.format('YYYY-MM-DD'),
+                        end_date: endDate.format('YYYY-MM-DD'),
+                    },
                 },
-            },
-        );
+            );
+
+            setAllFees((currentFees) => [data.fee, ...currentFees]);
+            setFees((currentFees) => [data.fee, ...currentFees]);
+            setAmount('');
+            setPaymentMethod('cash');
+            setStartDate(null);
+            setEndDate(null);
+        } catch (error) {
+            if (error instanceof ApiValidationError) {
+                setSaveErrors(error.errors);
+                setSaveError(error.message);
+
+                return;
+            }
+
+            setSaveError('Unable to record payment. Please try again.');
+        } finally {
+            setSavingPayment(false);
+        }
     };
+
+    const selectedMemberIdError = saveErrors.member_id?.[0];
+    const amountError = saveErrors.amount?.[0];
+    const paymentMethodError = saveErrors.payment_method?.[0];
+    const startDateError = saveErrors.start_date?.[0];
+    const endDateError = saveErrors.end_date?.[0];
 
     const handleCancel = () => {
         setSelectedMember(null);
@@ -320,6 +352,8 @@ export default function MembershipFeesIndex({
         setPaymentMethod('cash');
         setStartDate(null);
         setEndDate(null);
+        setSaveError(null);
+        setSaveErrors({});
     };
 
     return (
@@ -382,6 +416,11 @@ export default function MembershipFeesIndex({
                                 />
                             )}
                         />
+                        {selectedMemberIdError && (
+                            <Typography color="error" variant="caption">
+                                {selectedMemberIdError}
+                            </Typography>
+                        )}
 
                         {selectedMember && (
                             <>
@@ -488,56 +527,92 @@ export default function MembershipFeesIndex({
                             Record New Payment
                         </Typography>
 
+                        {saveError && (
+                            <Typography color="error" variant="body2">
+                                {saveError}
+                            </Typography>
+                        )}
+
                         <div className="flex gap-3">
-                            <TextField
-                                label="Amount (MKD)"
-                                variant="outlined"
-                                type="number"
-                                value={amount}
-                                onChange={(e) => setAmount(e.target.value)}
-                                sx={{ ...inputSx, flex: '0 0 65%' }}
-                            />
-                            <FormControl
-                                sx={{
-                                    flex: '0 0 calc(35% - 12px)',
-                                    ...inputSx,
-                                }}
-                            >
-                                <InputLabel id="payment-method-label">
-                                    Method
-                                </InputLabel>
-                                <Select
-                                    labelId="payment-method-label"
-                                    value={paymentMethod}
-                                    label="Method"
-                                    onChange={(e) =>
-                                        setPaymentMethod(
-                                            e.target.value as 'cash' | 'card',
-                                        )
-                                    }
+                            <div style={{ flex: '0 0 65%' }}>
+                                <TextField
+                                    label="Amount (MKD)"
+                                    variant="outlined"
+                                    type="number"
+                                    value={amount}
+                                    onChange={(e) => setAmount(e.target.value)}
+                                    sx={{ ...inputSx, width: '100%' }}
+                                />
+                                {amountError && (
+                                    <Typography color="error" variant="caption">
+                                        {amountError}
+                                    </Typography>
+                                )}
+                            </div>
+                            <div style={{ flex: '0 0 calc(35% - 12px)' }}>
+                                <FormControl
+                                    sx={{
+                                        width: '100%',
+                                        ...inputSx,
+                                    }}
                                 >
-                                    <MenuItem value="cash">Cash</MenuItem>
-                                    <MenuItem value="card">Card</MenuItem>
-                                </Select>
-                            </FormControl>
+                                    <InputLabel id="payment-method-label">
+                                        Method
+                                    </InputLabel>
+                                    <Select
+                                        labelId="payment-method-label"
+                                        value={paymentMethod}
+                                        label="Method"
+                                        onChange={(e) =>
+                                            setPaymentMethod(
+                                                e.target.value as
+                                                    | 'cash'
+                                                    | 'card',
+                                            )
+                                        }
+                                    >
+                                        <MenuItem value="cash">Cash</MenuItem>
+                                        <MenuItem value="card">Card</MenuItem>
+                                    </Select>
+                                </FormControl>
+                                {paymentMethodError && (
+                                    <Typography color="error" variant="caption">
+                                        {paymentMethodError}
+                                    </Typography>
+                                )}
+                            </div>
                         </div>
 
                         <LocalizationProvider dateAdapter={AdapterDayjs}>
-                            <DatePicker
-                                label="Start Date"
-                                value={startDate}
-                                onChange={(val) => setStartDate(val)}
-                                sx={inputSx}
-                                format="DD/MM/YYYY"
-                            />
-                            <DatePicker
-                                label="End Date"
-                                value={endDate}
-                                onChange={(val) => setEndDate(val)}
-                                minDate={startDate ?? undefined}
-                                sx={inputSx}
-                                format="DD/MM/YYYY"
-                            />
+                            <div>
+                                <DatePicker
+                                    label="Start Date"
+                                    value={startDate}
+                                    onChange={(val) => setStartDate(val)}
+                                    sx={inputSx}
+                                    format="DD/MM/YYYY"
+                                />
+                                {startDateError && (
+                                    <Typography color="error" variant="caption">
+                                        {startDateError}
+                                    </Typography>
+                                )}
+                            </div>
+                            <div>
+                                <DatePicker
+                                    label="End Date"
+                                    value={endDate}
+                                    onChange={(val) => setEndDate(val)}
+                                    minDate={startDate ?? undefined}
+                                    sx={inputSx}
+                                    format="DD/MM/YYYY"
+                                />
+                                {endDateError && (
+                                    <Typography color="error" variant="caption">
+                                        {endDateError}
+                                    </Typography>
+                                )}
+                            </div>
                         </LocalizationProvider>
 
                         <div className="flex gap-3">
@@ -550,10 +625,11 @@ export default function MembershipFeesIndex({
                                     !selectedMember ||
                                     !amount ||
                                     !startDate ||
-                                    !endDate
+                                    !endDate ||
+                                    savingPayment
                                 }
                             >
-                                Save
+                                {savingPayment ? 'Saving...' : 'Save'}
                             </Button>
                             <Button
                                 variant="outlined"
