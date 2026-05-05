@@ -1,6 +1,8 @@
 import dashboard from './dashboard';
 import notifications from './notifications';
 import profile from './profile';
+import security from './security';
+import userPassword from './user-password';
 import staff from './staff';
 import salaries from './salaries';
 import invoices from './invoices';
@@ -14,6 +16,8 @@ const api = {
     dashboard: Object.assign(dashboard, dashboard),
     notifications: Object.assign(notifications, notifications),
     profile: Object.assign(profile, profile),
+    security: Object.assign(security, security),
+    userPassword: Object.assign(userPassword, userPassword),
     staff: Object.assign(staff, staff),
     salaries: Object.assign(salaries, salaries),
     invoices: Object.assign(invoices, invoices),

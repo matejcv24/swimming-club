@@ -3,11 +3,11 @@ import {
     type RouteQueryOptions,
     type RouteDefinition,
     type RouteFormDefinition,
-} from './../../wayfinder';
+} from './../../../wayfinder';
 /**
- * @see \App\Http\Controllers\Settings\SecurityController::update
- * @see app/Http/Controllers/Settings/SecurityController.php:50
- * @route '/settings/password'
+ * @see \App\Http\Controllers\Api\Settings\SecurityController::update
+ * @see app/Http/Controllers/Api/Settings/SecurityController.php:29
+ * @route '/api/settings/password'
  */
 export const update = (
     options?: RouteQueryOptions,
@@ -18,22 +18,22 @@ export const update = (
 
 update.definition = {
     methods: ['put'],
-    url: '/settings/password',
+    url: '/api/settings/password',
 } satisfies RouteDefinition<['put']>;
 
 /**
- * @see \App\Http\Controllers\Settings\SecurityController::update
- * @see app/Http/Controllers/Settings/SecurityController.php:50
- * @route '/settings/password'
+ * @see \App\Http\Controllers\Api\Settings\SecurityController::update
+ * @see app/Http/Controllers/Api/Settings/SecurityController.php:29
+ * @route '/api/settings/password'
  */
 update.url = (options?: RouteQueryOptions) => {
     return update.definition.url + queryParams(options);
 };
 
 /**
- * @see \App\Http\Controllers\Settings\SecurityController::update
- * @see app/Http/Controllers/Settings/SecurityController.php:50
- * @route '/settings/password'
+ * @see \App\Http\Controllers\Api\Settings\SecurityController::update
+ * @see app/Http/Controllers/Api/Settings/SecurityController.php:29
+ * @route '/api/settings/password'
  */
 update.put = (options?: RouteQueryOptions): RouteDefinition<'put'> => ({
     url: update.url(options),
@@ -41,9 +41,9 @@ update.put = (options?: RouteQueryOptions): RouteDefinition<'put'> => ({
 });
 
 /**
- * @see \App\Http\Controllers\Settings\SecurityController::update
- * @see app/Http/Controllers/Settings/SecurityController.php:50
- * @route '/settings/password'
+ * @see \App\Http\Controllers\Api\Settings\SecurityController::update
+ * @see app/Http/Controllers/Api/Settings/SecurityController.php:29
+ * @route '/api/settings/password'
  */
 const updateForm = (
     options?: RouteQueryOptions,
@@ -58,9 +58,9 @@ const updateForm = (
 });
 
 /**
- * @see \App\Http\Controllers\Settings\SecurityController::update
- * @see app/Http/Controllers/Settings/SecurityController.php:50
- * @route '/settings/password'
+ * @see \App\Http\Controllers\Api\Settings\SecurityController::update
+ * @see app/Http/Controllers/Api/Settings/SecurityController.php:29
+ * @route '/api/settings/password'
  */
 updateForm.put = (
     options?: RouteQueryOptions,

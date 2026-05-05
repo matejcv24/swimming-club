@@ -9,6 +9,7 @@ use App\Http\Controllers\Api\NotificationController;
 use App\Http\Controllers\Api\ProfitController;
 use App\Http\Controllers\Api\SalaryController;
 use App\Http\Controllers\Api\Settings\ProfileController;
+use App\Http\Controllers\Api\Settings\SecurityController;
 use App\Http\Controllers\Api\StaffController;
 use App\Http\Controllers\Api\TrainingController;
 use App\Http\Controllers\Api\UnpaidFeeController;
@@ -25,6 +26,13 @@ Route::middleware(['web', 'auth', 'verified'])->group(function () {
 Route::middleware(['web', 'auth'])->group(function () {
     Route::get('/settings/profile', [ProfileController::class, 'show'])->name('api.profile.show');
     Route::patch('/settings/profile', [ProfileController::class, 'update'])->name('api.profile.update');
+});
+
+Route::middleware(['web', 'auth', 'verified'])->group(function () {
+    Route::get('/settings/security', [SecurityController::class, 'show'])->name('api.security.show');
+    Route::put('/settings/password', [SecurityController::class, 'updatePassword'])
+        ->middleware('throttle:6,1')
+        ->name('api.user-password.update');
 });
 
 Route::middleware(['web', 'auth', 'verified', 'role:admin'])->group(function () {
