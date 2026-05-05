@@ -8,7 +8,6 @@ use App\Http\Controllers\MemberController;
 use App\Http\Controllers\MembershipFeeController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\ProfitController;
-use App\Http\Controllers\SalaryController;
 use App\Http\Controllers\StaffController;
 use App\Http\Controllers\TrainingController;
 use App\Http\Controllers\UnpaidFeeController;
@@ -48,9 +47,6 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::middleware(['role:admin'])->group(function () {
         Route::get('/staff', [StaffController::class, 'index'])->name('staff.index');
         Route::post('/staff', [StaffController::class, 'store'])->name('staff.store');
-
-        Route::post('/salaries', [SalaryController::class, 'store'])->name('salaries.store');
-        Route::get('/salaries/by-coach/{coach}', [SalaryController::class, 'getByCoach'])->name('salaries.byCoach');
 
         Route::get('/invoices', [AdminController::class, 'invoices'])->name('invoices.page');
         Route::post('/invoices', [InvoiceController::class, 'store'])->name('invoices.store');

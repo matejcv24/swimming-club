@@ -4,11 +4,11 @@ import {
     type RouteDefinition,
     type RouteFormDefinition,
     applyUrlDefaults,
-} from './../../../../wayfinder';
+} from './../../../wayfinder';
 /**
- * @see \App\Http\Controllers\SalaryController::store
- * @see app/Http/Controllers/SalaryController.php:13
- * @route '/salaries'
+ * @see \App\Http\Controllers\Api\SalaryController::store
+ * @see app/Http/Controllers/Api/SalaryController.php:15
+ * @route '/api/salaries'
  */
 export const store = (
     options?: RouteQueryOptions,
@@ -19,22 +19,22 @@ export const store = (
 
 store.definition = {
     methods: ['post'],
-    url: '/salaries',
+    url: '/api/salaries',
 } satisfies RouteDefinition<['post']>;
 
 /**
- * @see \App\Http\Controllers\SalaryController::store
- * @see app/Http/Controllers/SalaryController.php:13
- * @route '/salaries'
+ * @see \App\Http\Controllers\Api\SalaryController::store
+ * @see app/Http/Controllers/Api/SalaryController.php:15
+ * @route '/api/salaries'
  */
 store.url = (options?: RouteQueryOptions) => {
     return store.definition.url + queryParams(options);
 };
 
 /**
- * @see \App\Http\Controllers\SalaryController::store
- * @see app/Http/Controllers/SalaryController.php:13
- * @route '/salaries'
+ * @see \App\Http\Controllers\Api\SalaryController::store
+ * @see app/Http/Controllers/Api/SalaryController.php:15
+ * @route '/api/salaries'
  */
 store.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     url: store.url(options),
@@ -42,9 +42,9 @@ store.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
 });
 
 /**
- * @see \App\Http\Controllers\SalaryController::store
- * @see app/Http/Controllers/SalaryController.php:13
- * @route '/salaries'
+ * @see \App\Http\Controllers\Api\SalaryController::store
+ * @see app/Http/Controllers/Api/SalaryController.php:15
+ * @route '/api/salaries'
  */
 const storeForm = (
     options?: RouteQueryOptions,
@@ -54,9 +54,9 @@ const storeForm = (
 });
 
 /**
- * @see \App\Http\Controllers\SalaryController::store
- * @see app/Http/Controllers/SalaryController.php:13
- * @route '/salaries'
+ * @see \App\Http\Controllers\Api\SalaryController::store
+ * @see app/Http/Controllers/Api/SalaryController.php:15
+ * @route '/api/salaries'
  */
 storeForm.post = (
     options?: RouteQueryOptions,
@@ -67,11 +67,11 @@ storeForm.post = (
 
 store.form = storeForm;
 /**
- * @see \App\Http\Controllers\SalaryController::getByCoach
- * @see app/Http/Controllers/SalaryController.php:36
- * @route '/salaries/by-coach/{coach}'
+ * @see \App\Http\Controllers\Api\SalaryController::byCoach
+ * @see app/Http/Controllers/Api/SalaryController.php:41
+ * @route '/api/salaries/by-coach/{coach}'
  */
-export const getByCoach = (
+export const byCoach = (
     args:
         | { coach: number | { id: number } }
         | [coach: number | { id: number }]
@@ -79,21 +79,21 @@ export const getByCoach = (
         | { id: number },
     options?: RouteQueryOptions,
 ): RouteDefinition<'get'> => ({
-    url: getByCoach.url(args, options),
+    url: byCoach.url(args, options),
     method: 'get',
 });
 
-getByCoach.definition = {
+byCoach.definition = {
     methods: ['get', 'head'],
-    url: '/salaries/by-coach/{coach}',
+    url: '/api/salaries/by-coach/{coach}',
 } satisfies RouteDefinition<['get', 'head']>;
 
 /**
- * @see \App\Http\Controllers\SalaryController::getByCoach
- * @see app/Http/Controllers/SalaryController.php:36
- * @route '/salaries/by-coach/{coach}'
+ * @see \App\Http\Controllers\Api\SalaryController::byCoach
+ * @see app/Http/Controllers/Api/SalaryController.php:41
+ * @route '/api/salaries/by-coach/{coach}'
  */
-getByCoach.url = (
+byCoach.url = (
     args:
         | { coach: number | { id: number } }
         | [coach: number | { id: number }]
@@ -122,18 +122,18 @@ getByCoach.url = (
     };
 
     return (
-        getByCoach.definition.url
+        byCoach.definition.url
             .replace('{coach}', parsedArgs.coach.toString())
             .replace(/\/+$/, '') + queryParams(options)
     );
 };
 
 /**
- * @see \App\Http\Controllers\SalaryController::getByCoach
- * @see app/Http/Controllers/SalaryController.php:36
- * @route '/salaries/by-coach/{coach}'
+ * @see \App\Http\Controllers\Api\SalaryController::byCoach
+ * @see app/Http/Controllers/Api/SalaryController.php:41
+ * @route '/api/salaries/by-coach/{coach}'
  */
-getByCoach.get = (
+byCoach.get = (
     args:
         | { coach: number | { id: number } }
         | [coach: number | { id: number }]
@@ -141,15 +141,15 @@ getByCoach.get = (
         | { id: number },
     options?: RouteQueryOptions,
 ): RouteDefinition<'get'> => ({
-    url: getByCoach.url(args, options),
+    url: byCoach.url(args, options),
     method: 'get',
 });
 /**
- * @see \App\Http\Controllers\SalaryController::getByCoach
- * @see app/Http/Controllers/SalaryController.php:36
- * @route '/salaries/by-coach/{coach}'
+ * @see \App\Http\Controllers\Api\SalaryController::byCoach
+ * @see app/Http/Controllers/Api/SalaryController.php:41
+ * @route '/api/salaries/by-coach/{coach}'
  */
-getByCoach.head = (
+byCoach.head = (
     args:
         | { coach: number | { id: number } }
         | [coach: number | { id: number }]
@@ -157,16 +157,16 @@ getByCoach.head = (
         | { id: number },
     options?: RouteQueryOptions,
 ): RouteDefinition<'head'> => ({
-    url: getByCoach.url(args, options),
+    url: byCoach.url(args, options),
     method: 'head',
 });
 
 /**
- * @see \App\Http\Controllers\SalaryController::getByCoach
- * @see app/Http/Controllers/SalaryController.php:36
- * @route '/salaries/by-coach/{coach}'
+ * @see \App\Http\Controllers\Api\SalaryController::byCoach
+ * @see app/Http/Controllers/Api/SalaryController.php:41
+ * @route '/api/salaries/by-coach/{coach}'
  */
-const getByCoachForm = (
+const byCoachForm = (
     args:
         | { coach: number | { id: number } }
         | [coach: number | { id: number }]
@@ -174,16 +174,16 @@ const getByCoachForm = (
         | { id: number },
     options?: RouteQueryOptions,
 ): RouteFormDefinition<'get'> => ({
-    action: getByCoach.url(args, options),
+    action: byCoach.url(args, options),
     method: 'get',
 });
 
 /**
- * @see \App\Http\Controllers\SalaryController::getByCoach
- * @see app/Http/Controllers/SalaryController.php:36
- * @route '/salaries/by-coach/{coach}'
+ * @see \App\Http\Controllers\Api\SalaryController::byCoach
+ * @see app/Http/Controllers/Api/SalaryController.php:41
+ * @route '/api/salaries/by-coach/{coach}'
  */
-getByCoachForm.get = (
+byCoachForm.get = (
     args:
         | { coach: number | { id: number } }
         | [coach: number | { id: number }]
@@ -191,15 +191,15 @@ getByCoachForm.get = (
         | { id: number },
     options?: RouteQueryOptions,
 ): RouteFormDefinition<'get'> => ({
-    action: getByCoach.url(args, options),
+    action: byCoach.url(args, options),
     method: 'get',
 });
 /**
- * @see \App\Http\Controllers\SalaryController::getByCoach
- * @see app/Http/Controllers/SalaryController.php:36
- * @route '/salaries/by-coach/{coach}'
+ * @see \App\Http\Controllers\Api\SalaryController::byCoach
+ * @see app/Http/Controllers/Api/SalaryController.php:41
+ * @route '/api/salaries/by-coach/{coach}'
  */
-getByCoachForm.head = (
+byCoachForm.head = (
     args:
         | { coach: number | { id: number } }
         | [coach: number | { id: number }]
@@ -207,7 +207,7 @@ getByCoachForm.head = (
         | { id: number },
     options?: RouteQueryOptions,
 ): RouteFormDefinition<'get'> => ({
-    action: getByCoach.url(args, {
+    action: byCoach.url(args, {
         [options?.mergeQuery ? 'mergeQuery' : 'query']: {
             _method: 'HEAD',
             ...(options?.query ?? options?.mergeQuery ?? {}),
@@ -216,7 +216,10 @@ getByCoachForm.head = (
     method: 'get',
 });
 
-getByCoach.form = getByCoachForm;
-const SalaryController = { store, getByCoach };
+byCoach.form = byCoachForm;
+const salaries = {
+    store: Object.assign(store, store),
+    byCoach: Object.assign(byCoach, byCoach),
+};
 
-export default SalaryController;
+export default salaries;

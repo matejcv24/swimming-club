@@ -1,5 +1,6 @@
 import NotificationController from './NotificationController';
 import StaffController from './StaffController';
+import SalaryController from './SalaryController';
 import AttendanceController from './AttendanceController';
 import MemberController from './MemberController';
 import MembershipFeeController from './MembershipFeeController';
@@ -11,6 +12,7 @@ const Api = {
         NotificationController,
     ),
     StaffController: Object.assign(StaffController, StaffController),
+    SalaryController: Object.assign(SalaryController, SalaryController),
     AttendanceController: Object.assign(
         AttendanceController,
         AttendanceController,

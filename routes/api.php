@@ -4,6 +4,7 @@ use App\Http\Controllers\Api\AttendanceController;
 use App\Http\Controllers\Api\MemberController;
 use App\Http\Controllers\Api\MembershipFeeController;
 use App\Http\Controllers\Api\NotificationController;
+use App\Http\Controllers\Api\SalaryController;
 use App\Http\Controllers\Api\StaffController;
 use App\Http\Controllers\Api\TrainingController;
 use App\Http\Controllers\Api\UnpaidFeeController;
@@ -18,6 +19,9 @@ Route::middleware(['web', 'auth', 'verified'])->group(function () {
 Route::middleware(['web', 'auth', 'verified', 'role:admin'])->group(function () {
     Route::get('/staff', [StaffController::class, 'index'])->name('api.staff.index');
     Route::post('/staff', [StaffController::class, 'store'])->name('api.staff.store');
+
+    Route::post('/salaries', [SalaryController::class, 'store'])->name('api.salaries.store');
+    Route::get('/salaries/by-coach/{coach}', [SalaryController::class, 'getByCoach'])->name('api.salaries.byCoach');
 });
 
 Route::middleware(['web', 'auth', 'verified', 'role:admin,coach'])->group(function () {

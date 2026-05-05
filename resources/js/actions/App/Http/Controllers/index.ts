@@ -8,7 +8,6 @@ import AttendanceController from './AttendanceController';
 import TrainingController from './TrainingController';
 import MembershipFeeController from './MembershipFeeController';
 import UnpaidFeeController from './UnpaidFeeController';
-import SalaryController from './SalaryController';
 import InvoiceController from './InvoiceController';
 import ProfitController from './ProfitController';
 import Settings from './Settings';
@@ -38,7 +37,6 @@ const Controllers = {
         UnpaidFeeController,
         UnpaidFeeController,
     ),
-    SalaryController: Object.assign(SalaryController, SalaryController),
     InvoiceController: Object.assign(InvoiceController, InvoiceController),
     ProfitController: Object.assign(ProfitController, ProfitController),
     Settings: Object.assign(Settings, Settings),

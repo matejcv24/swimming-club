@@ -59,6 +59,15 @@ interface StoreStaffResponse {
     coach: Staff;
 }
 
+interface ListSalariesResponse {
+    salaries: Salary[];
+}
+
+interface StoreSalaryResponse {
+    message: string;
+    salary: Salary;
+}
+
 const darkTheme = createTheme({
     palette: { mode: 'dark' },
 });
@@ -104,6 +113,11 @@ export default function StaffIndex({ staff: initialStaff = [] }: Props) {
     const [selectedCoach, setSelectedCoach] = useState<Staff | null>(null);
     const [salaries, setSalaries] = useState<Salary[]>([]);
     const [loadingSalaries, setLoadingSalaries] = useState(false);
+    const [salaryError, setSalaryError] = useState<string | null>(null);
+    const [salaryErrors, setSalaryErrors] = useState<Record<string, string[]>>(
+        {},
+    );
+    const [isSavingSalary, setIsSavingSalary] = useState(false);
     const [salaryAmount, setSalaryAmount] = useState('');
     const [salaryMonth, setSalaryMonth] = useState<Dayjs | null>(null);
     const [showSalaryHistoryModal, setShowSalaryHistoryModal] = useState(false);
@@ -240,38 +254,62 @@ export default function StaffIndex({ staff: initialStaff = [] }: Props) {
         setShowSalaryHistoryModal(false);
         setShowSalaryYearDetailModal(false);
         setSelectedSalaryYear(null);
+        setSalaryError(null);
+        setSalaryErrors({});
 
         try {
-            const response = await fetch(`/salaries/by-coach/${coach.id}`);
-            const data = await response.json();
+            const data = await apiRequest<ListSalariesResponse>(
+                `/api/salaries/by-coach/${coach.id}`,
+            );
+
             setSalaries(data.salaries ?? []);
         } catch {
             setSalaries([]);
+            setSalaryError('Unable to load salary history.');
+        } finally {
+            setLoadingSalaries(false);
         }
-
-        setLoadingSalaries(false);
     };
 
-    const handleSalarySave = () => {
+    const handleSalarySave = async () => {
         if (!selectedCoach || !salaryAmount || !salaryMonth) {
             return;
         }
 
-        router.post(
-            '/salaries',
-            {
-                user_id: selectedCoach.id,
-                amount: salaryAmount,
-                month: salaryMonth.startOf('month').format('YYYY-MM-DD'),
-            },
-            {
-                onSuccess: () => {
-                    handleCoachClick(selectedCoach);
-                    setSalaryAmount('');
-                    setSalaryMonth(null);
+        setSalaryError(null);
+        setSalaryErrors({});
+        setIsSavingSalary(true);
+
+        try {
+            const data = await apiRequest<StoreSalaryResponse>(
+                '/api/salaries',
+                {
+                    method: 'POST',
+                    body: {
+                        user_id: selectedCoach.id,
+                        amount: salaryAmount,
+                        month: salaryMonth
+                            .startOf('month')
+                            .format('YYYY-MM-DD'),
+                    },
                 },
-            },
-        );
+            );
+
+            setSalaries((currentSalaries) => [data.salary, ...currentSalaries]);
+            setSalaryAmount('');
+            setSalaryMonth(null);
+        } catch (error) {
+            if (error instanceof ApiValidationError) {
+                setSalaryErrors(error.errors);
+                setSalaryError(error.message);
+
+                return;
+            }
+
+            setSalaryError('Unable to save salary. Please try again.');
+        } finally {
+            setIsSavingSalary(false);
+        }
     };
 
     return (
@@ -446,6 +484,11 @@ export default function StaffIndex({ staff: initialStaff = [] }: Props) {
                                 inputProps={{ 'aria-label': 'salary amount' }}
                                 sx={inputSx}
                             />
+                            {salaryErrors.amount?.[0] && (
+                                <Typography variant="caption" color="error">
+                                    {salaryErrors.amount[0]}
+                                </Typography>
+                            )}
 
                             <LocalizationProvider dateAdapter={AdapterDayjs}>
                                 <DatePicker
@@ -456,6 +499,16 @@ export default function StaffIndex({ staff: initialStaff = [] }: Props) {
                                     sx={datePickerSx}
                                 />
                             </LocalizationProvider>
+                            {salaryErrors.month?.[0] && (
+                                <Typography variant="caption" color="error">
+                                    {salaryErrors.month[0]}
+                                </Typography>
+                            )}
+                            {salaryError && (
+                                <Typography variant="body2" color="error">
+                                    {salaryError}
+                                </Typography>
+                            )}
 
                             <div className="flex gap-3">
                                 <Button
@@ -463,9 +516,13 @@ export default function StaffIndex({ staff: initialStaff = [] }: Props) {
                                     fullWidth
                                     size="medium"
                                     onClick={handleSalarySave}
-                                    disabled={!salaryAmount || !salaryMonth}
+                                    disabled={
+                                        !salaryAmount ||
+                                        !salaryMonth ||
+                                        isSavingSalary
+                                    }
                                 >
-                                    Save
+                                    {isSavingSalary ? 'Saving...' : 'Save'}
                                 </Button>
                                 <Button
                                     variant="outlined"
