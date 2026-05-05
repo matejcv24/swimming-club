@@ -1,18 +1,18 @@
 <?php
 
 use App\Http\Controllers\AdminController;
+use App\Http\Controllers\AttendanceController;
 use App\Http\Controllers\ClubParentController;
 use App\Http\Controllers\InvoiceController;
 use App\Http\Controllers\MemberController;
 use App\Http\Controllers\MembershipFeeController;
+use App\Http\Controllers\NotificationController;
+use App\Http\Controllers\ProfitController;
 use App\Http\Controllers\SalaryController;
 use App\Http\Controllers\StaffController;
 use App\Http\Controllers\TrainingController;
 use App\Http\Controllers\UnpaidFeeController;
-use App\Http\Controllers\ProfitController;
-use App\Http\Controllers\AttendanceController;
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\NotificationController;
 use Inertia\Inertia;
 
 Route::get('/', function () {
@@ -34,7 +34,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('/notifications/{notification}/read', [NotificationController::class, 'markAsRead'])->name('notifications.read');
 
     Route::middleware(['role:admin,coach'])->group(function () {
-        Route::resource('members', MemberController::class)->except(['destroy']);
+        Route::get('/members', [MemberController::class, 'index'])->name('members.index');
         Route::post('/parents', [ClubParentController::class, 'store'])->name('parents.store');
         Route::get('/attendance', [AttendanceController::class, 'index'])->name('attendance.index');
 
