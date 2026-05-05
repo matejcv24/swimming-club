@@ -4,6 +4,7 @@ import CloseIcon from '@mui/icons-material/Close';
 import EditIcon from '@mui/icons-material/Edit';
 import PersonAddAlt1Icon from '@mui/icons-material/PersonAddAlt1';
 import SearchIcon from '@mui/icons-material/Search';
+import { ApiValidationError, apiRequest } from '@/lib/api';
 import Avatar from '@mui/material/Avatar';
 import Button from '@mui/material/Button';
 import Dialog from '@mui/material/Dialog';
@@ -59,11 +60,6 @@ interface UpdateMemberResponse {
     member: Member;
 }
 
-interface ValidationErrorResponse {
-    message?: string;
-    errors?: Record<string, string[]>;
-}
-
 const darkTheme = createTheme({
     palette: { mode: 'dark' },
 });
@@ -76,11 +72,6 @@ const inputSx = {
     '&::after': { borderBottomColor: 'white' },
     '& input::placeholder': { color: 'rgba(255,255,255,0.5)' },
 };
-
-const getCsrfToken = () =>
-    document
-        .querySelector<HTMLMetaElement>('meta[name="csrf-token"]')
-        ?.getAttribute('content') ?? '';
 
 export default function MembersIndex({ members: initialMembers }: Props) {
     const [members, setMembers] = useState(initialMembers);
@@ -124,20 +115,8 @@ export default function MembersIndex({ members: initialMembers }: Props) {
             setMembersError(null);
 
             try {
-                const response = await fetch('/api/members', {
-                    method: 'GET',
-                    credentials: 'same-origin',
-                    headers: {
-                        Accept: 'application/json',
-                        'X-Requested-With': 'XMLHttpRequest',
-                    },
-                });
-
-                if (!response.ok) {
-                    throw new Error('Unable to load members.');
-                }
-
-                const data = (await response.json()) as ListMembersResponse;
+                const data =
+                    await apiRequest<ListMembersResponse>('/api/members');
 
                 setMembers(data.members);
             } catch {
@@ -196,32 +175,10 @@ export default function MembersIndex({ members: initialMembers }: Props) {
         setIsAddingMember(true);
 
         try {
-            const response = await fetch('/api/members', {
+            const data = await apiRequest<StoreMemberResponse>('/api/members', {
                 method: 'POST',
-                credentials: 'same-origin',
-                headers: {
-                    Accept: 'application/json',
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': getCsrfToken(),
-                    'X-Requested-With': 'XMLHttpRequest',
-                },
-                body: JSON.stringify(form),
+                body: form,
             });
-
-            if (response.status === 422) {
-                const data = (await response.json()) as ValidationErrorResponse;
-
-                setAddErrors(data.errors ?? {});
-                setAddError(data.message ?? 'Please check the form.');
-
-                return;
-            }
-
-            if (!response.ok) {
-                throw new Error('Unable to save member.');
-            }
-
-            const data = (await response.json()) as StoreMemberResponse;
 
             setMembers((currentMembers) => [...currentMembers, data.member]);
             setShowAddModal(false);
@@ -233,7 +190,14 @@ export default function MembersIndex({ members: initialMembers }: Props) {
                 parent_email: '',
                 parent_phone: '',
             });
-        } catch {
+        } catch (error) {
+            if (error instanceof ApiValidationError) {
+                setAddErrors(error.errors);
+                setAddError(error.message);
+
+                return;
+            }
+
             setAddError(
                 'Unable to save member. Please check the form and try again.',
             );
@@ -273,32 +237,13 @@ export default function MembersIndex({ members: initialMembers }: Props) {
         setIsUpdatingMember(true);
 
         try {
-            const response = await fetch(`/api/members/${editMember.id}`, {
-                method: 'PATCH',
-                credentials: 'same-origin',
-                headers: {
-                    Accept: 'application/json',
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': getCsrfToken(),
-                    'X-Requested-With': 'XMLHttpRequest',
+            const data = await apiRequest<UpdateMemberResponse>(
+                `/api/members/${editMember.id}`,
+                {
+                    method: 'PATCH',
+                    body: editForm,
                 },
-                body: JSON.stringify(editForm),
-            });
-
-            if (response.status === 422) {
-                const data = (await response.json()) as ValidationErrorResponse;
-
-                setEditErrors(data.errors ?? {});
-                setEditError(data.message ?? 'Please check the form.');
-
-                return;
-            }
-
-            if (!response.ok) {
-                throw new Error('Unable to update member.');
-            }
-
-            const data = (await response.json()) as UpdateMemberResponse;
+            );
 
             setMembers((currentMembers) =>
                 currentMembers.map((member) =>
@@ -311,7 +256,14 @@ export default function MembersIndex({ members: initialMembers }: Props) {
                     : currentMember,
             );
             setEditMember(null);
-        } catch {
+        } catch (error) {
+            if (error instanceof ApiValidationError) {
+                setEditErrors(error.errors);
+                setEditError(error.message);
+
+                return;
+            }
+
             setEditError(
                 'Unable to update member. Please check the form and try again.',
             );
