@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\AttendanceController;
+use App\Http\Controllers\Api\InvoiceController;
 use App\Http\Controllers\Api\MemberController;
 use App\Http\Controllers\Api\MembershipFeeController;
 use App\Http\Controllers\Api\NotificationController;
@@ -22,6 +23,12 @@ Route::middleware(['web', 'auth', 'verified', 'role:admin'])->group(function () 
 
     Route::post('/salaries', [SalaryController::class, 'store'])->name('api.salaries.store');
     Route::get('/salaries/by-coach/{coach}', [SalaryController::class, 'getByCoach'])->name('api.salaries.byCoach');
+
+    Route::get('/invoices', [InvoiceController::class, 'index'])->name('api.invoices.index');
+    Route::post('/invoices', [InvoiceController::class, 'store'])->name('api.invoices.store');
+    Route::get('/invoices/by-month/{month}', [InvoiceController::class, 'getByMonth'])->name('api.invoices.byMonth');
+    Route::put('/invoices/{invoice}', [InvoiceController::class, 'update'])->name('api.invoices.update');
+    Route::delete('/invoices/{invoice}', [InvoiceController::class, 'destroy'])->name('api.invoices.destroy');
 });
 
 Route::middleware(['web', 'auth', 'verified', 'role:admin,coach'])->group(function () {

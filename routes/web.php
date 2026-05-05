@@ -3,7 +3,6 @@
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\AttendanceController;
 use App\Http\Controllers\ClubParentController;
-use App\Http\Controllers\InvoiceController;
 use App\Http\Controllers\MemberController;
 use App\Http\Controllers\MembershipFeeController;
 use App\Http\Controllers\NotificationController;
@@ -49,10 +48,6 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('/staff', [StaffController::class, 'store'])->name('staff.store');
 
         Route::get('/invoices', [AdminController::class, 'invoices'])->name('invoices.page');
-        Route::post('/invoices', [InvoiceController::class, 'store'])->name('invoices.store');
-        Route::get('/invoices/by-month/{month}', [InvoiceController::class, 'getByMonth'])->name('invoices.byMonth');
-        Route::put('/invoices/{invoice}', [InvoiceController::class, 'update'])->name('invoices.update');
-        Route::delete('/invoices/{invoice}', [InvoiceController::class, 'destroy'])->name('invoices.destroy');
 
         Route::get('/profit', [ProfitController::class, 'index'])->name('profit.index');
     });

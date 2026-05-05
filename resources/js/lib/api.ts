@@ -66,5 +66,9 @@ export async function apiRequest<T>(
         throw new Error(data?.message ?? 'The request failed.');
     }
 
+    if (response.status === 204) {
+        return null as T;
+    }
+
     return (await response.json()) as T;
 }

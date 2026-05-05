@@ -4,11 +4,91 @@ import {
     type RouteDefinition,
     type RouteFormDefinition,
     applyUrlDefaults,
-} from './../../../../wayfinder';
+} from './../../../wayfinder';
 /**
- * @see \App\Http\Controllers\InvoiceController::store
- * @see app/Http/Controllers/InvoiceController.php:42
- * @route '/invoices'
+ * @see \App\Http\Controllers\Api\InvoiceController::index
+ * @see app/Http/Controllers/Api/InvoiceController.php:12
+ * @route '/api/invoices'
+ */
+export const index = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+    url: index.url(options),
+    method: 'get',
+});
+
+index.definition = {
+    methods: ['get', 'head'],
+    url: '/api/invoices',
+} satisfies RouteDefinition<['get', 'head']>;
+
+/**
+ * @see \App\Http\Controllers\Api\InvoiceController::index
+ * @see app/Http/Controllers/Api/InvoiceController.php:12
+ * @route '/api/invoices'
+ */
+index.url = (options?: RouteQueryOptions) => {
+    return index.definition.url + queryParams(options);
+};
+
+/**
+ * @see \App\Http\Controllers\Api\InvoiceController::index
+ * @see app/Http/Controllers/Api/InvoiceController.php:12
+ * @route '/api/invoices'
+ */
+index.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+    url: index.url(options),
+    method: 'get',
+});
+/**
+ * @see \App\Http\Controllers\Api\InvoiceController::index
+ * @see app/Http/Controllers/Api/InvoiceController.php:12
+ * @route '/api/invoices'
+ */
+index.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
+    url: index.url(options),
+    method: 'head',
+});
+
+/**
+ * @see \App\Http\Controllers\Api\InvoiceController::index
+ * @see app/Http/Controllers/Api/InvoiceController.php:12
+ * @route '/api/invoices'
+ */
+const indexForm = (
+    options?: RouteQueryOptions,
+): RouteFormDefinition<'get'> => ({
+    action: index.url(options),
+    method: 'get',
+});
+
+/**
+ * @see \App\Http\Controllers\Api\InvoiceController::index
+ * @see app/Http/Controllers/Api/InvoiceController.php:12
+ * @route '/api/invoices'
+ */
+indexForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+    action: index.url(options),
+    method: 'get',
+});
+/**
+ * @see \App\Http\Controllers\Api\InvoiceController::index
+ * @see app/Http/Controllers/Api/InvoiceController.php:12
+ * @route '/api/invoices'
+ */
+indexForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+    action: index.url({
+        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+            _method: 'HEAD',
+            ...(options?.query ?? options?.mergeQuery ?? {}),
+        },
+    }),
+    method: 'get',
+});
+
+index.form = indexForm;
+/**
+ * @see \App\Http\Controllers\Api\InvoiceController::store
+ * @see app/Http/Controllers/Api/InvoiceController.php:33
+ * @route '/api/invoices'
  */
 export const store = (
     options?: RouteQueryOptions,
@@ -19,22 +99,22 @@ export const store = (
 
 store.definition = {
     methods: ['post'],
-    url: '/invoices',
+    url: '/api/invoices',
 } satisfies RouteDefinition<['post']>;
 
 /**
- * @see \App\Http\Controllers\InvoiceController::store
- * @see app/Http/Controllers/InvoiceController.php:42
- * @route '/invoices'
+ * @see \App\Http\Controllers\Api\InvoiceController::store
+ * @see app/Http/Controllers/Api/InvoiceController.php:33
+ * @route '/api/invoices'
  */
 store.url = (options?: RouteQueryOptions) => {
     return store.definition.url + queryParams(options);
 };
 
 /**
- * @see \App\Http\Controllers\InvoiceController::store
- * @see app/Http/Controllers/InvoiceController.php:42
- * @route '/invoices'
+ * @see \App\Http\Controllers\Api\InvoiceController::store
+ * @see app/Http/Controllers/Api/InvoiceController.php:33
+ * @route '/api/invoices'
  */
 store.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     url: store.url(options),
@@ -42,9 +122,9 @@ store.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
 });
 
 /**
- * @see \App\Http\Controllers\InvoiceController::store
- * @see app/Http/Controllers/InvoiceController.php:42
- * @route '/invoices'
+ * @see \App\Http\Controllers\Api\InvoiceController::store
+ * @see app/Http/Controllers/Api/InvoiceController.php:33
+ * @route '/api/invoices'
  */
 const storeForm = (
     options?: RouteQueryOptions,
@@ -54,9 +134,9 @@ const storeForm = (
 });
 
 /**
- * @see \App\Http\Controllers\InvoiceController::store
- * @see app/Http/Controllers/InvoiceController.php:42
- * @route '/invoices'
+ * @see \App\Http\Controllers\Api\InvoiceController::store
+ * @see app/Http/Controllers/Api/InvoiceController.php:33
+ * @route '/api/invoices'
  */
 storeForm.post = (
     options?: RouteQueryOptions,
@@ -67,11 +147,11 @@ storeForm.post = (
 
 store.form = storeForm;
 /**
- * @see \App\Http\Controllers\InvoiceController::getByMonth
- * @see app/Http/Controllers/InvoiceController.php:25
- * @route '/invoices/by-month/{month}'
+ * @see \App\Http\Controllers\Api\InvoiceController::byMonth
+ * @see app/Http/Controllers/Api/InvoiceController.php:19
+ * @route '/api/invoices/by-month/{month}'
  */
-export const getByMonth = (
+export const byMonth = (
     args:
         | { month: string | number }
         | [month: string | number]
@@ -79,21 +159,21 @@ export const getByMonth = (
         | number,
     options?: RouteQueryOptions,
 ): RouteDefinition<'get'> => ({
-    url: getByMonth.url(args, options),
+    url: byMonth.url(args, options),
     method: 'get',
 });
 
-getByMonth.definition = {
+byMonth.definition = {
     methods: ['get', 'head'],
-    url: '/invoices/by-month/{month}',
+    url: '/api/invoices/by-month/{month}',
 } satisfies RouteDefinition<['get', 'head']>;
 
 /**
- * @see \App\Http\Controllers\InvoiceController::getByMonth
- * @see app/Http/Controllers/InvoiceController.php:25
- * @route '/invoices/by-month/{month}'
+ * @see \App\Http\Controllers\Api\InvoiceController::byMonth
+ * @see app/Http/Controllers/Api/InvoiceController.php:19
+ * @route '/api/invoices/by-month/{month}'
  */
-getByMonth.url = (
+byMonth.url = (
     args:
         | { month: string | number }
         | [month: string | number]
@@ -118,18 +198,18 @@ getByMonth.url = (
     };
 
     return (
-        getByMonth.definition.url
+        byMonth.definition.url
             .replace('{month}', parsedArgs.month.toString())
             .replace(/\/+$/, '') + queryParams(options)
     );
 };
 
 /**
- * @see \App\Http\Controllers\InvoiceController::getByMonth
- * @see app/Http/Controllers/InvoiceController.php:25
- * @route '/invoices/by-month/{month}'
+ * @see \App\Http\Controllers\Api\InvoiceController::byMonth
+ * @see app/Http/Controllers/Api/InvoiceController.php:19
+ * @route '/api/invoices/by-month/{month}'
  */
-getByMonth.get = (
+byMonth.get = (
     args:
         | { month: string | number }
         | [month: string | number]
@@ -137,15 +217,15 @@ getByMonth.get = (
         | number,
     options?: RouteQueryOptions,
 ): RouteDefinition<'get'> => ({
-    url: getByMonth.url(args, options),
+    url: byMonth.url(args, options),
     method: 'get',
 });
 /**
- * @see \App\Http\Controllers\InvoiceController::getByMonth
- * @see app/Http/Controllers/InvoiceController.php:25
- * @route '/invoices/by-month/{month}'
+ * @see \App\Http\Controllers\Api\InvoiceController::byMonth
+ * @see app/Http/Controllers/Api/InvoiceController.php:19
+ * @route '/api/invoices/by-month/{month}'
  */
-getByMonth.head = (
+byMonth.head = (
     args:
         | { month: string | number }
         | [month: string | number]
@@ -153,16 +233,16 @@ getByMonth.head = (
         | number,
     options?: RouteQueryOptions,
 ): RouteDefinition<'head'> => ({
-    url: getByMonth.url(args, options),
+    url: byMonth.url(args, options),
     method: 'head',
 });
 
 /**
- * @see \App\Http\Controllers\InvoiceController::getByMonth
- * @see app/Http/Controllers/InvoiceController.php:25
- * @route '/invoices/by-month/{month}'
+ * @see \App\Http\Controllers\Api\InvoiceController::byMonth
+ * @see app/Http/Controllers/Api/InvoiceController.php:19
+ * @route '/api/invoices/by-month/{month}'
  */
-const getByMonthForm = (
+const byMonthForm = (
     args:
         | { month: string | number }
         | [month: string | number]
@@ -170,16 +250,16 @@ const getByMonthForm = (
         | number,
     options?: RouteQueryOptions,
 ): RouteFormDefinition<'get'> => ({
-    action: getByMonth.url(args, options),
+    action: byMonth.url(args, options),
     method: 'get',
 });
 
 /**
- * @see \App\Http\Controllers\InvoiceController::getByMonth
- * @see app/Http/Controllers/InvoiceController.php:25
- * @route '/invoices/by-month/{month}'
+ * @see \App\Http\Controllers\Api\InvoiceController::byMonth
+ * @see app/Http/Controllers/Api/InvoiceController.php:19
+ * @route '/api/invoices/by-month/{month}'
  */
-getByMonthForm.get = (
+byMonthForm.get = (
     args:
         | { month: string | number }
         | [month: string | number]
@@ -187,15 +267,15 @@ getByMonthForm.get = (
         | number,
     options?: RouteQueryOptions,
 ): RouteFormDefinition<'get'> => ({
-    action: getByMonth.url(args, options),
+    action: byMonth.url(args, options),
     method: 'get',
 });
 /**
- * @see \App\Http\Controllers\InvoiceController::getByMonth
- * @see app/Http/Controllers/InvoiceController.php:25
- * @route '/invoices/by-month/{month}'
+ * @see \App\Http\Controllers\Api\InvoiceController::byMonth
+ * @see app/Http/Controllers/Api/InvoiceController.php:19
+ * @route '/api/invoices/by-month/{month}'
  */
-getByMonthForm.head = (
+byMonthForm.head = (
     args:
         | { month: string | number }
         | [month: string | number]
@@ -203,7 +283,7 @@ getByMonthForm.head = (
         | number,
     options?: RouteQueryOptions,
 ): RouteFormDefinition<'get'> => ({
-    action: getByMonth.url(args, {
+    action: byMonth.url(args, {
         [options?.mergeQuery ? 'mergeQuery' : 'query']: {
             _method: 'HEAD',
             ...(options?.query ?? options?.mergeQuery ?? {}),
@@ -212,11 +292,11 @@ getByMonthForm.head = (
     method: 'get',
 });
 
-getByMonth.form = getByMonthForm;
+byMonth.form = byMonthForm;
 /**
- * @see \App\Http\Controllers\InvoiceController::update
- * @see app/Http/Controllers/InvoiceController.php:68
- * @route '/invoices/{invoice}'
+ * @see \App\Http\Controllers\Api\InvoiceController::update
+ * @see app/Http/Controllers/Api/InvoiceController.php:56
+ * @route '/api/invoices/{invoice}'
  */
 export const update = (
     args:
@@ -232,13 +312,13 @@ export const update = (
 
 update.definition = {
     methods: ['put'],
-    url: '/invoices/{invoice}',
+    url: '/api/invoices/{invoice}',
 } satisfies RouteDefinition<['put']>;
 
 /**
- * @see \App\Http\Controllers\InvoiceController::update
- * @see app/Http/Controllers/InvoiceController.php:68
- * @route '/invoices/{invoice}'
+ * @see \App\Http\Controllers\Api\InvoiceController::update
+ * @see app/Http/Controllers/Api/InvoiceController.php:56
+ * @route '/api/invoices/{invoice}'
  */
 update.url = (
     args:
@@ -277,9 +357,9 @@ update.url = (
 };
 
 /**
- * @see \App\Http\Controllers\InvoiceController::update
- * @see app/Http/Controllers/InvoiceController.php:68
- * @route '/invoices/{invoice}'
+ * @see \App\Http\Controllers\Api\InvoiceController::update
+ * @see app/Http/Controllers/Api/InvoiceController.php:56
+ * @route '/api/invoices/{invoice}'
  */
 update.put = (
     args:
@@ -294,9 +374,9 @@ update.put = (
 });
 
 /**
- * @see \App\Http\Controllers\InvoiceController::update
- * @see app/Http/Controllers/InvoiceController.php:68
- * @route '/invoices/{invoice}'
+ * @see \App\Http\Controllers\Api\InvoiceController::update
+ * @see app/Http/Controllers/Api/InvoiceController.php:56
+ * @route '/api/invoices/{invoice}'
  */
 const updateForm = (
     args:
@@ -316,9 +396,9 @@ const updateForm = (
 });
 
 /**
- * @see \App\Http\Controllers\InvoiceController::update
- * @see app/Http/Controllers/InvoiceController.php:68
- * @route '/invoices/{invoice}'
+ * @see \App\Http\Controllers\Api\InvoiceController::update
+ * @see app/Http/Controllers/Api/InvoiceController.php:56
+ * @route '/api/invoices/{invoice}'
  */
 updateForm.put = (
     args:
@@ -339,9 +419,9 @@ updateForm.put = (
 
 update.form = updateForm;
 /**
- * @see \App\Http\Controllers\InvoiceController::destroy
- * @see app/Http/Controllers/InvoiceController.php:82
- * @route '/invoices/{invoice}'
+ * @see \App\Http\Controllers\Api\InvoiceController::destroy
+ * @see app/Http/Controllers/Api/InvoiceController.php:67
+ * @route '/api/invoices/{invoice}'
  */
 export const destroy = (
     args:
@@ -357,13 +437,13 @@ export const destroy = (
 
 destroy.definition = {
     methods: ['delete'],
-    url: '/invoices/{invoice}',
+    url: '/api/invoices/{invoice}',
 } satisfies RouteDefinition<['delete']>;
 
 /**
- * @see \App\Http\Controllers\InvoiceController::destroy
- * @see app/Http/Controllers/InvoiceController.php:82
- * @route '/invoices/{invoice}'
+ * @see \App\Http\Controllers\Api\InvoiceController::destroy
+ * @see app/Http/Controllers/Api/InvoiceController.php:67
+ * @route '/api/invoices/{invoice}'
  */
 destroy.url = (
     args:
@@ -402,9 +482,9 @@ destroy.url = (
 };
 
 /**
- * @see \App\Http\Controllers\InvoiceController::destroy
- * @see app/Http/Controllers/InvoiceController.php:82
- * @route '/invoices/{invoice}'
+ * @see \App\Http\Controllers\Api\InvoiceController::destroy
+ * @see app/Http/Controllers/Api/InvoiceController.php:67
+ * @route '/api/invoices/{invoice}'
  */
 destroy.delete = (
     args:
@@ -419,9 +499,9 @@ destroy.delete = (
 });
 
 /**
- * @see \App\Http\Controllers\InvoiceController::destroy
- * @see app/Http/Controllers/InvoiceController.php:82
- * @route '/invoices/{invoice}'
+ * @see \App\Http\Controllers\Api\InvoiceController::destroy
+ * @see app/Http/Controllers/Api/InvoiceController.php:67
+ * @route '/api/invoices/{invoice}'
  */
 const destroyForm = (
     args:
@@ -441,9 +521,9 @@ const destroyForm = (
 });
 
 /**
- * @see \App\Http\Controllers\InvoiceController::destroy
- * @see app/Http/Controllers/InvoiceController.php:82
- * @route '/invoices/{invoice}'
+ * @see \App\Http\Controllers\Api\InvoiceController::destroy
+ * @see app/Http/Controllers/Api/InvoiceController.php:67
+ * @route '/api/invoices/{invoice}'
  */
 destroyForm.delete = (
     args:
@@ -463,6 +543,12 @@ destroyForm.delete = (
 });
 
 destroy.form = destroyForm;
-const InvoiceController = { store, getByMonth, update, destroy };
+const invoices = {
+    index: Object.assign(index, index),
+    store: Object.assign(store, store),
+    byMonth: Object.assign(byMonth, byMonth),
+    update: Object.assign(update, update),
+    destroy: Object.assign(destroy, destroy),
+};
 
-export default InvoiceController;
+export default invoices;

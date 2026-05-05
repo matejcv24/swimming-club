@@ -1,4 +1,4 @@
-import { Head, router, usePage } from '@inertiajs/react';
+import { Head, router } from '@inertiajs/react';
 import CloseIcon from '@mui/icons-material/Close';
 import EditIcon from '@mui/icons-material/Edit';
 import Button from '@mui/material/Button';
@@ -20,9 +20,10 @@ import Typography from '@mui/material/Typography';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
+import { ApiValidationError, apiRequest } from '@/lib/api';
 import dayjs from 'dayjs';
 import type { Dayjs } from 'dayjs';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 interface Invoice {
     id: number;
@@ -39,6 +40,10 @@ interface GroupedInvoiceByMonth {
 }
 
 interface Props {
+    invoices?: Invoice[];
+}
+
+interface ListInvoicesResponse {
     invoices: Invoice[];
 }
 
@@ -79,13 +84,7 @@ const datePickerSx = {
     '& .MuiSvgIcon-root': { color: 'white' },
 };
 
-export default function InvoicesIndex({ invoices }: Props) {
-    const page = usePage();
-    const csrfToken = (page.props as any).csrf_token;
-
-    console.log('Page props:', page.props);
-    console.log('CSRF Token from props:', csrfToken);
-
+export default function InvoicesIndex({ invoices = [] }: Props) {
     const [invoiceList, setInvoiceList] = useState<Invoice[]>(
         invoices.map((inv) => ({
             ...inv,
@@ -106,6 +105,38 @@ export default function InvoicesIndex({ invoices }: Props) {
         'big',
     );
     const [isSaving, setIsSaving] = useState(false);
+    const [isLoadingInvoices, setIsLoadingInvoices] = useState(false);
+    const [invoiceError, setInvoiceError] = useState<string | null>(null);
+    const [invoiceErrors, setInvoiceErrors] = useState<
+        Record<string, string[]>
+    >({});
+    const [editError, setEditError] = useState<string | null>(null);
+    const [editErrors, setEditErrors] = useState<Record<string, string[]>>({});
+
+    useEffect(() => {
+        const loadInvoices = async () => {
+            setIsLoadingInvoices(true);
+            setInvoiceError(null);
+
+            try {
+                const data =
+                    await apiRequest<ListInvoicesResponse>('/api/invoices');
+
+                setInvoiceList(
+                    data.invoices.map((invoice) => ({
+                        ...invoice,
+                        amount: Number(invoice.amount),
+                    })),
+                );
+            } catch {
+                setInvoiceError('Unable to refresh invoices right now.');
+            } finally {
+                setIsLoadingInvoices(false);
+            }
+        };
+
+        void loadInvoices();
+    }, []);
 
     // Get unique months and group invoices
     const groupedInvoices: Record<string, GroupedInvoiceByMonth> = {};
@@ -165,36 +196,18 @@ export default function InvoicesIndex({ invoices }: Props) {
         : [];
 
     const handleSaveInvoice = async () => {
-        console.log('handleSaveInvoice called');
-        console.log(
-            'Invoiced inputs - Month:',
-            invoiceMonth?.format('YYYY-MM-DD'),
-            'Amount:',
-            invoiceAmount,
-            'Pool:',
-            invoicePool,
-        );
-        console.log('CSRF Token available:', csrfToken);
-
         if (!invoiceMonth || !invoiceAmount) {
-            console.log('Missing required fields');
-
-            return;
-        }
-
-        if (!csrfToken) {
-            console.error('CSRF token is missing!');
-
             return;
         }
 
         setIsSaving(true);
+        setInvoiceError(null);
+        setInvoiceErrors({});
 
         const monthStr = invoiceMonth.format('YYYY-MM-DD');
         const amount = parseFloat(invoiceAmount);
 
         if (isNaN(amount) || amount < 0) {
-            console.error('Invalid amount - NaN or negative');
             setIsSaving(false);
 
             return;
@@ -205,49 +218,45 @@ export default function InvoicesIndex({ invoices }: Props) {
             pool: invoicePool,
             amount: amount,
         };
-        console.log('Sending payload:', payload);
 
         try {
-            const response = await fetch('/invoices', {
+            const data = await apiRequest<Invoice>('/api/invoices', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': csrfToken,
-                },
-                body: JSON.stringify(payload),
+                body: payload,
             });
 
-            console.log('Response status:', response.status);
+            const savedInvoice: Invoice = {
+                id: data.id,
+                month: data.month,
+                pool: data.pool,
+                amount: Number(data.amount),
+            };
 
-            if (response.ok) {
-                const data = await response.json();
-                console.log('Response data:', data);
-
-                const newInvoice: Invoice = {
-                    id: data.id,
-                    month: data.month,
-                    pool: data.pool,
-                    amount: parseFloat(data.amount),
-                };
-
-                setInvoiceList([newInvoice, ...invoiceList]);
-                setInvoiceMonth(null);
-                setInvoicePool('big');
-                setInvoiceAmount('');
-                console.log('Invoice saved successfully');
-            } else {
-                const errorData = await response
-                    .json()
-                    .catch(() => ({ error: 'Unable to parse error' }));
-                console.error(
-                    'Error saving invoice - Status:',
-                    response.status,
-                    'Error:',
-                    errorData,
+            setInvoiceList((currentInvoices) => {
+                const invoiceExists = currentInvoices.some(
+                    (invoice) => invoice.id === savedInvoice.id,
                 );
-            }
+
+                if (invoiceExists) {
+                    return currentInvoices.map((invoice) =>
+                        invoice.id === savedInvoice.id ? savedInvoice : invoice,
+                    );
+                }
+
+                return [savedInvoice, ...currentInvoices];
+            });
+            setInvoiceMonth(null);
+            setInvoicePool('big');
+            setInvoiceAmount('');
         } catch (error) {
-            console.error('Exception in handleSaveInvoice:', error);
+            if (error instanceof ApiValidationError) {
+                setInvoiceErrors(error.errors);
+                setInvoiceError(error.message);
+
+                return;
+            }
+
+            setInvoiceError('Unable to save invoice. Please try again.');
         } finally {
             setIsSaving(false);
         }
@@ -261,65 +270,60 @@ export default function InvoicesIndex({ invoices }: Props) {
         const amount = parseFloat(editAmount);
 
         if (isNaN(amount) || amount < 0) {
-            console.error('Invalid amount');
-
             return;
         }
 
-        try {
-            const response = await fetch(`/invoices/${editingInvoice.id}`, {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': csrfToken,
-                },
-                body: JSON.stringify({ amount: amount }),
-            });
+        setEditError(null);
+        setEditErrors({});
 
-            if (response.ok) {
-                const updated = await response.json();
-                // Update with proper typing
-                const updatedInvoice: Invoice = {
-                    id: updated.id,
-                    month: updated.month,
-                    pool: updated.pool,
-                    amount: parseFloat(updated.amount),
-                };
-                setInvoiceList(
-                    invoiceList.map((inv) =>
-                        inv.id === updatedInvoice.id ? updatedInvoice : inv,
-                    ),
-                );
-                setEditingInvoice(null);
-                setEditAmount('');
-                setEditPoolSelection('big');
-            } else {
-                const errorData = await response.json();
-                console.error('Error updating invoice:', errorData);
-            }
+        try {
+            const updated = await apiRequest<Invoice>(
+                `/api/invoices/${editingInvoice.id}`,
+                {
+                    method: 'PUT',
+                    body: { amount: amount },
+                },
+            );
+
+            const updatedInvoice: Invoice = {
+                id: updated.id,
+                month: updated.month,
+                pool: updated.pool,
+                amount: Number(updated.amount),
+            };
+            setInvoiceList((currentInvoices) =>
+                currentInvoices.map((invoice) =>
+                    invoice.id === updatedInvoice.id ? updatedInvoice : invoice,
+                ),
+            );
+            setEditingInvoice(null);
+            setEditAmount('');
+            setEditPoolSelection('big');
         } catch (error) {
-            console.error('Error updating invoice:', error);
+            if (error instanceof ApiValidationError) {
+                setEditErrors(error.errors);
+                setEditError(error.message);
+
+                return;
+            }
+
+            setEditError('Unable to update invoice. Please try again.');
         }
     };
 
     const handleDeleteInvoice = async (id: number) => {
         try {
-            const response = await fetch(`/invoices/${id}`, {
+            await apiRequest<null>(`/api/invoices/${id}`, {
                 method: 'DELETE',
-                headers: {
-                    'X-CSRF-TOKEN': csrfToken,
-                },
             });
 
-            if (response.ok) {
-                setInvoiceList(invoiceList.filter((inv) => inv.id !== id));
-                setEditingInvoice(null);
-                setEditAmount('');
-            } else {
-                console.error('Error deleting invoice');
-            }
-        } catch (error) {
-            console.error('Error deleting invoice:', error);
+            setInvoiceList((currentInvoices) =>
+                currentInvoices.filter((invoice) => invoice.id !== id),
+            );
+            setEditingInvoice(null);
+            setEditAmount('');
+        } catch {
+            setEditError('Unable to delete invoice. Please try again.');
         }
     };
 
@@ -380,6 +384,11 @@ export default function InvoicesIndex({ invoices }: Props) {
                                     sx={datePickerSx}
                                 />
                             </LocalizationProvider>
+                            {invoiceErrors.month?.[0] && (
+                                <Typography variant="caption" color="error">
+                                    {invoiceErrors.month[0]}
+                                </Typography>
+                            )}
 
                             <FormControl variant="standard" fullWidth>
                                 <InputLabel
@@ -410,6 +419,11 @@ export default function InvoicesIndex({ invoices }: Props) {
                                     </MenuItem>
                                 </Select>
                             </FormControl>
+                            {invoiceErrors.pool?.[0] && (
+                                <Typography variant="caption" color="error">
+                                    {invoiceErrors.pool[0]}
+                                </Typography>
+                            )}
 
                             <Input
                                 placeholder="Amount (MKD)"
@@ -424,6 +438,16 @@ export default function InvoicesIndex({ invoices }: Props) {
                                 }}
                                 sx={inputSx}
                             />
+                            {invoiceErrors.amount?.[0] && (
+                                <Typography variant="caption" color="error">
+                                    {invoiceErrors.amount[0]}
+                                </Typography>
+                            )}
+                            {invoiceError && (
+                                <Typography variant="body2" color="error">
+                                    {invoiceError}
+                                </Typography>
+                            )}
 
                             <div className="flex gap-3">
                                 <Button
@@ -468,7 +492,14 @@ export default function InvoicesIndex({ invoices }: Props) {
                                 Invoice History By Year
                             </Typography>
 
-                            {sortedYears.length > 0 ? (
+                            {isLoadingInvoices ? (
+                                <Typography
+                                    variant="body2"
+                                    color="text.secondary"
+                                >
+                                    Loading invoices...
+                                </Typography>
+                            ) : sortedYears.length > 0 ? (
                                 <List disablePadding>
                                     {sortedYears.map((year) => (
                                         <ListItem
@@ -790,6 +821,16 @@ export default function InvoicesIndex({ invoices }: Props) {
                                 }}
                                 sx={inputSx}
                             />
+                            {editErrors.amount?.[0] && (
+                                <Typography variant="caption" color="error">
+                                    {editErrors.amount[0]}
+                                </Typography>
+                            )}
+                            {editError && (
+                                <Typography variant="body2" color="error">
+                                    {editError}
+                                </Typography>
+                            )}
 
                             <div className="flex gap-3">
                                 <Button

@@ -1,34 +1,28 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Http\Controllers\Api;
 
+use App\Http\Controllers\Controller;
 use App\Models\Invoice;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class InvoiceController extends Controller
 {
-    /**
-     * Display all invoices grouped by month
-     */
-    public function index()
+    public function index(): JsonResponse
     {
-        $invoices = Invoice::orderBy('month', 'desc')->get();
-        
         return response()->json([
-            'invoices' => $invoices,
+            'invoices' => Invoice::orderBy('month', 'desc')->get(),
         ]);
     }
 
-    /**
-     * Get invoices for a specific month
-     */
-    public function getByMonth($month)
+    public function getByMonth(string $month): JsonResponse
     {
-        $invoices = Invoice::where('month', '=', $month)->get();
-        
+        $invoices = Invoice::where('month', $month)->get();
+
         $big = $invoices->firstWhere('pool', 'big')?->amount ?? 0;
         $small = $invoices->firstWhere('pool', 'small')?->amount ?? 0;
-        
+
         return response()->json([
             'big_pool' => $big,
             'small_pool' => $small,
@@ -36,15 +30,12 @@ class InvoiceController extends Controller
         ]);
     }
 
-    /**
-     * Store a new invoice
-     */
-    public function store(Request $request)
+    public function store(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'month' => 'required|date_format:Y-m-d',
-            'pool' => 'required|in:big,small',
-            'amount' => 'required|numeric|min:0',
+            'month' => ['required', 'date_format:Y-m-d'],
+            'pool' => ['required', 'in:big,small'],
+            'amount' => ['required', 'numeric', 'min:0'],
         ]);
 
         $existing = Invoice::where('month', $validated['month'])
@@ -52,9 +43,9 @@ class InvoiceController extends Controller
             ->first();
 
         if ($existing) {
-            // Update if already exists
             $existing->update(['amount' => $validated['amount']]);
-            return response()->json($existing, 200);
+
+            return response()->json($existing);
         }
 
         $invoice = Invoice::create($validated);
@@ -62,24 +53,18 @@ class InvoiceController extends Controller
         return response()->json($invoice, 201);
     }
 
-    /**
-     * Update an existing invoice
-     */
-    public function update(Request $request, Invoice $invoice)
+    public function update(Request $request, Invoice $invoice): JsonResponse
     {
         $validated = $request->validate([
-            'amount' => 'required|numeric|min:0',
+            'amount' => ['required', 'numeric', 'min:0'],
         ]);
 
         $invoice->update($validated);
 
-        return response()->json($invoice, 200);
+        return response()->json($invoice);
     }
 
-    /**
-     * Delete an invoice
-     */
-    public function destroy(Invoice $invoice)
+    public function destroy(Invoice $invoice): JsonResponse
     {
         $invoice->delete();
 
