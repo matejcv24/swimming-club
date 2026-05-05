@@ -7,7 +7,7 @@ import {
 } from './../../../../wayfinder';
 /**
  * @see \App\Http\Controllers\StaffController::showClaimForm
- * @see app/Http/Controllers/StaffController.php:50
+ * @see app/Http/Controllers/StaffController.php:46
  * @route '/claim-coach-account/{coach}'
  */
 export const showClaimForm = (
@@ -29,7 +29,7 @@ showClaimForm.definition = {
 
 /**
  * @see \App\Http\Controllers\StaffController::showClaimForm
- * @see app/Http/Controllers/StaffController.php:50
+ * @see app/Http/Controllers/StaffController.php:46
  * @route '/claim-coach-account/{coach}'
  */
 showClaimForm.url = (
@@ -69,7 +69,7 @@ showClaimForm.url = (
 
 /**
  * @see \App\Http\Controllers\StaffController::showClaimForm
- * @see app/Http/Controllers/StaffController.php:50
+ * @see app/Http/Controllers/StaffController.php:46
  * @route '/claim-coach-account/{coach}'
  */
 showClaimForm.get = (
@@ -85,7 +85,7 @@ showClaimForm.get = (
 });
 /**
  * @see \App\Http\Controllers\StaffController::showClaimForm
- * @see app/Http/Controllers/StaffController.php:50
+ * @see app/Http/Controllers/StaffController.php:46
  * @route '/claim-coach-account/{coach}'
  */
 showClaimForm.head = (
@@ -102,7 +102,7 @@ showClaimForm.head = (
 
 /**
  * @see \App\Http\Controllers\StaffController::showClaimForm
- * @see app/Http/Controllers/StaffController.php:50
+ * @see app/Http/Controllers/StaffController.php:46
  * @route '/claim-coach-account/{coach}'
  */
 const showClaimFormForm = (
@@ -119,7 +119,7 @@ const showClaimFormForm = (
 
 /**
  * @see \App\Http\Controllers\StaffController::showClaimForm
- * @see app/Http/Controllers/StaffController.php:50
+ * @see app/Http/Controllers/StaffController.php:46
  * @route '/claim-coach-account/{coach}'
  */
 showClaimFormForm.get = (
@@ -135,7 +135,7 @@ showClaimFormForm.get = (
 });
 /**
  * @see \App\Http\Controllers\StaffController::showClaimForm
- * @see app/Http/Controllers/StaffController.php:50
+ * @see app/Http/Controllers/StaffController.php:46
  * @route '/claim-coach-account/{coach}'
  */
 showClaimFormForm.head = (
@@ -158,7 +158,7 @@ showClaimFormForm.head = (
 showClaimForm.form = showClaimFormForm;
 /**
  * @see \App\Http\Controllers\StaffController::claimAccount
- * @see app/Http/Controllers/StaffController.php:65
+ * @see app/Http/Controllers/StaffController.php:61
  * @route '/claim-coach-account/{coach}'
  */
 export const claimAccount = (
@@ -180,7 +180,7 @@ claimAccount.definition = {
 
 /**
  * @see \App\Http\Controllers\StaffController::claimAccount
- * @see app/Http/Controllers/StaffController.php:65
+ * @see app/Http/Controllers/StaffController.php:61
  * @route '/claim-coach-account/{coach}'
  */
 claimAccount.url = (
@@ -220,7 +220,7 @@ claimAccount.url = (
 
 /**
  * @see \App\Http\Controllers\StaffController::claimAccount
- * @see app/Http/Controllers/StaffController.php:65
+ * @see app/Http/Controllers/StaffController.php:61
  * @route '/claim-coach-account/{coach}'
  */
 claimAccount.post = (
@@ -237,7 +237,7 @@ claimAccount.post = (
 
 /**
  * @see \App\Http\Controllers\StaffController::claimAccount
- * @see app/Http/Controllers/StaffController.php:65
+ * @see app/Http/Controllers/StaffController.php:61
  * @route '/claim-coach-account/{coach}'
  */
 const claimAccountForm = (
@@ -254,7 +254,7 @@ const claimAccountForm = (
 
 /**
  * @see \App\Http\Controllers\StaffController::claimAccount
- * @see app/Http/Controllers/StaffController.php:65
+ * @see app/Http/Controllers/StaffController.php:61
  * @route '/claim-coach-account/{coach}'
  */
 claimAccountForm.post = (
@@ -352,7 +352,7 @@ indexForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
 index.form = indexForm;
 /**
  * @see \App\Http\Controllers\StaffController::store
- * @see app/Http/Controllers/StaffController.php:25
+ * @see app/Http/Controllers/StaffController.php:21
  * @route '/staff'
  */
 export const store = (
@@ -369,7 +369,7 @@ store.definition = {
 
 /**
  * @see \App\Http\Controllers\StaffController::store
- * @see app/Http/Controllers/StaffController.php:25
+ * @see app/Http/Controllers/StaffController.php:21
  * @route '/staff'
  */
 store.url = (options?: RouteQueryOptions) => {
@@ -378,7 +378,7 @@ store.url = (options?: RouteQueryOptions) => {
 
 /**
  * @see \App\Http\Controllers\StaffController::store
- * @see app/Http/Controllers/StaffController.php:25
+ * @see app/Http/Controllers/StaffController.php:21
  * @route '/staff'
  */
 store.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -388,7 +388,7 @@ store.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
 
 /**
  * @see \App\Http\Controllers\StaffController::store
- * @see app/Http/Controllers/StaffController.php:25
+ * @see app/Http/Controllers/StaffController.php:21
  * @route '/staff'
  */
 const storeForm = (
@@ -400,7 +400,7 @@ const storeForm = (
 
 /**
  * @see \App\Http\Controllers\StaffController::store
- * @see app/Http/Controllers/StaffController.php:25
+ * @see app/Http/Controllers/StaffController.php:21
  * @route '/staff'
  */
 storeForm.post = (

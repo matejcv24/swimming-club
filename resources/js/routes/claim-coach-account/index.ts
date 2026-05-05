@@ -7,7 +7,7 @@ import {
 } from './../../wayfinder';
 /**
  * @see \App\Http\Controllers\StaffController::store
- * @see app/Http/Controllers/StaffController.php:65
+ * @see app/Http/Controllers/StaffController.php:61
  * @route '/claim-coach-account/{coach}'
  */
 export const store = (
@@ -29,7 +29,7 @@ store.definition = {
 
 /**
  * @see \App\Http\Controllers\StaffController::store
- * @see app/Http/Controllers/StaffController.php:65
+ * @see app/Http/Controllers/StaffController.php:61
  * @route '/claim-coach-account/{coach}'
  */
 store.url = (
@@ -69,7 +69,7 @@ store.url = (
 
 /**
  * @see \App\Http\Controllers\StaffController::store
- * @see app/Http/Controllers/StaffController.php:65
+ * @see app/Http/Controllers/StaffController.php:61
  * @route '/claim-coach-account/{coach}'
  */
 store.post = (
@@ -86,7 +86,7 @@ store.post = (
 
 /**
  * @see \App\Http\Controllers\StaffController::store
- * @see app/Http/Controllers/StaffController.php:65
+ * @see app/Http/Controllers/StaffController.php:61
  * @route '/claim-coach-account/{coach}'
  */
 const storeForm = (
@@ -103,7 +103,7 @@ const storeForm = (
 
 /**
  * @see \App\Http\Controllers\StaffController::store
- * @see app/Http/Controllers/StaffController.php:65
+ * @see app/Http/Controllers/StaffController.php:61
  * @route '/claim-coach-account/{coach}'
  */
 storeForm.post = (

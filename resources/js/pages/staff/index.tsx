@@ -23,15 +23,16 @@ import Typography from '@mui/material/Typography';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
+import { ApiValidationError, apiRequest } from '@/lib/api';
 import dayjs from 'dayjs';
 import type { Dayjs } from 'dayjs';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 interface Staff {
     id: number;
     name: string;
     email: string;
-    password: string | null;
+    has_claimed_account: boolean;
 }
 
 interface Salary {
@@ -46,7 +47,16 @@ interface GroupedSalaryByMonth {
 }
 
 interface Props {
+    staff?: Staff[];
+}
+
+interface ListStaffResponse {
     staff: Staff[];
+}
+
+interface StoreStaffResponse {
+    message: string;
+    coach: Staff;
 }
 
 const darkTheme = createTheme({
@@ -80,10 +90,16 @@ const formatCurrency = (value: number): string => {
     }).format(value);
 };
 
-export default function StaffIndex({ staff }: Props) {
+export default function StaffIndex({ staff: initialStaff = [] }: Props) {
+    const [staff, setStaff] = useState(initialStaff);
     const [showAddModal, setShowAddModal] = useState(false);
     const [search, setSearch] = useState('');
     const [form, setForm] = useState({ name: '', email: '' });
+    const [isLoadingStaff, setIsLoadingStaff] = useState(false);
+    const [staffError, setStaffError] = useState<string | null>(null);
+    const [addError, setAddError] = useState<string | null>(null);
+    const [addErrors, setAddErrors] = useState<Record<string, string[]>>({});
+    const [isAddingCoach, setIsAddingCoach] = useState(false);
 
     const [selectedCoach, setSelectedCoach] = useState<Staff | null>(null);
     const [salaries, setSalaries] = useState<Salary[]>([]);
@@ -96,6 +112,25 @@ export default function StaffIndex({ staff }: Props) {
     const [selectedSalaryYear, setSelectedSalaryYear] = useState<string | null>(
         null,
     );
+
+    useEffect(() => {
+        const loadStaff = async () => {
+            setIsLoadingStaff(true);
+            setStaffError(null);
+
+            try {
+                const data = await apiRequest<ListStaffResponse>('/api/staff');
+
+                setStaff(data.staff);
+            } catch {
+                setStaffError('Unable to refresh staff right now.');
+            } finally {
+                setIsLoadingStaff(false);
+            }
+        };
+
+        void loadStaff();
+    }, []);
 
     const filteredStaff = staff.filter((s) =>
         s.name.toLowerCase().includes(search.toLowerCase()),
@@ -169,14 +204,33 @@ export default function StaffIndex({ staff }: Props) {
             .toUpperCase()
             .slice(0, 2);
 
-    const handleAddSubmit = (e: React.FormEvent) => {
+    const handleAddSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        router.post('/staff', form, {
-            onSuccess: () => {
-                setShowAddModal(false);
-                setForm({ name: '', email: '' });
-            },
-        });
+        setAddError(null);
+        setAddErrors({});
+        setIsAddingCoach(true);
+
+        try {
+            const data = await apiRequest<StoreStaffResponse>('/api/staff', {
+                method: 'POST',
+                body: form,
+            });
+
+            setStaff((currentStaff) => [...currentStaff, data.coach]);
+            setShowAddModal(false);
+            setForm({ name: '', email: '' });
+        } catch (error) {
+            if (error instanceof ApiValidationError) {
+                setAddErrors(error.errors);
+                setAddError(error.message);
+
+                return;
+            }
+
+            setAddError('Unable to invite coach. Please try again.');
+        } finally {
+            setIsAddingCoach(false);
+        }
     };
 
     const handleCoachClick = async (coach: Staff) => {
@@ -277,7 +331,25 @@ export default function StaffIndex({ staff }: Props) {
                 </DialogTitle>
 
                 <DialogContent sx={{ p: 0, overflowY: 'auto' }}>
-                    {filteredStaff.length === 0 ? (
+                    {staffError && (
+                        <Typography
+                            variant="body2"
+                            color="error"
+                            sx={{ textAlign: 'center', mt: 2 }}
+                        >
+                            {staffError}
+                        </Typography>
+                    )}
+
+                    {isLoadingStaff ? (
+                        <Typography
+                            variant="body2"
+                            color="text.secondary"
+                            sx={{ textAlign: 'center', mt: 6 }}
+                        >
+                            Loading staff...
+                        </Typography>
+                    ) : filteredStaff.length === 0 ? (
                         <Typography
                             variant="body2"
                             color="text.secondary"
@@ -312,7 +384,7 @@ export default function StaffIndex({ staff }: Props) {
                                                 variant="body2"
                                                 color="text.secondary"
                                             >
-                                                {member.password === null
+                                                {!member.has_claimed_account
                                                     ? '⏳ Invite pending'
                                                     : '✅ Active'}
                                             </Typography>
@@ -765,6 +837,11 @@ export default function StaffIndex({ staff }: Props) {
                             inputProps={{ 'aria-label': 'coach name' }}
                             sx={inputSx}
                         />
+                        {addErrors.name?.[0] && (
+                            <Typography variant="caption" color="error">
+                                {addErrors.name[0]}
+                            </Typography>
+                        )}
                         <Input
                             type="email"
                             placeholder="Email address"
@@ -777,14 +854,25 @@ export default function StaffIndex({ staff }: Props) {
                             inputProps={{ 'aria-label': 'coach email' }}
                             sx={inputSx}
                         />
+                        {addErrors.email?.[0] && (
+                            <Typography variant="caption" color="error">
+                                {addErrors.email[0]}
+                            </Typography>
+                        )}
+                        {addError && (
+                            <Typography variant="body2" color="error">
+                                {addError}
+                            </Typography>
+                        )}
                         <div className="flex gap-3">
                             <Button
                                 type="submit"
                                 variant="contained"
                                 fullWidth
                                 size="medium"
+                                disabled={isAddingCoach}
                             >
-                                Send Invite
+                                {isAddingCoach ? 'Sending...' : 'Send Invite'}
                             </Button>
                             <Button
                                 type="button"

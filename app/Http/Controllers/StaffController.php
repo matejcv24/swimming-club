@@ -15,17 +15,13 @@ class StaffController extends Controller
 {
     public function index()
     {
-        $staff = User::where('role', 'coach')->get();
-
-        return inertia('staff/index', [
-            'staff' => $staff,
-        ]);
+        return inertia('staff/index');
     }
 
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'name'  => ['required', 'string', 'max:255'],
+            'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'email', 'unique:users,email'],
         ]);
 

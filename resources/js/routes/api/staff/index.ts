@@ -3,11 +3,11 @@ import {
     type RouteQueryOptions,
     type RouteDefinition,
     type RouteFormDefinition,
-} from './../../wayfinder';
+} from './../../../wayfinder';
 /**
- * @see \App\Http\Controllers\StaffController::index
- * @see app/Http/Controllers/StaffController.php:16
- * @route '/staff'
+ * @see \App\Http\Controllers\Api\StaffController::index
+ * @see app/Http/Controllers/Api/StaffController.php:15
+ * @route '/api/staff'
  */
 export const index = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
     url: index.url(options),
@@ -16,31 +16,31 @@ export const index = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
 
 index.definition = {
     methods: ['get', 'head'],
-    url: '/staff',
+    url: '/api/staff',
 } satisfies RouteDefinition<['get', 'head']>;
 
 /**
- * @see \App\Http\Controllers\StaffController::index
- * @see app/Http/Controllers/StaffController.php:16
- * @route '/staff'
+ * @see \App\Http\Controllers\Api\StaffController::index
+ * @see app/Http/Controllers/Api/StaffController.php:15
+ * @route '/api/staff'
  */
 index.url = (options?: RouteQueryOptions) => {
     return index.definition.url + queryParams(options);
 };
 
 /**
- * @see \App\Http\Controllers\StaffController::index
- * @see app/Http/Controllers/StaffController.php:16
- * @route '/staff'
+ * @see \App\Http\Controllers\Api\StaffController::index
+ * @see app/Http/Controllers/Api/StaffController.php:15
+ * @route '/api/staff'
  */
 index.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
     url: index.url(options),
     method: 'get',
 });
 /**
- * @see \App\Http\Controllers\StaffController::index
- * @see app/Http/Controllers/StaffController.php:16
- * @route '/staff'
+ * @see \App\Http\Controllers\Api\StaffController::index
+ * @see app/Http/Controllers/Api/StaffController.php:15
+ * @route '/api/staff'
  */
 index.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     url: index.url(options),
@@ -48,9 +48,9 @@ index.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 });
 
 /**
- * @see \App\Http\Controllers\StaffController::index
- * @see app/Http/Controllers/StaffController.php:16
- * @route '/staff'
+ * @see \App\Http\Controllers\Api\StaffController::index
+ * @see app/Http/Controllers/Api/StaffController.php:15
+ * @route '/api/staff'
  */
 const indexForm = (
     options?: RouteQueryOptions,
@@ -60,18 +60,18 @@ const indexForm = (
 });
 
 /**
- * @see \App\Http\Controllers\StaffController::index
- * @see app/Http/Controllers/StaffController.php:16
- * @route '/staff'
+ * @see \App\Http\Controllers\Api\StaffController::index
+ * @see app/Http/Controllers/Api/StaffController.php:15
+ * @route '/api/staff'
  */
 indexForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
     action: index.url(options),
     method: 'get',
 });
 /**
- * @see \App\Http\Controllers\StaffController::index
- * @see app/Http/Controllers/StaffController.php:16
- * @route '/staff'
+ * @see \App\Http\Controllers\Api\StaffController::index
+ * @see app/Http/Controllers/Api/StaffController.php:15
+ * @route '/api/staff'
  */
 indexForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
     action: index.url({
@@ -85,9 +85,9 @@ indexForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
 
 index.form = indexForm;
 /**
- * @see \App\Http\Controllers\StaffController::store
- * @see app/Http/Controllers/StaffController.php:21
- * @route '/staff'
+ * @see \App\Http\Controllers\Api\StaffController::store
+ * @see app/Http/Controllers/Api/StaffController.php:25
+ * @route '/api/staff'
  */
 export const store = (
     options?: RouteQueryOptions,
@@ -98,22 +98,22 @@ export const store = (
 
 store.definition = {
     methods: ['post'],
-    url: '/staff',
+    url: '/api/staff',
 } satisfies RouteDefinition<['post']>;
 
 /**
- * @see \App\Http\Controllers\StaffController::store
- * @see app/Http/Controllers/StaffController.php:21
- * @route '/staff'
+ * @see \App\Http\Controllers\Api\StaffController::store
+ * @see app/Http/Controllers/Api/StaffController.php:25
+ * @route '/api/staff'
  */
 store.url = (options?: RouteQueryOptions) => {
     return store.definition.url + queryParams(options);
 };
 
 /**
- * @see \App\Http\Controllers\StaffController::store
- * @see app/Http/Controllers/StaffController.php:21
- * @route '/staff'
+ * @see \App\Http\Controllers\Api\StaffController::store
+ * @see app/Http/Controllers/Api/StaffController.php:25
+ * @route '/api/staff'
  */
 store.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     url: store.url(options),
@@ -121,9 +121,9 @@ store.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
 });
 
 /**
- * @see \App\Http\Controllers\StaffController::store
- * @see app/Http/Controllers/StaffController.php:21
- * @route '/staff'
+ * @see \App\Http\Controllers\Api\StaffController::store
+ * @see app/Http/Controllers/Api/StaffController.php:25
+ * @route '/api/staff'
  */
 const storeForm = (
     options?: RouteQueryOptions,
@@ -133,9 +133,9 @@ const storeForm = (
 });
 
 /**
- * @see \App\Http\Controllers\StaffController::store
- * @see app/Http/Controllers/StaffController.php:21
- * @route '/staff'
+ * @see \App\Http\Controllers\Api\StaffController::store
+ * @see app/Http/Controllers/Api/StaffController.php:25
+ * @route '/api/staff'
  */
 storeForm.post = (
     options?: RouteQueryOptions,
