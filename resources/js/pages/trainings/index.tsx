@@ -24,7 +24,7 @@ import Typography from '@mui/material/Typography';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import { DateCalendar } from '@mui/x-date-pickers/DateCalendar';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
-import { apiRequest } from '@/lib/api';
+import { ApiValidationError, apiRequest } from '@/lib/api';
 import dayjs from 'dayjs';
 import type { Dayjs } from 'dayjs';
 import { useCallback, useEffect, useState } from 'react';
@@ -47,6 +47,11 @@ interface AttendanceByDateResponse {
     member_ids: number[];
 }
 
+interface StoreTrainingResponse {
+    message: string;
+    member_ids: number[];
+}
+
 const darkTheme = createTheme({
     palette: { mode: 'dark' },
 });
@@ -65,6 +70,9 @@ export default function TrainingsIndex({
     const [loading, setLoading] = useState(false);
     const [loadingMembers, setLoadingMembers] = useState(false);
     const [membersError, setMembersError] = useState<string | null>(null);
+    const [saveError, setSaveError] = useState<string | null>(null);
+    const [saveErrors, setSaveErrors] = useState<Record<string, string[]>>({});
+    const [savingAttendance, setSavingAttendance] = useState(false);
     const [attendanceSearch, setAttendanceSearch] = useState('');
 
     const activePool = activeTab === 0 ? 'big' : 'small';
@@ -146,27 +154,50 @@ export default function TrainingsIndex({
         );
     };
 
-    const handleSave = () => {
+    const handleSave = async () => {
         if (!selectedDate) {
             return;
         }
 
-        router.post(
-            '/trainings',
-            {
-                date: selectedDate.format('YYYY-MM-DD'),
-                pool: activePool,
-                member_ids: checkedIds,
-            },
-            {
-                onSuccess: () => {
-                    setShowAttendanceModal(false);
-                    setCheckedIds([]);
-                    setEditMode(false);
+        setSaveError(null);
+        setSaveErrors({});
+        setSavingAttendance(true);
+
+        try {
+            const data = await apiRequest<StoreTrainingResponse>(
+                '/api/trainings',
+                {
+                    method: 'POST',
+                    body: {
+                        date: selectedDate.format('YYYY-MM-DD'),
+                        pool: activePool,
+                        member_ids: checkedIds,
+                    },
                 },
-            },
-        );
+            );
+
+            setCheckedIds(data.member_ids);
+            setShowAttendanceModal(false);
+            setAttendanceSearch('');
+            setEditMode(false);
+        } catch (error) {
+            if (error instanceof ApiValidationError) {
+                setSaveErrors(error.errors);
+                setSaveError(error.message);
+
+                return;
+            }
+
+            setSaveError('Unable to save attendance. Please try again.');
+        } finally {
+            setSavingAttendance(false);
+        }
     };
+
+    const dateError = saveErrors.date?.[0];
+    const poolError = saveErrors.pool?.[0];
+    const memberIdsError =
+        saveErrors.member_ids?.[0] ?? saveErrors['member_ids.0']?.[0];
 
     const getInitials = (name: string) =>
         name
@@ -331,6 +362,24 @@ export default function TrainingsIndex({
                             Edit mode — check or uncheck members then save
                         </Typography>
                     )}
+                    {saveError && (
+                        <Typography
+                            variant="body2"
+                            color="error"
+                            sx={{ px: 4, pb: 1, display: 'block' }}
+                        >
+                            {saveError}
+                        </Typography>
+                    )}
+                    {(dateError || poolError || memberIdsError) && (
+                        <Typography
+                            variant="caption"
+                            color="error"
+                            sx={{ px: 4, pb: 1, display: 'block' }}
+                        >
+                            {dateError ?? poolError ?? memberIdsError}
+                        </Typography>
+                    )}
                     <Divider />
                 </DialogTitle>
 
@@ -411,9 +460,13 @@ export default function TrainingsIndex({
                             fullWidth
                             size="large"
                             onClick={handleSave}
-                            disabled={checkedIds.length === 0}
+                            disabled={
+                                checkedIds.length === 0 || savingAttendance
+                            }
                         >
-                            Save Attendance ({checkedIds.length} present)
+                            {savingAttendance
+                                ? 'Saving...'
+                                : `Save Attendance (${checkedIds.length} present)`}
                         </Button>
                     ) : (
                         <Typography
