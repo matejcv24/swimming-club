@@ -11,8 +11,9 @@ import ListItem from '@mui/material/ListItem';
 import ListItemText from '@mui/material/ListItemText';
 import { createTheme, ThemeProvider } from '@mui/material/styles';
 import Typography from '@mui/material/Typography';
+import { apiRequest } from '@/lib/api';
 import dayjs from 'dayjs';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 interface Salary {
     id: number;
@@ -28,6 +29,16 @@ interface Props {
     invoiceTotal?: number;
     coachSalaryTotal?: number;
     coachSalaries?: Salary[];
+}
+
+interface DashboardResponse {
+    userRole: 'admin' | 'coach';
+    activeMembers: number;
+    profitTotal: number;
+    unpaidFees: number;
+    invoiceTotal: number;
+    coachSalaryTotal: number;
+    coachSalaries: Salary[];
 }
 
 interface GroupedSalaryByMonth {
@@ -49,14 +60,27 @@ const formatCurrency = (value: number): string => {
 };
 
 export default function Dashboard({
-    userRole = 'admin',
-    activeMembers = 0,
-    profitTotal = 0,
-    unpaidFees = 0,
-    invoiceTotal = 0,
-    coachSalaryTotal = 0,
-    coachSalaries = [],
+    userRole: initialUserRole,
+    activeMembers: initialActiveMembers = 0,
+    profitTotal: initialProfitTotal = 0,
+    unpaidFees: initialUnpaidFees = 0,
+    invoiceTotal: initialInvoiceTotal = 0,
+    coachSalaryTotal: initialCoachSalaryTotal = 0,
+    coachSalaries: initialCoachSalaries = [],
 }: Props) {
+    const [userRole, setUserRole] = useState<'admin' | 'coach' | null>(
+        initialUserRole ?? null,
+    );
+    const [activeMembers, setActiveMembers] = useState(initialActiveMembers);
+    const [profitTotal, setProfitTotal] = useState(initialProfitTotal);
+    const [unpaidFees, setUnpaidFees] = useState(initialUnpaidFees);
+    const [invoiceTotal, setInvoiceTotal] = useState(initialInvoiceTotal);
+    const [coachSalaryTotal, setCoachSalaryTotal] = useState(
+        initialCoachSalaryTotal,
+    );
+    const [coachSalaries, setCoachSalaries] = useState(initialCoachSalaries);
+    const [isLoadingDashboard, setIsLoadingDashboard] = useState(false);
+    const [dashboardError, setDashboardError] = useState<string | null>(null);
     const [showSalaryModal, setShowSalaryModal] = useState(false);
     const [showSalaryHistoryModal, setShowSalaryHistoryModal] = useState(false);
     const [showSalaryYearDetailModal, setShowSalaryYearDetailModal] =
@@ -64,6 +88,32 @@ export default function Dashboard({
     const [selectedSalaryYear, setSelectedSalaryYear] = useState<string | null>(
         null,
     );
+
+    useEffect(() => {
+        const loadDashboard = async () => {
+            setIsLoadingDashboard(true);
+            setDashboardError(null);
+
+            try {
+                const data =
+                    await apiRequest<DashboardResponse>('/api/dashboard');
+
+                setUserRole(data.userRole);
+                setActiveMembers(data.activeMembers);
+                setProfitTotal(data.profitTotal);
+                setUnpaidFees(data.unpaidFees);
+                setInvoiceTotal(data.invoiceTotal);
+                setCoachSalaryTotal(data.coachSalaryTotal);
+                setCoachSalaries(data.coachSalaries);
+            } catch {
+                setDashboardError('Unable to refresh dashboard data.');
+            } finally {
+                setIsLoadingDashboard(false);
+            }
+        };
+
+        void loadDashboard();
+    }, []);
 
     const groupedSalaries: Record<string, GroupedSalaryByMonth> = {};
 
@@ -128,6 +178,16 @@ export default function Dashboard({
             <Head title="Dashboard" />
             <div className="flex h-full flex-1 flex-col gap-6 p-6">
                 <h1 className="text-2xl font-bold">Swimming Club Hydra</h1>
+
+                {dashboardError && (
+                    <p className="text-sm text-red-600">{dashboardError}</p>
+                )}
+
+                {isLoadingDashboard && (
+                    <p className="text-sm text-muted-foreground">
+                        Loading dashboard...
+                    </p>
+                )}
 
                 <div className="grid gap-4 md:grid-cols-3">
                     {userRole === 'admin' && (

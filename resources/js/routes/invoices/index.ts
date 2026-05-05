@@ -6,7 +6,7 @@ import {
 } from './../../wayfinder';
 /**
  * @see \App\Http\Controllers\AdminController::page
- * @see app/Http/Controllers/AdminController.php:57
+ * @see app/Http/Controllers/AdminController.php:12
  * @route '/invoices'
  */
 export const page = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -21,7 +21,7 @@ page.definition = {
 
 /**
  * @see \App\Http\Controllers\AdminController::page
- * @see app/Http/Controllers/AdminController.php:57
+ * @see app/Http/Controllers/AdminController.php:12
  * @route '/invoices'
  */
 page.url = (options?: RouteQueryOptions) => {
@@ -30,7 +30,7 @@ page.url = (options?: RouteQueryOptions) => {
 
 /**
  * @see \App\Http\Controllers\AdminController::page
- * @see app/Http/Controllers/AdminController.php:57
+ * @see app/Http/Controllers/AdminController.php:12
  * @route '/invoices'
  */
 page.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -39,7 +39,7 @@ page.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
 });
 /**
  * @see \App\Http\Controllers\AdminController::page
- * @see app/Http/Controllers/AdminController.php:57
+ * @see app/Http/Controllers/AdminController.php:12
  * @route '/invoices'
  */
 page.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -49,7 +49,7 @@ page.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
 /**
  * @see \App\Http\Controllers\AdminController::page
- * @see app/Http/Controllers/AdminController.php:57
+ * @see app/Http/Controllers/AdminController.php:12
  * @route '/invoices'
  */
 const pageForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -59,7 +59,7 @@ const pageForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
 
 /**
  * @see \App\Http\Controllers\AdminController::page
- * @see app/Http/Controllers/AdminController.php:57
+ * @see app/Http/Controllers/AdminController.php:12
  * @route '/invoices'
  */
 pageForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -68,7 +68,7 @@ pageForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
 });
 /**
  * @see \App\Http\Controllers\AdminController::page
- * @see app/Http/Controllers/AdminController.php:57
+ * @see app/Http/Controllers/AdminController.php:12
  * @route '/invoices'
  */
 pageForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({

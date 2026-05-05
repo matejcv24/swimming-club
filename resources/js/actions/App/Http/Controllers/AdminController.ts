@@ -6,7 +6,7 @@ import {
 } from './../../../../wayfinder';
 /**
  * @see \App\Http\Controllers\AdminController::index
- * @see app/Http/Controllers/AdminController.php:14
+ * @see app/Http/Controllers/AdminController.php:7
  * @route '/dashboard'
  */
 export const index = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -21,7 +21,7 @@ index.definition = {
 
 /**
  * @see \App\Http\Controllers\AdminController::index
- * @see app/Http/Controllers/AdminController.php:14
+ * @see app/Http/Controllers/AdminController.php:7
  * @route '/dashboard'
  */
 index.url = (options?: RouteQueryOptions) => {
@@ -30,7 +30,7 @@ index.url = (options?: RouteQueryOptions) => {
 
 /**
  * @see \App\Http\Controllers\AdminController::index
- * @see app/Http/Controllers/AdminController.php:14
+ * @see app/Http/Controllers/AdminController.php:7
  * @route '/dashboard'
  */
 index.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -39,7 +39,7 @@ index.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
 });
 /**
  * @see \App\Http\Controllers\AdminController::index
- * @see app/Http/Controllers/AdminController.php:14
+ * @see app/Http/Controllers/AdminController.php:7
  * @route '/dashboard'
  */
 index.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -49,7 +49,7 @@ index.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
 /**
  * @see \App\Http\Controllers\AdminController::index
- * @see app/Http/Controllers/AdminController.php:14
+ * @see app/Http/Controllers/AdminController.php:7
  * @route '/dashboard'
  */
 const indexForm = (
@@ -61,7 +61,7 @@ const indexForm = (
 
 /**
  * @see \App\Http\Controllers\AdminController::index
- * @see app/Http/Controllers/AdminController.php:14
+ * @see app/Http/Controllers/AdminController.php:7
  * @route '/dashboard'
  */
 indexForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -70,7 +70,7 @@ indexForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
 });
 /**
  * @see \App\Http\Controllers\AdminController::index
- * @see app/Http/Controllers/AdminController.php:14
+ * @see app/Http/Controllers/AdminController.php:7
  * @route '/dashboard'
  */
 indexForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -86,7 +86,7 @@ indexForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
 index.form = indexForm;
 /**
  * @see \App\Http\Controllers\AdminController::invoices
- * @see app/Http/Controllers/AdminController.php:57
+ * @see app/Http/Controllers/AdminController.php:12
  * @route '/invoices'
  */
 export const invoices = (
@@ -103,7 +103,7 @@ invoices.definition = {
 
 /**
  * @see \App\Http\Controllers\AdminController::invoices
- * @see app/Http/Controllers/AdminController.php:57
+ * @see app/Http/Controllers/AdminController.php:12
  * @route '/invoices'
  */
 invoices.url = (options?: RouteQueryOptions) => {
@@ -112,7 +112,7 @@ invoices.url = (options?: RouteQueryOptions) => {
 
 /**
  * @see \App\Http\Controllers\AdminController::invoices
- * @see app/Http/Controllers/AdminController.php:57
+ * @see app/Http/Controllers/AdminController.php:12
  * @route '/invoices'
  */
 invoices.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -121,7 +121,7 @@ invoices.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
 });
 /**
  * @see \App\Http\Controllers\AdminController::invoices
- * @see app/Http/Controllers/AdminController.php:57
+ * @see app/Http/Controllers/AdminController.php:12
  * @route '/invoices'
  */
 invoices.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -131,7 +131,7 @@ invoices.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
 /**
  * @see \App\Http\Controllers\AdminController::invoices
- * @see app/Http/Controllers/AdminController.php:57
+ * @see app/Http/Controllers/AdminController.php:12
  * @route '/invoices'
  */
 const invoicesForm = (
@@ -143,7 +143,7 @@ const invoicesForm = (
 
 /**
  * @see \App\Http\Controllers\AdminController::invoices
- * @see app/Http/Controllers/AdminController.php:57
+ * @see app/Http/Controllers/AdminController.php:12
  * @route '/invoices'
  */
 invoicesForm.get = (
@@ -154,7 +154,7 @@ invoicesForm.get = (
 });
 /**
  * @see \App\Http\Controllers\AdminController::invoices
- * @see app/Http/Controllers/AdminController.php:57
+ * @see app/Http/Controllers/AdminController.php:12
  * @route '/invoices'
  */
 invoicesForm.head = (

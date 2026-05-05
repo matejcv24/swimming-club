@@ -1,3 +1,4 @@
+import dashboard from './dashboard';
 import notifications from './notifications';
 import staff from './staff';
 import salaries from './salaries';
@@ -9,6 +10,7 @@ import membershipFees from './membership-fees';
 import trainings from './trainings';
 import unpaidFees from './unpaid-fees';
 const api = {
+    dashboard: Object.assign(dashboard, dashboard),
     notifications: Object.assign(notifications, notifications),
     staff: Object.assign(staff, staff),
     salaries: Object.assign(salaries, salaries),

@@ -1,3 +1,4 @@
+import DashboardController from './DashboardController';
 import NotificationController from './NotificationController';
 import StaffController from './StaffController';
 import SalaryController from './SalaryController';
@@ -9,6 +10,10 @@ import MembershipFeeController from './MembershipFeeController';
 import TrainingController from './TrainingController';
 import UnpaidFeeController from './UnpaidFeeController';
 const Api = {
+    DashboardController: Object.assign(
+        DashboardController,
+        DashboardController,
+    ),
     NotificationController: Object.assign(
         NotificationController,
         NotificationController,
