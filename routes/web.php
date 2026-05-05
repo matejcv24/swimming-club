@@ -24,8 +24,6 @@ Route::get('/claim-coach-account/{coach}', [StaffController::class, 'showClaimFo
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/dashboard', [AdminController::class, 'index'])->name('dashboard');
     Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications.index');
-    Route::post('/notifications/read-all', [NotificationController::class, 'markAllAsRead'])->name('notifications.read-all');
-    Route::post('/notifications/{notification}/read', [NotificationController::class, 'markAsRead'])->name('notifications.read');
 
     Route::middleware(['role:admin,coach'])->group(function () {
         Route::get('/members', [MemberController::class, 'index'])->name('members.index');
