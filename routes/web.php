@@ -39,7 +39,6 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::middleware(['role:admin'])->group(function () {
         Route::get('/staff', [StaffController::class, 'index'])->name('staff.index');
-        Route::post('/staff', [StaffController::class, 'store'])->name('staff.store');
 
         Route::get('/invoices', [AdminController::class, 'invoices'])->name('invoices.page');
 

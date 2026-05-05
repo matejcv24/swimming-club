@@ -305,7 +305,7 @@ homeForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
 home.form = homeForm;
 /**
  * @see \App\Http\Controllers\StaffController::claimCoachAccount
- * @see app/Http/Controllers/StaffController.php:45
+ * @see app/Http/Controllers/StaffController.php:18
  * @route '/claim-coach-account/{coach}'
  */
 export const claimCoachAccount = (
@@ -327,7 +327,7 @@ claimCoachAccount.definition = {
 
 /**
  * @see \App\Http\Controllers\StaffController::claimCoachAccount
- * @see app/Http/Controllers/StaffController.php:45
+ * @see app/Http/Controllers/StaffController.php:18
  * @route '/claim-coach-account/{coach}'
  */
 claimCoachAccount.url = (
@@ -367,7 +367,7 @@ claimCoachAccount.url = (
 
 /**
  * @see \App\Http\Controllers\StaffController::claimCoachAccount
- * @see app/Http/Controllers/StaffController.php:45
+ * @see app/Http/Controllers/StaffController.php:18
  * @route '/claim-coach-account/{coach}'
  */
 claimCoachAccount.get = (
@@ -383,7 +383,7 @@ claimCoachAccount.get = (
 });
 /**
  * @see \App\Http\Controllers\StaffController::claimCoachAccount
- * @see app/Http/Controllers/StaffController.php:45
+ * @see app/Http/Controllers/StaffController.php:18
  * @route '/claim-coach-account/{coach}'
  */
 claimCoachAccount.head = (
@@ -400,7 +400,7 @@ claimCoachAccount.head = (
 
 /**
  * @see \App\Http\Controllers\StaffController::claimCoachAccount
- * @see app/Http/Controllers/StaffController.php:45
+ * @see app/Http/Controllers/StaffController.php:18
  * @route '/claim-coach-account/{coach}'
  */
 const claimCoachAccountForm = (
@@ -417,7 +417,7 @@ const claimCoachAccountForm = (
 
 /**
  * @see \App\Http\Controllers\StaffController::claimCoachAccount
- * @see app/Http/Controllers/StaffController.php:45
+ * @see app/Http/Controllers/StaffController.php:18
  * @route '/claim-coach-account/{coach}'
  */
 claimCoachAccountForm.get = (
@@ -433,7 +433,7 @@ claimCoachAccountForm.get = (
 });
 /**
  * @see \App\Http\Controllers\StaffController::claimCoachAccount
- * @see app/Http/Controllers/StaffController.php:45
+ * @see app/Http/Controllers/StaffController.php:18
  * @route '/claim-coach-account/{coach}'
  */
 claimCoachAccountForm.head = (
