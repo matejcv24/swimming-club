@@ -16,7 +16,7 @@ class NotificationController extends Controller
             'unreadNotifications' => $user->unreadNotifications()->latest()->get()->map(fn ($notification) => [
                 'id' => $notification->id,
                 'message' => $notification->data['message'] ?? '',
-                'url' => $notification->data['url'] ?? '/dashboard',
+                'url' => $this->notificationUrl($notification, $user),
                 'type' => $notification->data['type'] ?? '',
                 'created_at' => $notification->created_at?->toDateTimeString(),
                 'read_at' => $notification->read_at?->toDateTimeString(),
@@ -24,7 +24,7 @@ class NotificationController extends Controller
             'allNotifications' => $user->notifications()->latest()->get()->map(fn ($notification) => [
                 'id' => $notification->id,
                 'message' => $notification->data['message'] ?? '',
-                'url' => $notification->data['url'] ?? '/dashboard',
+                'url' => $this->notificationUrl($notification, $user),
                 'type' => $notification->data['type'] ?? '',
                 'created_at' => $notification->created_at?->toDateTimeString(),
                 'read_at' => $notification->read_at?->toDateTimeString(),
@@ -44,7 +44,7 @@ class NotificationController extends Controller
             $notification->markAsRead();
         }
 
-        return redirect($notification->data['url'] ?? '/dashboard');
+        return redirect($this->notificationUrl($notification, $request->user()));
     }
 
     public function markAllAsRead(Request $request)
@@ -52,5 +52,14 @@ class NotificationController extends Controller
         $request->user()->unreadNotifications->markAsRead();
 
         return back();
+    }
+
+    private function notificationUrl(DatabaseNotification $notification, object $user): string
+    {
+        if (($notification->data['type'] ?? '') === 'salary_added' && $user->role === 'coach') {
+            return '/dashboard?salary=1';
+        }
+
+        return $notification->data['url'] ?? '/dashboard';
     }
 }

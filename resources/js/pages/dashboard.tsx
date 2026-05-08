@@ -57,7 +57,11 @@ export default function Dashboard({
     coachSalaryTotal = 0,
     coachSalaries = [],
 }: Props) {
-    const [showSalaryModal, setShowSalaryModal] = useState(false);
+    const [showSalaryModal, setShowSalaryModal] = useState(
+        userRole === 'coach' &&
+            typeof window !== 'undefined' &&
+            new URLSearchParams(window.location.search).get('salary') === '1',
+    );
     const [showSalaryHistoryModal, setShowSalaryHistoryModal] = useState(false);
     const [showSalaryYearDetailModal, setShowSalaryYearDetailModal] =
         useState(false);

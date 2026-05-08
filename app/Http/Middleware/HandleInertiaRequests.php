@@ -46,7 +46,7 @@ public function share(Request $request): array
                 'unread' => $request->user()->unreadNotifications()->latest()->take(5)->get()->map(fn ($notification) => [
                     'id' => $notification->id,
                     'message' => $notification->data['message'] ?? '',
-                    'url' => $notification->data['url'] ?? '/dashboard',
+                    'url' => $this->notificationUrl($notification, $request->user()),
                     'type' => $notification->data['type'] ?? '',
                     'created_at' => $notification->created_at?->toDateTimeString(),
                     'read_at' => $notification->read_at?->toDateTimeString(),
@@ -54,7 +54,7 @@ public function share(Request $request): array
                 'all' => $request->user()->notifications()->latest()->take(20)->get()->map(fn ($notification) => [
                     'id' => $notification->id,
                     'message' => $notification->data['message'] ?? '',
-                    'url' => $notification->data['url'] ?? '/dashboard',
+                    'url' => $this->notificationUrl($notification, $request->user()),
                     'type' => $notification->data['type'] ?? '',
                     'created_at' => $notification->created_at?->toDateTimeString(),
                     'read_at' => $notification->read_at?->toDateTimeString(),
@@ -66,5 +66,14 @@ public function share(Request $request): array
                 'all' => [],
             ],
     ];
+}
+
+private function notificationUrl(object $notification, object $user): string
+{
+    if (($notification->data['type'] ?? '') === 'salary_added' && $user->role === 'coach') {
+        return '/dashboard?salary=1';
+    }
+
+    return $notification->data['url'] ?? '/dashboard';
 }
 }
