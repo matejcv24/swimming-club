@@ -39,7 +39,7 @@ const chipSx = {
 
 const formatCurrency = (value: number): string => {
     return new Intl.NumberFormat('en-US', {
-        minimumFractionDigits: 2,
+        minimumFractionDigits: 0,
         maximumFractionDigits: 2,
     }).format(value);
 };
