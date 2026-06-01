@@ -36,8 +36,12 @@ class MembershipFeeController extends Controller
             'end_date' => ['required', 'date', 'after:start_date'],
         ]);
 
-        $fee = MembershipFee::create($validated);
         $member = Member::find($validated['member_id']);
+
+        MembershipFee::create([
+            ...$validated,
+            'pool' => $member?->pool ?? 'big',
+        ]);
 
         if (Auth::user()?->role === 'coach' && $member) {
             $admins = User::where('role', 'admin')->get();

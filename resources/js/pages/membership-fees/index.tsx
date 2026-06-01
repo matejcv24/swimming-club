@@ -42,6 +42,7 @@ interface Member {
 interface Fee {
     id: number;
     member_id: number;
+    pool: 'big' | 'small';
     amount: number;
     payment_method: 'cash' | 'card';
     start_date: string;
@@ -219,7 +220,7 @@ export default function MembershipFeesIndex({
         }
 
         return selectedMonthData.fees.filter(
-            (fee) => fee.member?.pool === monthPoolFilter,
+            (fee) => fee.pool === monthPoolFilter,
         );
     }, [monthPoolFilter, selectedMonthData]);
 
@@ -932,9 +933,7 @@ export default function MembershipFeesIndex({
                                                 textTransform: 'capitalize',
                                             }}
                                         >
-                                            {fee.member?.pool
-                                                ? `${fee.member.pool} pool`
-                                                : '-'}
+                                            {fee.pool} pool
                                         </TableCell>
                                         <TableCell sx={{ color: 'white' }}>
                                             {dayjs(fee.start_date).format(

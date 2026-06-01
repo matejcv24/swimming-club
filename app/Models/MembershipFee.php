@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class MembershipFee extends Model
 {
-    protected $fillable = ['member_id', 'amount', 'payment_method', 'start_date', 'end_date'];
+    protected $fillable = ['member_id', 'pool', 'amount', 'payment_method', 'start_date', 'end_date'];
 
     protected $casts = [
         'start_date' => 'date',
