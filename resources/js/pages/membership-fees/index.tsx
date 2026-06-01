@@ -42,6 +42,7 @@ interface Member {
 interface Fee {
     id: number;
     member_id: number;
+    member_name?: string | null;
     pool: 'big' | 'small';
     amount: number;
     payment_method: 'cash' | 'card';
@@ -925,7 +926,9 @@ export default function MembershipFeesIndex({
                                 {filteredSelectedMonthFees.map((fee) => (
                                     <TableRow key={fee.id}>
                                         <TableCell sx={{ color: 'white' }}>
-                                            {fee.member?.name ?? '—'}
+                                            {fee.member?.name ??
+                                                fee.member_name ??
+                                                '—'}
                                         </TableCell>
                                         <TableCell
                                             sx={{
