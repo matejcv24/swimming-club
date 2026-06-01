@@ -31,6 +31,8 @@ import dayjs from 'dayjs';
 import type { Dayjs } from 'dayjs';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
+type PoolFilter = 'all' | 'big' | 'small';
+
 interface Member {
     id: number;
     name: string;
@@ -47,6 +49,7 @@ interface Fee {
     member?: {
         id: number;
         name: string;
+        pool: string;
     };
 }
 
@@ -98,7 +101,7 @@ function PaymentMethodBadge({ fee }: { fee: Fee }) {
         >
             <Chip
                 label={`${Number(fee.amount).toLocaleString('en-US', {
-                    minimumFractionDigits: 2,
+                    minimumFractionDigits: 0,
                     maximumFractionDigits: 2,
                 })} MKD`}
                 color="success"
@@ -117,7 +120,7 @@ function PaymentMethodBadge({ fee }: { fee: Fee }) {
 
 const formatCurrency = (value: number): string => {
     return new Intl.NumberFormat('en-US', {
-        minimumFractionDigits: 2,
+        minimumFractionDigits: 0,
         maximumFractionDigits: 2,
     }).format(value);
 };
@@ -140,6 +143,7 @@ export default function MembershipFeesIndex({
     const [showMonthDetailModal, setShowMonthDetailModal] = useState(false);
     const [selectedYear, setSelectedYear] = useState<string | null>(null);
     const [selectedMonth, setSelectedMonth] = useState<string | null>(null);
+    const [monthPoolFilter, setMonthPoolFilter] = useState<PoolFilter>('all');
 
     const groupedFeesByMonth = useMemo(() => {
         const grouped: Record<string, MonthGroup> = {};
@@ -204,6 +208,29 @@ export default function MembershipFeesIndex({
     const selectedMonthData = selectedMonth
         ? groupedFeesByMonth[selectedMonth]
         : null;
+
+    const filteredSelectedMonthFees = useMemo(() => {
+        if (!selectedMonthData) {
+            return [];
+        }
+
+        if (monthPoolFilter === 'all') {
+            return selectedMonthData.fees;
+        }
+
+        return selectedMonthData.fees.filter(
+            (fee) => fee.member?.pool === monthPoolFilter,
+        );
+    }, [monthPoolFilter, selectedMonthData]);
+
+    const filteredSelectedMonthTotal = useMemo(
+        () =>
+            filteredSelectedMonthFees.reduce(
+                (total, fee) => total + Number(fee.amount),
+                0,
+            ),
+        [filteredSelectedMonthFees],
+    );
 
     const handleMemberSelect = useCallback(async (member: Member | null) => {
         setSelectedMember(member);
@@ -719,6 +746,7 @@ export default function MembershipFeesIndex({
                                     }}
                                     onClick={() => {
                                         setSelectedMonth(month);
+                                        setMonthPoolFilter('all');
                                         setShowMonthDetailModal(true);
                                     }}
                                 >
@@ -758,6 +786,7 @@ export default function MembershipFeesIndex({
                 onClose={() => {
                     setShowMonthDetailModal(false);
                     setSelectedMonth(null);
+                    setMonthPoolFilter('all');
                 }}
                 disableRestoreFocus
                 fullWidth
@@ -778,6 +807,7 @@ export default function MembershipFeesIndex({
                             onClick={() => {
                                 setShowMonthDetailModal(false);
                                 setSelectedMonth(null);
+                                setMonthPoolFilter('all');
                             }}
                             color="error"
                         >
@@ -788,32 +818,123 @@ export default function MembershipFeesIndex({
                 </DialogTitle>
 
                 <DialogContent sx={{ p: 0 }}>
+                    <div className="grid gap-3 px-4 py-3 sm:grid-cols-3">
+                        <FormControl sx={inputSx}>
+                            <InputLabel id="month-pool-filter-label">
+                                Pool
+                            </InputLabel>
+                            <Select
+                                labelId="month-pool-filter-label"
+                                value={monthPoolFilter}
+                                label="Pool"
+                                onChange={(e) =>
+                                    setMonthPoolFilter(
+                                        e.target.value as PoolFilter,
+                                    )
+                                }
+                            >
+                                <MenuItem value="all">All</MenuItem>
+                                <MenuItem value="small">Small Pool</MenuItem>
+                                <MenuItem value="big">Big Pool</MenuItem>
+                            </Select>
+                        </FormControl>
+                        <TextField
+                            label="Paid Memberships"
+                            value={filteredSelectedMonthFees.length}
+                            InputProps={{ readOnly: true }}
+                            sx={inputSx}
+                        />
+                        <TextField
+                            label="Total Value"
+                            value={`${formatCurrency(filteredSelectedMonthTotal)} MKD`}
+                            InputProps={{ readOnly: true }}
+                            sx={inputSx}
+                        />
+                    </div>
+                    <Divider />
                     <TableContainer>
                         <Table>
                             <TableHead>
                                 <TableRow>
-                                    <TableCell sx={{ color: 'white' }}>
+                                    <TableCell
+                                        sx={{
+                                            color: 'white',
+                                            fontWeight: 'bold',
+                                        }}
+                                    >
                                         Member
                                     </TableCell>
-                                    <TableCell sx={{ color: 'white' }}>
+                                    <TableCell
+                                        sx={{
+                                            color: 'white',
+                                            fontWeight: 'bold',
+                                        }}
+                                    >
+                                        Pool
+                                    </TableCell>
+                                    <TableCell
+                                        sx={{
+                                            color: 'white',
+                                            fontWeight: 'bold',
+                                        }}
+                                    >
                                         Start Date
                                     </TableCell>
-                                    <TableCell sx={{ color: 'white' }}>
+                                    <TableCell
+                                        sx={{
+                                            color: 'white',
+                                            fontWeight: 'bold',
+                                        }}
+                                    >
                                         End Date
                                     </TableCell>
-                                    <TableCell sx={{ color: 'white' }}>
+                                    <TableCell
+                                        sx={{
+                                            color: 'white',
+                                            fontWeight: 'bold',
+                                        }}
+                                    >
                                         Amount
                                     </TableCell>
-                                    <TableCell sx={{ color: 'white' }}>
+                                    <TableCell
+                                        sx={{
+                                            color: 'white',
+                                            fontWeight: 'bold',
+                                        }}
+                                    >
                                         Method
                                     </TableCell>
                                 </TableRow>
                             </TableHead>
                             <TableBody>
-                                {selectedMonthData?.fees.map((fee) => (
+                                {filteredSelectedMonthFees.length === 0 && (
+                                    <TableRow>
+                                        <TableCell
+                                            colSpan={6}
+                                            sx={{
+                                                color: 'rgba(255,255,255,0.7)',
+                                                textAlign: 'center',
+                                                py: 4,
+                                            }}
+                                        >
+                                            No payments recorded for this pool.
+                                        </TableCell>
+                                    </TableRow>
+                                )}
+                                {filteredSelectedMonthFees.map((fee) => (
                                     <TableRow key={fee.id}>
                                         <TableCell sx={{ color: 'white' }}>
                                             {fee.member?.name ?? '—'}
+                                        </TableCell>
+                                        <TableCell
+                                            sx={{
+                                                color: 'white',
+                                                textTransform: 'capitalize',
+                                            }}
+                                        >
+                                            {fee.member?.pool
+                                                ? `${fee.member.pool} pool`
+                                                : '-'}
                                         </TableCell>
                                         <TableCell sx={{ color: 'white' }}>
                                             {dayjs(fee.start_date).format(

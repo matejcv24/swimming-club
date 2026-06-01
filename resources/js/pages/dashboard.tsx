@@ -43,7 +43,7 @@ const DARK_BG = '#1d232a';
 
 const formatCurrency = (value: number): string => {
     return new Intl.NumberFormat('en-US', {
-        minimumFractionDigits: 2,
+        minimumFractionDigits: 0,
         maximumFractionDigits: 2,
     }).format(value);
 };
@@ -142,7 +142,7 @@ export default function Dashboard({
                             <p className="text-sm text-gray-500">Profit</p>
                             <p className="mt-2 text-4xl font-bold">
                                 {profitTotal.toLocaleString('en-US', {
-                                    minimumFractionDigits: 2,
+                                    minimumFractionDigits: 0,
                                     maximumFractionDigits: 2,
                                 })}{' '}
                                 MKD
@@ -158,7 +158,7 @@ export default function Dashboard({
                             <p className="text-sm text-gray-500">Invoices</p>
                             <p className="mt-2 text-4xl font-bold">
                                 {invoiceTotal.toLocaleString('en-US', {
-                                    minimumFractionDigits: 2,
+                                    minimumFractionDigits: 0,
                                     maximumFractionDigits: 2,
                                 })}{' '}
                                 MKD

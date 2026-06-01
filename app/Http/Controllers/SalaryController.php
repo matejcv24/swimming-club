@@ -25,7 +25,7 @@ public function store(Request $request)
     if ($coach && $coach->role === 'coach') {
         $monthLabel = Carbon::parse($validated['month'])->format('F Y');
         $coach->notify(new SalaryAddedNotification(
-            $monthLabel . ' salary: ' . number_format((float) $validated['amount'], 2) . ' MKD',
+            $monthLabel . ' salary: ' . rtrim(rtrim(number_format((float) $validated['amount'], 2), '0'), '.') . ' MKD',
             '/dashboard?salary=1'
         ));
     }
