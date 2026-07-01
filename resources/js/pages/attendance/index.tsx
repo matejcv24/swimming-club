@@ -145,7 +145,7 @@ export default function AttendanceIndex({ members, attendanceRows }: Props) {
     });
 
     const sortedYears = Object.keys(yearGroups)
-        .filter((year) => year !== currentYear)
+        .filter((year) => year !== currentYear || !currentMonthData)
         .sort()
         .reverse();
 
