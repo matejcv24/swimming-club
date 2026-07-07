@@ -25,11 +25,17 @@ services:
       - key: LOG_LEVEL
         value: info
       - key: DB_CONNECTION
-        value: pgsql
-      - key: DB_URL
-        fromDatabase:
-          name: swimming-club-db
-          property: connectionString
+        value: mysql
+      - key: DB_HOST
+        value: 178.63.130.212
+      - key: DB_PORT
+        value: "3306"
+      - key: DB_DATABASE
+        value: orientyshop_hydra
+      - key: DB_USERNAME
+        sync: false
+      - key: DB_PASSWORD
+        sync: false
       - key: SESSION_DRIVER
         value: file
       - key: CACHE_STORE
@@ -64,11 +70,17 @@ services:
       - key: LOG_LEVEL
         value: info
       - key: DB_CONNECTION
-        value: pgsql
-      - key: DB_URL
-        fromDatabase:
-          name: swimming-club-db
-          property: connectionString
+        value: mysql
+      - key: DB_HOST
+        value: 178.63.130.212
+      - key: DB_PORT
+        value: "3306"
+      - key: DB_DATABASE
+        value: orientyshop_hydra
+      - key: DB_USERNAME
+        sync: false
+      - key: DB_PASSWORD
+        sync: false
       - key: SESSION_DRIVER
         value: file
       - key: CACHE_STORE
@@ -77,10 +89,3 @@ services:
         value: database
       - key: MAIL_MAILER
         value: log
-
-databases:
-  - name: swimming-club-db
-    plan: basic-256mb
-    region: frankfurt
-    databaseName: swimming_club
-    postgresMajorVersion: "17"
