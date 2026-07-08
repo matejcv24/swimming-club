@@ -32,6 +32,8 @@ services:
         value: 178.63.130.212
       - key: DB_PORT
         value: "3306"
+      - key: DB_CONNECT_TIMEOUT
+        value: "5"
       - key: DB_DATABASE
         value: orientyshop_hydra
       - key: DB_USERNAME
@@ -77,6 +79,8 @@ services:
         value: 178.63.130.212
       - key: DB_PORT
         value: "3306"
+      - key: DB_CONNECT_TIMEOUT
+        value: "5"
       - key: DB_DATABASE
         value: orientyshop_hydra
       - key: DB_USERNAME
