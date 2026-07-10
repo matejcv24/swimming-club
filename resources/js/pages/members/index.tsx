@@ -24,6 +24,8 @@ import MenuItem from '@mui/material/MenuItem';
 import Select from '@mui/material/Select';
 import { createTheme, ThemeProvider } from '@mui/material/styles';
 import Switch from '@mui/material/Switch';
+import Tab from '@mui/material/Tab';
+import Tabs from '@mui/material/Tabs';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 import { useEffect, useState } from 'react';
@@ -63,6 +65,7 @@ export default function MembersIndex({ members }: Props) {
     const [selectedMember, setSelectedMember] = useState<Member | null>(null);
     const [editMember, setEditMember] = useState<Member | null>(null);
     const [search, setSearch] = useState('');
+    const [memberStatusTab, setMemberStatusTab] = useState(0);
     const [form, setForm] = useState({
         name: '',
         pool: 'big',
@@ -99,7 +102,15 @@ export default function MembersIndex({ members }: Props) {
         }
     }, [members]);
 
-    const filteredMembers = members.filter((m) =>
+    const activeMembers = members.filter(
+        (member) => member.status === 'active',
+    );
+    const inactiveMembers = members.filter(
+        (member) => member.status !== 'active',
+    );
+    const visibleMembers =
+        memberStatusTab === 0 ? activeMembers : inactiveMembers;
+    const filteredMembers = visibleMembers.filter((m) =>
         m.name.toLowerCase().includes(search.toLowerCase()),
     );
 
@@ -221,6 +232,17 @@ export default function MembersIndex({ members }: Props) {
                             </IconButton>
                         </div>
                     </div>
+                    <Divider />
+                    <Tabs
+                        value={memberStatusTab}
+                        onChange={(_, newValue) => setMemberStatusTab(newValue)}
+                        variant="fullWidth"
+                        textColor="inherit"
+                        indicatorColor="primary"
+                    >
+                        <Tab label={`Active (${activeMembers.length})`} />
+                        <Tab label={`Inactive (${inactiveMembers.length})`} />
+                    </Tabs>
                     <Divider />
                 </DialogTitle>
 
