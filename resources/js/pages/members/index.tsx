@@ -214,9 +214,6 @@ export default function MembersIndex({ members }: Props) {
                             }}
                             sx={{ width: 180 }}
                         />
-                        <Typography variant="h6" fontWeight="bold">
-                            Members
-                        </Typography>
                         <div className="flex items-center">
                             <IconButton
                                 onClick={() => setShowAddModal(true)}
