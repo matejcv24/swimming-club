@@ -1,0 +1,115 @@
+name: deploy
+
+# Builds the app, runs the tests and uploads it to the cPanel hosting
+# (public_html) on every push to main. The cPanel account has no shell, so
+# files go up over FTPS and public/deploy-hook.php runs the artisan commands.
+#
+# Required repository secrets:
+#   FTP_USERNAME       FTP account whose home directory is public_html
+#   FTP_PASSWORD       password of that FTP account
+#   DEPLOY_HOOK_TOKEN  must match DEPLOY_HOOK_TOKEN in the server's .env
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+env:
+  SITE_URL: https://hydraswimming.mk
+  FTP_SERVER: hydraswimming.mk
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          tools: composer:v2
+          coverage: none
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Install Dependencies
+        run: |
+          composer install --no-interaction --prefer-dist
+          npm ci
+
+      - name: Build Assets
+        run: npm run build
+
+      - name: Tests
+        run: |
+          cp .env.example .env
+          php artisan key:generate
+          php artisan test
+
+      - name: Prepare Production Files
+        run: |
+          rm .env
+          composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader
+          rm -f public/hot
+
+      - name: Enable Maintenance Mode
+        # The hook does not exist on the server before the very first deploy
+        continue-on-error: true
+        run: |
+          curl -fsS -X POST "$SITE_URL/deploy-hook.php" \
+            -H "X-Deploy-Token: ${{ secrets.DEPLOY_HOOK_TOKEN }}" \
+            -d action=down
+
+      - name: Upload Files
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ env.FTP_SERVER }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          protocol: ftps
+          security: loose
+          local-dir: ./
+          server-dir: ./
+          exclude: |
+            **/.git*
+            **/.git*/**
+            **/node_modules/**
+            .github/**
+            .playwright-mcp/**
+            docker/**
+            tests/**
+            storage/**
+            .env
+            .env.*
+            *.zip
+            Dockerfile
+            .dockerignore
+            render.yaml
+            phpunit.xml
+            .phpunit.result.cache
+
+      - name: Migrate and Cache
+        run: |
+          curl --fail-with-body -sS --max-time 300 -X POST "$SITE_URL/deploy-hook.php" \
+            -H "X-Deploy-Token: ${{ secrets.DEPLOY_HOOK_TOKEN }}" \
+            -d action=up
+
+      - name: Bring Site Back Up After Failure
+        if: failure()
+        run: |
+          curl -sS -X POST "$SITE_URL/deploy-hook.php" \
+            -H "X-Deploy-Token: ${{ secrets.DEPLOY_HOOK_TOKEN }}" \
+            -d action=live || true
