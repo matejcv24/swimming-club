@@ -49,7 +49,7 @@ jobs:
       - name: Install Dependencies
         run: |
           composer install --no-interaction --prefer-dist
-          npm ci
+          npm i
 
       - name: Build Assets
         run: npm run build
