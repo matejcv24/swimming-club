@@ -1,12 +1,12 @@
 name: deploy
 
-# Builds the app, runs the tests and uploads it to the cPanel hosting
-# (public_html) on every push to main. The cPanel account has no shell, so
-# files go up over FTPS and public/deploy-hook.php runs the artisan commands.
+# Builds the app, runs the tests and deploys it to the cPanel hosting on every
+# push to main. The hosting account has no shell and its firewall does not
+# tolerate thousands of FTP transfers, so the build is published as one zip on
+# the "production-build" GitHub release and public/deploy-hook.php on the
+# server downloads, verifies and unpacks it, then migrates and rebuilds caches.
 #
-# Required repository secrets:
-#   FTP_USERNAME       FTP account whose home directory is public_html
-#   FTP_PASSWORD       password of that FTP account
+# Required repository secret:
 #   DEPLOY_HOOK_TOKEN  must match DEPLOY_HOOK_TOKEN in the server's .env
 
 on:
@@ -19,15 +19,17 @@ concurrency:
   group: deploy-production
   cancel-in-progress: false
 
+permissions:
+  contents: write
+
 env:
-  SITE_URL: https://hydraswimming.mk
-  # Same server as hydraswimming.mk; its FTPS certificate is issued for this name
-  FTP_SERVER: server06.global-net.com.mk
+  HOOK_URL: https://hydraswimming.mk/deploy-hook.php
+  RELEASE_TAG: production-build
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    timeout-minutes: 90
+    timeout-minutes: 30
 
     steps:
       - name: Checkout code
@@ -60,56 +62,59 @@ jobs:
           php artisan key:generate
           php artisan test
 
-      - name: Prepare Production Files
+      - name: Package Release
+        id: package
         run: |
           rm .env
           composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader
           rm -f public/hot
+          name="build-${GITHUB_SHA}.zip"
+          zip -qr "$RUNNER_TEMP/$name" . \
+            -x '.git/*' 'node_modules/*' '.github/*' 'tests/*' 'storage/*' 'docker/*' \
+               '.playwright-mcp/*' '.env' '.env.*' '*.zip' 'Dockerfile' '.dockerignore' \
+               'render.yaml' 'phpunit.xml' '.phpunit.result.cache'
+          echo "name=$name" >> "$GITHUB_OUTPUT"
+          echo "sha256=$(sha256sum "$RUNNER_TEMP/$name" | cut -d' ' -f1)" >> "$GITHUB_OUTPUT"
+          ls -lh "$RUNNER_TEMP/$name"
+
+      - name: Publish Release Zip
+        env:
+          GH_TOKEN: ${{ github.token }}
+          NAME: ${{ steps.package.outputs.name }}
+        run: |
+          gh release view "$RELEASE_TAG" > /dev/null 2>&1 || \
+            gh release create "$RELEASE_TAG" --prerelease --target main \
+              --title "Production build" --notes "Built automatically by the deploy workflow."
+          gh release upload "$RELEASE_TAG" "$RUNNER_TEMP/$NAME" --clobber
+          # Keep only the zip for this commit
+          gh release view "$RELEASE_TAG" --json assets -q '.assets[].name' \
+            | grep -vx "$NAME" | xargs -r -I{} gh release delete-asset "$RELEASE_TAG" {} -y
 
       - name: Enable Maintenance Mode
-        # The hook does not exist on the server before the very first deploy
+        # The hook may not exist on the server yet during the very first deploy
         continue-on-error: true
         run: |
-          curl -fsS -X POST "$SITE_URL/deploy-hook.php" \
+          curl --fail-with-body -sS -X POST "$HOOK_URL" \
             -H "X-Deploy-Token: ${{ secrets.DEPLOY_HOOK_TOKEN }}" \
             -d action=down
 
-      - name: Upload Files
-        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
-        with:
-          server: ${{ env.FTP_SERVER }}
-          username: ${{ secrets.FTP_USERNAME }}
-          password: ${{ secrets.FTP_PASSWORD }}
-          protocol: ftps
-          local-dir: ./
-          server-dir: ./
-          exclude: |
-            **/.git*
-            **/.git*/**
-            **/node_modules/**
-            .github/**
-            .playwright-mcp/**
-            docker/**
-            tests/**
-            storage/**
-            .env
-            .env.*
-            *.zip
-            Dockerfile
-            .dockerignore
-            render.yaml
-            phpunit.xml
-            .phpunit.result.cache
+      - name: Install Release
+        run: |
+          curl --fail-with-body -sS --max-time 300 -X POST "$HOOK_URL" \
+            -H "X-Deploy-Token: ${{ secrets.DEPLOY_HOOK_TOKEN }}" \
+            --data-urlencode action=install \
+            --data-urlencode "url=https://github.com/${GITHUB_REPOSITORY}/releases/download/${RELEASE_TAG}/${{ steps.package.outputs.name }}" \
+            --data-urlencode "sha256=${{ steps.package.outputs.sha256 }}"
 
       - name: Migrate and Cache
         run: |
-          curl --fail-with-body -sS --max-time 300 -X POST "$SITE_URL/deploy-hook.php" \
+          curl --fail-with-body -sS --max-time 300 -X POST "$HOOK_URL" \
             -H "X-Deploy-Token: ${{ secrets.DEPLOY_HOOK_TOKEN }}" \
             -d action=up
 
       - name: Bring Site Back Up After Failure
         if: failure()
         run: |
-          curl -sS -X POST "$SITE_URL/deploy-hook.php" \
+          curl -sS -X POST "$HOOK_URL" \
             -H "X-Deploy-Token: ${{ secrets.DEPLOY_HOOK_TOKEN }}" \
             -d action=live || true
