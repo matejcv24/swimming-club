@@ -1,7 +1,7 @@
 import { Head, router } from '@inertiajs/react';
 import CloseIcon from '@mui/icons-material/Close';
+import EditIcon from '@mui/icons-material/Edit';
 import PersonAddAlt1Icon from '@mui/icons-material/PersonAddAlt1';
-import SearchIcon from '@mui/icons-material/Search';
 import Avatar from '@mui/material/Avatar';
 import Button from '@mui/material/Button';
 import Chip from '@mui/material/Chip';
@@ -11,14 +11,12 @@ import DialogTitle from '@mui/material/DialogTitle';
 import Divider from '@mui/material/Divider';
 import IconButton from '@mui/material/IconButton';
 import Input from '@mui/material/Input';
-import InputAdornment from '@mui/material/InputAdornment';
 import List from '@mui/material/List';
 import ListItem from '@mui/material/ListItem';
 import ListItemAvatar from '@mui/material/ListItemAvatar';
 import ListItemButton from '@mui/material/ListItemButton';
 import ListItemText from '@mui/material/ListItemText';
 import { createTheme, ThemeProvider } from '@mui/material/styles';
-import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
@@ -31,7 +29,6 @@ interface Staff {
     id: number;
     name: string;
     email: string;
-    password: string | null;
 }
 
 interface Salary {
@@ -82,8 +79,16 @@ const formatCurrency = (value: number): string => {
 
 export default function StaffIndex({ staff }: Props) {
     const [showAddModal, setShowAddModal] = useState(false);
-    const [search, setSearch] = useState('');
-    const [form, setForm] = useState({ name: '', email: '' });
+    const [form, setForm] = useState({ name: '', email: '', password: '' });
+    const [formErrors, setFormErrors] = useState<Record<string, string>>({});
+
+    const [showEditModal, setShowEditModal] = useState(false);
+    const [editForm, setEditForm] = useState({
+        name: '',
+        email: '',
+        password: '',
+    });
+    const [editErrors, setEditErrors] = useState<Record<string, string>>({});
 
     const [selectedCoach, setSelectedCoach] = useState<Staff | null>(null);
     const [salaries, setSalaries] = useState<Salary[]>([]);
@@ -95,10 +100,6 @@ export default function StaffIndex({ staff }: Props) {
         useState(false);
     const [selectedSalaryYear, setSelectedSalaryYear] = useState<string | null>(
         null,
-    );
-
-    const filteredStaff = staff.filter((s) =>
-        s.name.toLowerCase().includes(search.toLowerCase()),
     );
 
     const groupedSalaries: Record<string, GroupedSalaryByMonth> = {};
@@ -174,8 +175,47 @@ export default function StaffIndex({ staff }: Props) {
         router.post('/staff', form, {
             onSuccess: () => {
                 setShowAddModal(false);
-                setForm({ name: '', email: '' });
+                setForm({ name: '', email: '', password: '' });
+                setFormErrors({});
             },
+            onError: (errors) => setFormErrors(errors),
+        });
+    };
+
+    const handleEditOpen = () => {
+        if (!selectedCoach) {
+            return;
+        }
+
+        setEditForm({
+            name: selectedCoach.name,
+            email: selectedCoach.email,
+            password: '',
+        });
+        setEditErrors({});
+        setShowEditModal(true);
+    };
+
+    const handleEditSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+
+        if (!selectedCoach) {
+            return;
+        }
+
+        router.put(`/staff/${selectedCoach.id}`, editForm, {
+            preserveScroll: true,
+            onSuccess: () => {
+                setSelectedCoach({
+                    ...selectedCoach,
+                    name: editForm.name,
+                    email: editForm.email,
+                });
+                setShowEditModal(false);
+                setEditForm({ name: '', email: '', password: '' });
+                setEditErrors({});
+            },
+            onError: (errors) => setEditErrors(errors),
         });
     };
 
@@ -240,21 +280,6 @@ export default function StaffIndex({ staff }: Props) {
             >
                 <DialogTitle sx={{ p: 0 }}>
                     <div className="flex items-center justify-between gap-3 px-4 py-3">
-                        <TextField
-                            variant="standard"
-                            placeholder="Search staff..."
-                            value={search}
-                            onChange={(e) => setSearch(e.target.value)}
-                            size="small"
-                            InputProps={{
-                                startAdornment: (
-                                    <InputAdornment position="start">
-                                        <SearchIcon fontSize="small" />
-                                    </InputAdornment>
-                                ),
-                            }}
-                            sx={{ width: 180 }}
-                        />
                         <Typography variant="h6" fontWeight="bold">
                             Staff
                         </Typography>
@@ -277,7 +302,7 @@ export default function StaffIndex({ staff }: Props) {
                 </DialogTitle>
 
                 <DialogContent sx={{ p: 0, overflowY: 'auto' }}>
-                    {filteredStaff.length === 0 ? (
+                    {staff.length === 0 ? (
                         <Typography
                             variant="body2"
                             color="text.secondary"
@@ -287,7 +312,7 @@ export default function StaffIndex({ staff }: Props) {
                         </Typography>
                     ) : (
                         <List disablePadding>
-                            {filteredStaff.map((member) => (
+                            {staff.map((member) => (
                                 <ListItemButton
                                     key={member.id}
                                     divider
@@ -312,9 +337,7 @@ export default function StaffIndex({ staff }: Props) {
                                                 variant="body2"
                                                 color="text.secondary"
                                             >
-                                                {member.password === null
-                                                    ? '⏳ Invite pending'
-                                                    : '✅ Active'}
+                                                {member.email}
                                             </Typography>
                                         }
                                     />
@@ -337,9 +360,23 @@ export default function StaffIndex({ staff }: Props) {
                 >
                     <DialogTitle sx={{ p: 0 }}>
                         <div className="flex items-center justify-between px-4 py-3">
-                            <Typography variant="h6" fontWeight="bold">
-                                {selectedCoach.name}
-                            </Typography>
+                            <div className="flex min-w-0 items-center gap-1">
+                                <Typography
+                                    variant="h6"
+                                    fontWeight="bold"
+                                    noWrap
+                                >
+                                    {selectedCoach.name}
+                                </Typography>
+                                <IconButton
+                                    size="small"
+                                    color="primary"
+                                    onClick={handleEditOpen}
+                                    aria-label="edit coach"
+                                >
+                                    <EditIcon fontSize="small" />
+                                </IconButton>
+                            </div>
                             <IconButton
                                 onClick={() => setSelectedCoach(null)}
                                 color="error"
@@ -775,8 +812,36 @@ export default function StaffIndex({ staff }: Props) {
                             required
                             fullWidth
                             inputProps={{ 'aria-label': 'coach email' }}
+                            error={!!formErrors.email}
                             sx={inputSx}
                         />
+                        <Input
+                            type="password"
+                            placeholder="Password (min. 8 characters)"
+                            value={form.password}
+                            onChange={(e) =>
+                                setForm({ ...form, password: e.target.value })
+                            }
+                            required
+                            fullWidth
+                            autoComplete="new-password"
+                            inputProps={{
+                                'aria-label': 'coach password',
+                                minLength: 8,
+                            }}
+                            error={!!formErrors.password}
+                            sx={inputSx}
+                        />
+                        {Object.values(formErrors).map((message) => (
+                            <Typography
+                                key={message}
+                                variant="body2"
+                                color="error"
+                                sx={{ mt: -3 }}
+                            >
+                                {message}
+                            </Typography>
+                        ))}
                         <div className="flex gap-3">
                             <Button
                                 type="submit"
@@ -784,7 +849,7 @@ export default function StaffIndex({ staff }: Props) {
                                 fullWidth
                                 size="medium"
                             >
-                                Send Invite
+                                Create Coach
                             </Button>
                             <Button
                                 type="button"
@@ -792,6 +857,127 @@ export default function StaffIndex({ staff }: Props) {
                                 fullWidth
                                 size="medium"
                                 onClick={() => setShowAddModal(false)}
+                            >
+                                Cancel
+                            </Button>
+                        </div>
+                    </form>
+                </DialogContent>
+            </Dialog>
+
+            <Dialog
+                open={showEditModal}
+                onClose={() => setShowEditModal(false)}
+                fullWidth
+                maxWidth="sm"
+                PaperProps={{
+                    sx: { bgcolor: DARK_BG },
+                }}
+            >
+                <DialogTitle sx={{ p: 0 }}>
+                    <div className="relative flex items-center justify-between px-4 py-3">
+                        <div className="w-10" />
+                        <Typography variant="h6" fontWeight="bold">
+                            Edit Coach
+                        </Typography>
+                        <IconButton
+                            onClick={() => setShowEditModal(false)}
+                            color="error"
+                        >
+                            <CloseIcon />
+                        </IconButton>
+                    </div>
+                    <Divider />
+                </DialogTitle>
+
+                <DialogContent>
+                    <form
+                        onSubmit={handleEditSubmit}
+                        className="flex flex-col gap-6 py-4"
+                    >
+                        <Input
+                            placeholder="Full name"
+                            value={editForm.name}
+                            onChange={(e) =>
+                                setEditForm({
+                                    ...editForm,
+                                    name: e.target.value,
+                                })
+                            }
+                            required
+                            fullWidth
+                            inputProps={{ 'aria-label': 'coach name' }}
+                            error={!!editErrors.name}
+                            sx={inputSx}
+                        />
+                        <Input
+                            type="email"
+                            placeholder="Email address"
+                            value={editForm.email}
+                            onChange={(e) =>
+                                setEditForm({
+                                    ...editForm,
+                                    email: e.target.value,
+                                })
+                            }
+                            required
+                            fullWidth
+                            inputProps={{ 'aria-label': 'coach email' }}
+                            error={!!editErrors.email}
+                            sx={inputSx}
+                        />
+                        <Input
+                            type="password"
+                            placeholder="New password (optional)"
+                            value={editForm.password}
+                            onChange={(e) =>
+                                setEditForm({
+                                    ...editForm,
+                                    password: e.target.value,
+                                })
+                            }
+                            fullWidth
+                            autoComplete="new-password"
+                            inputProps={{
+                                'aria-label': 'coach new password',
+                                minLength: 8,
+                            }}
+                            error={!!editErrors.password}
+                            sx={inputSx}
+                        />
+                        <Typography
+                            variant="caption"
+                            color="text.secondary"
+                            sx={{ mt: -2 }}
+                        >
+                            Leave empty to keep the current password. A new
+                            password logs the coach out on all devices.
+                        </Typography>
+                        {Object.values(editErrors).map((message) => (
+                            <Typography
+                                key={message}
+                                variant="body2"
+                                color="error"
+                                sx={{ mt: -3 }}
+                            >
+                                {message}
+                            </Typography>
+                        ))}
+                        <div className="flex gap-3">
+                            <Button
+                                type="submit"
+                                variant="contained"
+                                fullWidth
+                                size="medium"
+                            >
+                                Save
+                            </Button>
+                            <Button
+                                type="button"
+                                variant="outlined"
+                                fullWidth
+                                size="medium"
+                                onClick={() => setShowEditModal(false)}
                             >
                                 Cancel
                             </Button>

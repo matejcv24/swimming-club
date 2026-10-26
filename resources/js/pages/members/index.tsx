@@ -1,6 +1,7 @@
 import { Head, router } from '@inertiajs/react';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import CloseIcon from '@mui/icons-material/Close';
+import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
 import PersonAddAlt1Icon from '@mui/icons-material/PersonAddAlt1';
 import SearchIcon from '@mui/icons-material/Search';
@@ -16,6 +17,7 @@ import IconButton from '@mui/material/IconButton';
 import Input from '@mui/material/Input';
 import InputAdornment from '@mui/material/InputAdornment';
 import InputLabel from '@mui/material/InputLabel';
+import Link from '@mui/material/Link';
 import List from '@mui/material/List';
 import ListItemAvatar from '@mui/material/ListItemAvatar';
 import ListItemButton from '@mui/material/ListItemButton';
@@ -38,13 +40,13 @@ interface Member {
     parent: {
         id: number;
         name: string;
-        email: string;
         phone: string;
     };
 }
 
 interface Props {
     members: Member[];
+    userRole: 'admin' | 'coach';
 }
 
 const darkTheme = createTheme({
@@ -60,8 +62,10 @@ const inputSx = {
     '& input::placeholder': { color: 'rgba(255,255,255,0.5)' },
 };
 
-export default function MembersIndex({ members }: Props) {
+export default function MembersIndex({ members, userRole }: Props) {
     const [showAddModal, setShowAddModal] = useState(false);
+    const [deleteMember, setDeleteMember] = useState<Member | null>(null);
+    const [deleting, setDeleting] = useState(false);
     const [selectedMember, setSelectedMember] = useState<Member | null>(null);
     const [editMember, setEditMember] = useState<Member | null>(null);
     const [search, setSearch] = useState('');
@@ -71,7 +75,6 @@ export default function MembersIndex({ members }: Props) {
         pool: 'big',
         status: 'active' as 'active' | 'inactive',
         parent_name: '',
-        parent_email: '',
         parent_phone: '',
     });
 
@@ -80,7 +83,6 @@ export default function MembersIndex({ members }: Props) {
         pool: 'big',
         status: 'active' as 'active' | 'inactive',
         parent_name: '',
-        parent_email: '',
         parent_phone: '',
     });
 
@@ -120,7 +122,6 @@ export default function MembersIndex({ members }: Props) {
             editForm.pool !== editMember.pool ||
             editForm.status !== editMember.status ||
             editForm.parent_name !== (editMember.parent?.name ?? '') ||
-            editForm.parent_email !== (editMember.parent?.email ?? '') ||
             editForm.parent_phone !== (editMember.parent?.phone ?? ''));
 
     const getInitials = (name: string) =>
@@ -141,10 +142,28 @@ export default function MembersIndex({ members }: Props) {
                     pool: 'big',
                     status: 'active',
                     parent_name: '',
-                    parent_email: '',
                     parent_phone: '',
                 });
             },
+        });
+    };
+
+    const handleDeleteConfirm = () => {
+        if (!deleteMember) {
+            return;
+        }
+
+        setDeleting(true);
+        router.delete(`/members/${deleteMember.id}`, {
+            preserveScroll: true,
+            onSuccess: () => {
+                if (selectedMember?.id === deleteMember.id) {
+                    setSelectedMember(null);
+                }
+
+                setDeleteMember(null);
+            },
+            onFinish: () => setDeleting(false),
         });
     };
 
@@ -156,7 +175,6 @@ export default function MembersIndex({ members }: Props) {
             pool: member.pool,
             status: member.status ?? 'active',
             parent_name: member.parent?.name ?? '',
-            parent_email: member.parent?.email ?? '',
             parent_phone: member.parent?.phone ?? '',
         });
     };
@@ -316,6 +334,19 @@ export default function MembersIndex({ members }: Props) {
                                         >
                                             <EditIcon fontSize="small" />
                                         </IconButton>
+                                        {userRole === 'admin' && (
+                                            <IconButton
+                                                size="small"
+                                                color="error"
+                                                aria-label="delete member"
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    setDeleteMember(member);
+                                                }}
+                                            >
+                                                <DeleteIcon fontSize="small" />
+                                            </IconButton>
+                                        )}
                                     </div>
                                 </ListItemButton>
                             ))}
@@ -323,6 +354,70 @@ export default function MembersIndex({ members }: Props) {
                     )}
                 </DialogContent>
             </Dialog>
+
+            {/* Delete Member Confirmation Modal */}
+            {userRole === 'admin' && (
+                <Dialog
+                    open={!!deleteMember}
+                    onClose={() => setDeleteMember(null)}
+                    disableRestoreFocus
+                    fullWidth
+                    maxWidth="xs"
+                    PaperProps={{
+                        sx: { bgcolor: DARK_BG },
+                    }}
+                >
+                    <DialogTitle sx={{ p: 0 }}>
+                        <div className="flex items-center justify-between px-4 py-3">
+                            <Typography variant="h6" fontWeight="bold">
+                                Delete Member
+                            </Typography>
+                            <IconButton
+                                onClick={() => setDeleteMember(null)}
+                                color="error"
+                            >
+                                <CloseIcon />
+                            </IconButton>
+                        </div>
+                        <Divider />
+                    </DialogTitle>
+
+                    <DialogContent>
+                        <div className="flex flex-col gap-4 py-4">
+                            <Typography variant="body1">
+                                Are you sure you want to delete{' '}
+                                <strong>{deleteMember?.name}</strong>?
+                            </Typography>
+                            <Typography variant="body2" color="text.secondary">
+                                All of their membership fees, attendance records
+                                and parent details will be deleted too. This
+                                cannot be undone.
+                            </Typography>
+                            <div className="flex gap-3">
+                                <Button
+                                    variant="contained"
+                                    color="error"
+                                    fullWidth
+                                    size="medium"
+                                    onClick={handleDeleteConfirm}
+                                    disabled={deleting}
+                                >
+                                    Yes
+                                </Button>
+                                <Button
+                                    variant="outlined"
+                                    fullWidth
+                                    size="medium"
+                                    onClick={() => setDeleteMember(null)}
+                                    disabled={deleting}
+                                >
+                                    No
+                                </Button>
+                            </div>
+                        </div>
+                    </DialogContent>
+                </Dialog>
+            )}
 
             {/* Member Detail Modal */}
             <Dialog
@@ -416,21 +511,19 @@ export default function MembersIndex({ members }: Props) {
                                     variant="caption"
                                     color="text.secondary"
                                 >
-                                    Parent Email
-                                </Typography>
-                                <Typography variant="body1">
-                                    {selectedMember.parent?.email ?? '—'}
-                                </Typography>
-                            </div>
-                            <div>
-                                <Typography
-                                    variant="caption"
-                                    color="text.secondary"
-                                >
                                     Parent Phone
                                 </Typography>
                                 <Typography variant="body1">
-                                    {selectedMember.parent?.phone ?? '—'}
+                                    {selectedMember.parent?.phone ? (
+                                        <Link
+                                            href={`tel:${selectedMember.parent.phone.replace(/[^\d+]/g, '')}`}
+                                            underline="none"
+                                        >
+                                            {selectedMember.parent.phone}
+                                        </Link>
+                                    ) : (
+                                        '—'
+                                    )}
                                 </Typography>
                             </div>
                         </div>
@@ -572,21 +665,6 @@ export default function MembersIndex({ members }: Props) {
                             required
                             fullWidth
                             inputProps={{ 'aria-label': 'parent name' }}
-                            sx={inputSx}
-                        />
-
-                        <Input
-                            type="email"
-                            placeholder="Parent email (optional)"
-                            value={editForm.parent_email}
-                            onChange={(e) =>
-                                setEditForm({
-                                    ...editForm,
-                                    parent_email: e.target.value,
-                                })
-                            }
-                            fullWidth
-                            inputProps={{ 'aria-label': 'parent email' }}
                             sx={inputSx}
                         />
 
@@ -757,20 +835,6 @@ export default function MembersIndex({ members }: Props) {
                                 required
                                 fullWidth
                                 inputProps={{ 'aria-label': 'parent name' }}
-                                sx={inputSx}
-                            />
-                            <Input
-                                type="email"
-                                placeholder="Enter parent's email (optional)"
-                                value={form.parent_email}
-                                onChange={(e) =>
-                                    setForm({
-                                        ...form,
-                                        parent_email: e.target.value,
-                                    })
-                                }
-                                fullWidth
-                                inputProps={{ 'aria-label': 'parent email' }}
                                 sx={inputSx}
                             />
                             <Input

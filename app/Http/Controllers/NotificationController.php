@@ -47,13 +47,6 @@ class NotificationController extends Controller
         return redirect($this->notificationUrl($notification, $request->user()));
     }
 
-    public function markAllAsRead(Request $request)
-    {
-        $request->user()->unreadNotifications->markAsRead();
-
-        return back();
-    }
-
     private function notificationUrl(DatabaseNotification $notification, object $user): string
     {
         if (($notification->data['type'] ?? '') === 'salary_added' && $user->role === 'coach') {

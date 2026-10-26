@@ -8,6 +8,7 @@ use App\Models\User;
 use App\Notifications\MembershipPaymentNotification;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Validation\Rule;
 
 class MembershipFeeController extends Controller
 {
@@ -29,7 +30,7 @@ class MembershipFeeController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'member_id' => ['required', 'exists:members,id'],
+            'member_id' => ['required', Rule::exists('members', 'id')->where('status', 'active')],
             'amount' => ['required', 'numeric', 'min:0'],
             'payment_method' => ['required', 'in:cash,card'],
             'start_date' => ['required', 'date'],
@@ -56,6 +57,20 @@ class MembershipFeeController extends Controller
         }
 
         return back()->with('success', 'Payment recorded!');
+    }
+
+    public function update(Request $request, MembershipFee $membershipFee)
+    {
+        $validated = $request->validate([
+            'amount' => ['required', 'numeric', 'min:0'],
+            'payment_method' => ['required', 'in:cash,card'],
+            'start_date' => ['required', 'date'],
+            'end_date' => ['required', 'date', 'after:start_date'],
+        ]);
+
+        $membershipFee->update($validated);
+
+        return back()->with('success', 'Payment updated!');
     }
 
     public function getByMember(Member $member)

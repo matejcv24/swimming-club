@@ -1,5 +1,6 @@
 import { Head, router } from '@inertiajs/react';
 import CloseIcon from '@mui/icons-material/Close';
+import EditIcon from '@mui/icons-material/Edit';
 import Autocomplete from '@mui/material/Autocomplete';
 import Button from '@mui/material/Button';
 import Chip from '@mui/material/Chip';
@@ -37,6 +38,7 @@ interface Member {
     id: number;
     name: string;
     pool: string;
+    status: 'active' | 'inactive';
 }
 
 interface Fee {
@@ -132,6 +134,7 @@ export default function MembershipFeesIndex({
     allFees,
     userRole,
 }: Props) {
+    const activeMembers = members.filter((m) => m.status === 'active');
     const [selectedMember, setSelectedMember] = useState<Member | null>(null);
     const [fees, setFees] = useState<Fee[]>([]);
     const [loadingFees, setLoadingFees] = useState(false);
@@ -140,6 +143,21 @@ export default function MembershipFeesIndex({
     const [startDate, setStartDate] = useState<Dayjs | null>(null);
     const [endDate, setEndDate] = useState<Dayjs | null>(null);
     const [showHistoryModal, setShowHistoryModal] = useState(false);
+    const [editingFee, setEditingFee] = useState<Fee | null>(null);
+    const [editFeeForm, setEditFeeForm] = useState<{
+        amount: string;
+        payment_method: 'cash' | 'card';
+        start_date: Dayjs | null;
+        end_date: Dayjs | null;
+    }>({
+        amount: '',
+        payment_method: 'cash',
+        start_date: null,
+        end_date: null,
+    });
+    const [editFeeErrors, setEditFeeErrors] = useState<Record<string, string>>(
+        {},
+    );
 
     const [showYearHistoryModal, setShowYearHistoryModal] = useState(false);
     const [showMonthDetailModal, setShowMonthDetailModal] = useState(false);
@@ -304,6 +322,50 @@ export default function MembershipFeesIndex({
         );
     };
 
+    const handleEditFeeOpen = (fee: Fee) => {
+        setEditingFee(fee);
+        setEditFeeForm({
+            amount: String(Number(fee.amount)),
+            payment_method: fee.payment_method,
+            start_date: dayjs(fee.start_date),
+            end_date: dayjs(fee.end_date),
+        });
+        setEditFeeErrors({});
+    };
+
+    const handleEditFeeClose = () => {
+        setEditingFee(null);
+        setEditFeeErrors({});
+    };
+
+    const handleEditFeeSave = () => {
+        if (!editingFee || !editFeeForm.start_date || !editFeeForm.end_date) {
+            return;
+        }
+
+        router.put(
+            `/membership-fees/${editingFee.id}`,
+            {
+                amount: editFeeForm.amount,
+                payment_method: editFeeForm.payment_method,
+                start_date: editFeeForm.start_date.format('YYYY-MM-DD'),
+                end_date: editFeeForm.end_date.format('YYYY-MM-DD'),
+            },
+            {
+                preserveScroll: true,
+                preserveState: true,
+                onSuccess: () => {
+                    handleEditFeeClose();
+
+                    if (selectedMember) {
+                        void handleMemberSelect(selectedMember);
+                    }
+                },
+                onError: (errors) => setEditFeeErrors(errors),
+            },
+        );
+    };
+
     const handleCancel = () => {
         setSelectedMember(null);
         setFees([]);
@@ -348,7 +410,7 @@ export default function MembershipFeesIndex({
                 <DialogContent sx={{ overflowY: 'auto' }}>
                     <div className="flex flex-col gap-6 py-4">
                         <Autocomplete
-                            options={members}
+                            options={activeMembers}
                             getOptionLabel={(m) => m.name}
                             value={selectedMember}
                             onChange={(_, val) => handleMemberSelect(val)}
@@ -686,12 +748,165 @@ export default function MembershipFeesIndex({
                                     }
                                     sx={{ flex: '1 1 auto', minWidth: 0 }}
                                 />
-                                <PaymentMethodBadge fee={fee} />
+                                <div className="flex items-center gap-1">
+                                    <PaymentMethodBadge fee={fee} />
+                                    {userRole === 'admin' && (
+                                        <IconButton
+                                            size="small"
+                                            color="primary"
+                                            onClick={() =>
+                                                handleEditFeeOpen(fee)
+                                            }
+                                            aria-label="edit payment"
+                                        >
+                                            <EditIcon fontSize="small" />
+                                        </IconButton>
+                                    )}
+                                </div>
                             </ListItem>
                         ))}
                     </List>
                 </DialogContent>
             </Dialog>
+
+            {userRole === 'admin' && (
+                <Dialog
+                    open={!!editingFee}
+                    onClose={handleEditFeeClose}
+                    disableRestoreFocus
+                    fullWidth
+                    maxWidth="sm"
+                    PaperProps={{
+                        sx: { bgcolor: DARK_BG },
+                    }}
+                >
+                    <DialogTitle sx={{ p: 0 }}>
+                        <div className="flex items-center justify-between px-4 py-3">
+                            <Typography variant="h6" fontWeight="bold">
+                                Edit Payment — {selectedMember?.name}
+                            </Typography>
+                            <IconButton
+                                onClick={handleEditFeeClose}
+                                color="error"
+                            >
+                                <CloseIcon />
+                            </IconButton>
+                        </div>
+                        <Divider />
+                    </DialogTitle>
+
+                    <DialogContent>
+                        <div className="flex flex-col gap-6 py-4">
+                            <div className="flex gap-3">
+                                <TextField
+                                    label="Amount (MKD)"
+                                    variant="outlined"
+                                    type="number"
+                                    value={editFeeForm.amount}
+                                    onChange={(e) =>
+                                        setEditFeeForm({
+                                            ...editFeeForm,
+                                            amount: e.target.value,
+                                        })
+                                    }
+                                    error={!!editFeeErrors.amount}
+                                    sx={{ ...inputSx, flex: '0 0 65%' }}
+                                />
+                                <FormControl
+                                    sx={{
+                                        flex: '0 0 calc(35% - 12px)',
+                                        ...inputSx,
+                                    }}
+                                >
+                                    <InputLabel id="edit-payment-method-label">
+                                        Method
+                                    </InputLabel>
+                                    <Select
+                                        labelId="edit-payment-method-label"
+                                        value={editFeeForm.payment_method}
+                                        label="Method"
+                                        onChange={(e) =>
+                                            setEditFeeForm({
+                                                ...editFeeForm,
+                                                payment_method: e.target
+                                                    .value as 'cash' | 'card',
+                                            })
+                                        }
+                                    >
+                                        <MenuItem value="cash">Cash</MenuItem>
+                                        <MenuItem value="card">Card</MenuItem>
+                                    </Select>
+                                </FormControl>
+                            </div>
+
+                            <LocalizationProvider dateAdapter={AdapterDayjs}>
+                                <DatePicker
+                                    label="Start Date"
+                                    value={editFeeForm.start_date}
+                                    onChange={(val) =>
+                                        setEditFeeForm({
+                                            ...editFeeForm,
+                                            start_date: val,
+                                        })
+                                    }
+                                    sx={inputSx}
+                                    format="DD/MM/YYYY"
+                                />
+                                <DatePicker
+                                    label="End Date"
+                                    value={editFeeForm.end_date}
+                                    onChange={(val) =>
+                                        setEditFeeForm({
+                                            ...editFeeForm,
+                                            end_date: val,
+                                        })
+                                    }
+                                    minDate={
+                                        editFeeForm.start_date ?? undefined
+                                    }
+                                    sx={inputSx}
+                                    format="DD/MM/YYYY"
+                                />
+                            </LocalizationProvider>
+
+                            {Object.values(editFeeErrors).map((message) => (
+                                <Typography
+                                    key={message}
+                                    variant="body2"
+                                    color="error"
+                                    sx={{ mt: -3 }}
+                                >
+                                    {message}
+                                </Typography>
+                            ))}
+
+                            <div className="flex gap-3">
+                                <Button
+                                    variant="contained"
+                                    fullWidth
+                                    size="medium"
+                                    onClick={handleEditFeeSave}
+                                    disabled={
+                                        !editFeeForm.amount ||
+                                        !editFeeForm.start_date ||
+                                        !editFeeForm.end_date
+                                    }
+                                >
+                                    Save
+                                </Button>
+                                <Button
+                                    variant="outlined"
+                                    fullWidth
+                                    size="medium"
+                                    onClick={handleEditFeeClose}
+                                >
+                                    Cancel
+                                </Button>
+                            </div>
+                        </div>
+                    </DialogContent>
+                </Dialog>
+            )}
 
             <Dialog
                 open={showYearHistoryModal}
