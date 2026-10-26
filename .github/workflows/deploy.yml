@@ -21,7 +21,8 @@ concurrency:
 
 env:
   SITE_URL: https://hydraswimming.mk
-  FTP_SERVER: hydraswimming.mk
+  # Same server as hydraswimming.mk; its FTPS certificate is issued for this name
+  FTP_SERVER: server06.global-net.com.mk
 
 jobs:
   deploy:
@@ -80,7 +81,6 @@ jobs:
           username: ${{ secrets.FTP_USERNAME }}
           password: ${{ secrets.FTP_PASSWORD }}
           protocol: ftps
-          security: loose
           local-dir: ./
           server-dir: ./
           exclude: |
