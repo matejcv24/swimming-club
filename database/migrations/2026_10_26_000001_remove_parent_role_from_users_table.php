@@ -11,6 +11,18 @@ return new class extends Migration
     {
         $parentIds = DB::table('users')->where('role', 'parent')->pluck('id');
 
+        // Deleting a user cascades to their trainings (and attendance) and salaries.
+        // Parent users should never own any; stop instead of losing real data.
+        $ownsData = DB::table('trainings')->whereIn('coach_id', $parentIds)->exists()
+            || DB::table('salaries')->whereIn('user_id', $parentIds)->exists();
+
+        if ($ownsData) {
+            throw new RuntimeException(
+                'Some parent-role users own trainings or salaries. Nothing was deleted; '
+                .'change their role or move that data before running this migration.'
+            );
+        }
+
         DB::table('notifications')
             ->where('notifiable_type', 'App\\Models\\User')
             ->whereIn('notifiable_id', $parentIds)
