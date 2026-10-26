@@ -19,18 +19,9 @@ Route::get('/', function () {
     return Inertia::render('welcome');
 })->name('home');
 
-Route::get('/claim-coach-account/{coach}', [StaffController::class, 'showClaimForm'])
-    ->name('claim-coach-account')
-    ->middleware('signed');
-
-Route::post('/claim-coach-account/{coach}', [StaffController::class, 'claimAccount'])
-    ->name('claim-coach-account.store')
-    ->middleware('signed');
-
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/dashboard', [AdminController::class, 'index'])->name('dashboard');
     Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications.index');
-    Route::post('/notifications/read-all', [NotificationController::class, 'markAllAsRead'])->name('notifications.read-all');
     Route::post('/notifications/{notification}/read', [NotificationController::class, 'markAsRead'])->name('notifications.read');
 
     Route::middleware(['role:admin,coach'])->group(function () {
@@ -43,7 +34,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
         Route::get('/membership-fees/by-member/{member}', [MembershipFeeController::class, 'getByMember'])
             ->name('membership-fees.byMember');
-        Route::resource('membership-fees', MembershipFeeController::class);
+        Route::resource('membership-fees', MembershipFeeController::class)->except(['update']);
 
         Route::get('/unpaid-fees', [UnpaidFeeController::class, 'index'])->name('unpaid-fees.index');
     });
@@ -51,6 +42,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::middleware(['role:admin'])->group(function () {
         Route::get('/staff', [StaffController::class, 'index'])->name('staff.index');
         Route::post('/staff', [StaffController::class, 'store'])->name('staff.store');
+        Route::put('/staff/{coach}', [StaffController::class, 'update'])->name('staff.update');
+
+        Route::put('/membership-fees/{membershipFee}', [MembershipFeeController::class, 'update'])->name('membership-fees.update');
+        Route::delete('/members/{member}', [MemberController::class, 'destroy'])->name('members.destroy');
 
         Route::post('/salaries', [SalaryController::class, 'store'])->name('salaries.store');
         Route::get('/salaries/by-coach/{coach}', [SalaryController::class, 'getByCoach'])->name('salaries.byCoach');

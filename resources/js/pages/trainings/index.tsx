@@ -45,7 +45,7 @@ const darkTheme = createTheme({
 const DARK_BG = '#1d232a';
 
 export default function TrainingsIndex({ members }: Props) {
-    const [activeTab, setActiveTab] = useState(0);
+    const [activeTab, setActiveTab] = useState(1);
     const [selectedDate, setSelectedDate] = useState<Dayjs | null>(null);
     const [showAttendanceModal, setShowAttendanceModal] = useState(false);
     const [checkedIds, setCheckedIds] = useState<number[]>([]);

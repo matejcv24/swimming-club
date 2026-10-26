@@ -26,61 +26,20 @@ function formatNotificationDate(value: string | null) {
 
 export function NotificationsMenu() {
     const [open, setOpen] = useState(false);
-    const [hasViewedUnread, setHasViewedUnread] = useState(false);
     const { notifications } = usePage().props as {
         notifications?: NotificationSharedData;
     };
     const unreadCount = notifications?.unread_count ?? 0;
     const unreadNotifications = notifications?.unread ?? [];
 
-    const markViewedNotificationsAsRead = (
-        options?: Parameters<typeof router.post>[2],
-    ) => {
-        if (!hasViewedUnread) {
-            return;
-        }
-
-        router.post(
-            '/notifications/read-all',
-            {},
-            {
-                preserveScroll: true,
-                preserveState: true,
-                only: ['notifications'],
-                ...options,
-            },
-        );
-        setHasViewedUnread(false);
-    };
-
-    const handleOpenChange = (nextOpen: boolean) => {
-        if (nextOpen && unreadCount > 0) {
-            setHasViewedUnread(true);
-        }
-
-        if (!nextOpen) {
-            markViewedNotificationsAsRead();
-        }
-
-        setOpen(nextOpen);
-    };
-
-    const openNotification = (url: string) => {
+    // Marks only the clicked notification as read, then redirects to its page.
+    const openNotification = (id: string) => {
         setOpen(false);
-
-        if (hasViewedUnread) {
-            markViewedNotificationsAsRead({
-                onSuccess: () => router.visit(url),
-            });
-
-            return;
-        }
-
-        router.visit(url);
+        router.post(`/notifications/${id}/read`);
     };
 
     return (
-        <DropdownMenu open={open} onOpenChange={handleOpenChange}>
+        <DropdownMenu open={open} onOpenChange={setOpen}>
             <DropdownMenuTrigger asChild>
                 <button
                     type="button"
@@ -123,7 +82,7 @@ export function NotificationsMenu() {
                         <DropdownMenuItem
                             key={notification.id}
                             className="cursor-pointer items-start gap-3 py-3"
-                            onSelect={() => openNotification(notification.url)}
+                            onSelect={() => openNotification(notification.id)}
                         >
                             <span className="mt-1 size-2 shrink-0 rounded-full bg-red-600" />
                             <span className="min-w-0 flex-1">

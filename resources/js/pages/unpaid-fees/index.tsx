@@ -6,6 +6,7 @@ import DialogContent from '@mui/material/DialogContent';
 import DialogTitle from '@mui/material/DialogTitle';
 import Divider from '@mui/material/Divider';
 import IconButton from '@mui/material/IconButton';
+import Link from '@mui/material/Link';
 import List from '@mui/material/List';
 import ListItem from '@mui/material/ListItem';
 import ListItemAvatar from '@mui/material/ListItemAvatar';
@@ -41,7 +42,7 @@ export default function UnpaidFeesIndex({
     bigPoolMembers,
     smallPoolMembers,
 }: Props) {
-    const [tab, setTab] = useState(0);
+    const [tab, setTab] = useState(1);
 
     const members = tab === 0 ? bigPoolMembers : smallPoolMembers;
 
@@ -144,7 +145,17 @@ export default function UnpaidFeesIndex({
                                                     color="text.secondary"
                                                     sx={{ display: 'block' }}
                                                 >
-                                                    Phone: {member.phone ?? '-'}
+                                                    Phone:{' '}
+                                                    {member.phone ? (
+                                                        <Link
+                                                            href={`tel:${member.phone.replace(/[^\d+]/g, '')}`}
+                                                            underline="none"
+                                                        >
+                                                            {member.phone}
+                                                        </Link>
+                                                    ) : (
+                                                        '-'
+                                                    )}
                                                 </Typography>
                                                 <Typography
                                                     component="span"

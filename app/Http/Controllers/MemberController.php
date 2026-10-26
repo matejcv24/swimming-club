@@ -7,7 +7,9 @@ use App\Models\Member;
 use App\Models\User;
 use App\Notifications\MemberChangedNotification;
 use Illuminate\Http\Request;
+use Illuminate\Notifications\DatabaseNotification;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 
 class MemberController extends Controller
 {
@@ -17,6 +19,7 @@ class MemberController extends Controller
 
         return inertia('members/index', [
             'members' => $members,
+            'userRole' => Auth::user()->role,
         ]);
     }
 
@@ -31,13 +34,11 @@ class MemberController extends Controller
             'name' => ['required', 'string', 'max:255'],
             'pool' => ['required', 'in:big,small'],
             'parent_name' => ['required', 'string', 'max:255'],
-            'parent_email' => ['nullable', 'sometimes', 'email', 'unique:parents,email'],
             'parent_phone' => ['required', 'string', 'max:20'],
         ]);
 
         $parent = ClubParent::create([
             'name' => $validated['parent_name'],
-            'email' => $validated['parent_email'] ?? null,
             'phone' => $validated['parent_phone'],
         ]);
 
@@ -79,7 +80,6 @@ class MemberController extends Controller
             'pool' => ['required', 'in:big,small'],
             'status' => ['required', 'in:active,inactive'],
             'parent_name' => ['required', 'string', 'max:255'],
-            'parent_email' => ['nullable', 'email'],
             'parent_phone' => ['required', 'string', 'max:20'],
         ]);
 
@@ -101,10 +101,6 @@ class MemberController extends Controller
             $changes[] = 'parent name';
         }
 
-        if (($member->parent?->email ?? '') !== ($validated['parent_email'] ?? null)) {
-            $changes[] = 'parent email';
-        }
-
         if (($member->parent?->phone ?? '') !== $validated['parent_phone']) {
             $changes[] = 'parent phone';
         }
@@ -118,7 +114,6 @@ class MemberController extends Controller
         if ($member->parent) {
             $member->parent->update([
                 'name' => $validated['parent_name'],
-                'email' => $validated['parent_email'] ?? null,
                 'phone' => $validated['parent_phone'],
             ]);
         }
@@ -140,6 +135,30 @@ class MemberController extends Controller
 
     public function destroy(Member $member)
     {
-        abort(403, 'Deleting members is not allowed.');
+        DB::transaction(function () use ($member) {
+            $member->attendances()->delete();
+            $member->membershipFees()->delete();
+
+            // Remove notifications that link to this member, they would point to nothing
+            DatabaseNotification::query()
+                ->where('data', 'like', '%member=' . $member->id . '%')
+                ->get()
+                ->filter(function (DatabaseNotification $notification) use ($member) {
+                    parse_str((string) parse_url($notification->data['url'] ?? '', PHP_URL_QUERY), $query);
+
+                    return (int) ($query['member'] ?? 0) === $member->id;
+                })
+                ->each->delete();
+
+            $parent = $member->parent;
+
+            $member->delete();
+
+            if ($parent && !$parent->members()->exists()) {
+                $parent->delete();
+            }
+        });
+
+        return back()->with('success', 'Member deleted!');
     }
 }
