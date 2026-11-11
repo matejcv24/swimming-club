@@ -1,6 +1,6 @@
 import { Head, router } from '@inertiajs/react';
-import CloseIcon from '@mui/icons-material/Close';
 import EditIcon from '@mui/icons-material/Edit';
+import PersonIcon from '@mui/icons-material/Person';
 import PersonAddAlt1Icon from '@mui/icons-material/PersonAddAlt1';
 import Avatar from '@mui/material/Avatar';
 import Button from '@mui/material/Button';
@@ -16,7 +16,6 @@ import ListItem from '@mui/material/ListItem';
 import ListItemAvatar from '@mui/material/ListItemAvatar';
 import ListItemButton from '@mui/material/ListItemButton';
 import ListItemText from '@mui/material/ListItemText';
-import { createTheme, ThemeProvider } from '@mui/material/styles';
 import Typography from '@mui/material/Typography';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
@@ -24,6 +23,14 @@ import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import dayjs from 'dayjs';
 import type { Dayjs } from 'dayjs';
 import { useState } from 'react';
+import { DashboardBackground } from '@/components/dashboard-background';
+import {
+    MuiThemeProvider,
+    POPUP_BG,
+    POPUP_FG,
+    popupFg,
+} from '@/components/mui-theme-provider';
+import { avatarSx, CloseButton, PopupHeader } from '@/components/popup-ui';
 
 interface Staff {
     id: number;
@@ -46,28 +53,22 @@ interface Props {
     staff: Staff[];
 }
 
-const darkTheme = createTheme({
-    palette: { mode: 'dark' },
-});
-
-const DARK_BG = '#1d232a';
-
 const inputSx = {
-    color: 'white',
-    '&::before': { borderBottomColor: 'white' },
-    '&::after': { borderBottomColor: 'white' },
-    '& input::placeholder': { color: 'rgba(255,255,255,0.5)' },
+    color: POPUP_FG,
+    '&::before': { borderBottomColor: POPUP_FG },
+    '&::after': { borderBottomColor: POPUP_FG },
+    '& input::placeholder': { color: popupFg(0.5) },
 };
 
 const datePickerSx = {
     '& .MuiOutlinedInput-root': {
-        '& fieldset': { borderColor: 'rgba(255,255,255,0.3)' },
-        '&:hover fieldset': { borderColor: 'white' },
-        '&.Mui-focused fieldset': { borderColor: 'white' },
+        '& fieldset': { borderColor: popupFg(0.3) },
+        '&:hover fieldset': { borderColor: POPUP_FG },
+        '&.Mui-focused fieldset': { borderColor: POPUP_FG },
     },
-    '& .MuiInputLabel-root': { color: 'rgba(255,255,255,0.5)' },
-    '& .MuiInputBase-input': { color: 'white' },
-    '& .MuiSvgIcon-root': { color: 'white' },
+    '& .MuiInputLabel-root': { color: popupFg(0.5) },
+    '& .MuiInputBase-input': { color: POPUP_FG },
+    '& .MuiSvgIcon-root': { color: POPUP_FG },
 };
 
 const formatCurrency = (value: number): string => {
@@ -261,7 +262,8 @@ export default function StaffIndex({ staff }: Props) {
     };
 
     return (
-        <ThemeProvider theme={darkTheme}>
+        <MuiThemeProvider>
+            <DashboardBackground />
             <Head title="Staff" />
 
             <Dialog
@@ -274,31 +276,27 @@ export default function StaffIndex({ staff }: Props) {
                         height: '80vh',
                         display: 'flex',
                         flexDirection: 'column',
-                        bgcolor: DARK_BG,
+                        bgcolor: POPUP_BG,
                     },
                 }}
             >
                 <DialogTitle sx={{ p: 0 }}>
-                    <div className="flex items-center justify-between gap-3 px-4 py-3">
-                        <Typography variant="h6" fontWeight="bold">
-                            Staff
-                        </Typography>
-                        <div className="flex items-center">
-                            <IconButton
+                    <PopupHeader
+                        icon={<PersonIcon fontSize="small" />}
+                        title="Staff"
+                        subtitle={`${staff.length} ${staff.length === 1 ? 'coach' : 'coaches'}`}
+                        actions={
+                            <Button
+                                variant="contained"
+                                size="small"
+                                startIcon={<PersonAddAlt1Icon />}
                                 onClick={() => setShowAddModal(true)}
-                                color="primary"
                             >
-                                <PersonAddAlt1Icon />
-                            </IconButton>
-                            <IconButton
-                                onClick={() => router.visit('/dashboard')}
-                                color="error"
-                            >
-                                <CloseIcon />
-                            </IconButton>
-                        </div>
-                    </div>
-                    <Divider />
+                                Add
+                            </Button>
+                        }
+                        onClose={() => router.visit('/dashboard')}
+                    />
                 </DialogTitle>
 
                 <DialogContent sx={{ p: 0, overflowY: 'auto' }}>
@@ -312,14 +310,14 @@ export default function StaffIndex({ staff }: Props) {
                         </Typography>
                     ) : (
                         <List disablePadding>
-                            {staff.map((member) => (
+                            {staff.map((member, index) => (
                                 <ListItemButton
                                     key={member.id}
                                     divider
                                     onClick={() => handleCoachClick(member)}
                                 >
                                     <ListItemAvatar>
-                                        <Avatar>
+                                        <Avatar sx={avatarSx(index)}>
                                             {getInitials(member.name)}
                                         </Avatar>
                                     </ListItemAvatar>
@@ -355,7 +353,7 @@ export default function StaffIndex({ staff }: Props) {
                     fullWidth
                     maxWidth="sm"
                     PaperProps={{
-                        sx: { bgcolor: DARK_BG },
+                        sx: { bgcolor: POPUP_BG },
                     }}
                 >
                     <DialogTitle sx={{ p: 0 }}>
@@ -377,12 +375,9 @@ export default function StaffIndex({ staff }: Props) {
                                     <EditIcon fontSize="small" />
                                 </IconButton>
                             </div>
-                            <IconButton
+                            <CloseButton
                                 onClick={() => setSelectedCoach(null)}
-                                color="error"
-                            >
-                                <CloseIcon />
-                            </IconButton>
+                            />
                         </div>
                         <Divider />
                     </DialogTitle>
@@ -479,8 +474,7 @@ export default function StaffIndex({ staff }: Props) {
                                             paddingY: 1.5,
                                             alignItems: 'center',
                                             '&:hover': {
-                                                bgcolor:
-                                                    'rgba(255,255,255,0.05)',
+                                                bgcolor: popupFg(0.05),
                                             },
                                         }}
                                         onClick={() =>
@@ -567,8 +561,7 @@ export default function StaffIndex({ staff }: Props) {
                                                 paddingY: 1.5,
                                                 alignItems: 'center',
                                                 '&:hover': {
-                                                    bgcolor:
-                                                        'rgba(255,255,255,0.05)',
+                                                    bgcolor: popupFg(0.05),
                                                 },
                                             }}
                                             onClick={() => {
@@ -631,7 +624,7 @@ export default function StaffIndex({ staff }: Props) {
                 fullWidth
                 maxWidth="sm"
                 PaperProps={{
-                    sx: { bgcolor: DARK_BG },
+                    sx: { bgcolor: POPUP_BG },
                 }}
             >
                 <DialogTitle sx={{ p: 0 }}>
@@ -639,12 +632,9 @@ export default function StaffIndex({ staff }: Props) {
                         <Typography variant="h6" fontWeight="bold">
                             Payment History By Month — {selectedCoach?.name}
                         </Typography>
-                        <IconButton
+                        <CloseButton
                             onClick={() => setShowSalaryHistoryModal(false)}
-                            color="error"
-                        >
-                            <CloseIcon />
-                        </IconButton>
+                        />
                     </div>
                     <Divider />
                 </DialogTitle>
@@ -699,7 +689,7 @@ export default function StaffIndex({ staff }: Props) {
                 fullWidth
                 maxWidth="sm"
                 PaperProps={{
-                    sx: { bgcolor: DARK_BG },
+                    sx: { bgcolor: POPUP_BG },
                 }}
             >
                 <DialogTitle sx={{ p: 0 }}>
@@ -708,15 +698,12 @@ export default function StaffIndex({ staff }: Props) {
                             Payment History - {selectedSalaryYear} —{' '}
                             {selectedCoach?.name}
                         </Typography>
-                        <IconButton
+                        <CloseButton
                             onClick={() => {
                                 setShowSalaryYearDetailModal(false);
                                 setSelectedSalaryYear(null);
                             }}
-                            color="error"
-                        >
-                            <CloseIcon />
-                        </IconButton>
+                        />
                     </div>
                     <Divider />
                 </DialogTitle>
@@ -767,7 +754,7 @@ export default function StaffIndex({ staff }: Props) {
                 fullWidth
                 maxWidth="sm"
                 PaperProps={{
-                    sx: { bgcolor: DARK_BG },
+                    sx: { bgcolor: POPUP_BG },
                 }}
             >
                 <DialogTitle sx={{ p: 0 }}>
@@ -776,12 +763,7 @@ export default function StaffIndex({ staff }: Props) {
                         <Typography variant="h6" fontWeight="bold">
                             Add Coach
                         </Typography>
-                        <IconButton
-                            onClick={() => setShowAddModal(false)}
-                            color="error"
-                        >
-                            <CloseIcon />
-                        </IconButton>
+                        <CloseButton onClick={() => setShowAddModal(false)} />
                     </div>
                     <Divider />
                 </DialogTitle>
@@ -871,7 +853,7 @@ export default function StaffIndex({ staff }: Props) {
                 fullWidth
                 maxWidth="sm"
                 PaperProps={{
-                    sx: { bgcolor: DARK_BG },
+                    sx: { bgcolor: POPUP_BG },
                 }}
             >
                 <DialogTitle sx={{ p: 0 }}>
@@ -880,12 +862,7 @@ export default function StaffIndex({ staff }: Props) {
                         <Typography variant="h6" fontWeight="bold">
                             Edit Coach
                         </Typography>
-                        <IconButton
-                            onClick={() => setShowEditModal(false)}
-                            color="error"
-                        >
-                            <CloseIcon />
-                        </IconButton>
+                        <CloseButton onClick={() => setShowEditModal(false)} />
                     </div>
                     <Divider />
                 </DialogTitle>
@@ -985,6 +962,6 @@ export default function StaffIndex({ staff }: Props) {
                     </form>
                 </DialogContent>
             </Dialog>
-        </ThemeProvider>
+        </MuiThemeProvider>
     );
 }

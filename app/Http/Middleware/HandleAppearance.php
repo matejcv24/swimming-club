@@ -9,14 +9,19 @@ use Symfony\Component\HttpFoundation\Response;
 
 class HandleAppearance
 {
+    private const APPEARANCES = ['light', 'dark', 'system'];
+
     /**
-     * Handle an incoming request.
+     * Theme for the first paint: the logged-in user's saved choice, otherwise
+     * this browser's last choice, otherwise dark.
      *
      * @param  Closure(Request): (Response)  $next
      */
     public function handle(Request $request, Closure $next): Response
     {
-        View::share('appearance', $request->cookie('appearance') ?? 'system');
+        $appearance = $request->user()?->appearance ?? $request->cookie('appearance');
+
+        View::share('appearance', in_array($appearance, self::APPEARANCES, true) ? $appearance : 'dark');
 
         return $next($request);
     }

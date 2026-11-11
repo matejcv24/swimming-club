@@ -1,6 +1,6 @@
 import { Head, router, usePage } from '@inertiajs/react';
-import CloseIcon from '@mui/icons-material/Close';
 import EditIcon from '@mui/icons-material/Edit';
+import ReceiptLongIcon from '@mui/icons-material/ReceiptLong';
 import Button from '@mui/material/Button';
 import Chip from '@mui/material/Chip';
 import Dialog from '@mui/material/Dialog';
@@ -15,7 +15,6 @@ import List from '@mui/material/List';
 import ListItem from '@mui/material/ListItem';
 import MenuItem from '@mui/material/MenuItem';
 import Select from '@mui/material/Select';
-import { createTheme, ThemeProvider } from '@mui/material/styles';
 import Typography from '@mui/material/Typography';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
@@ -23,6 +22,14 @@ import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import dayjs from 'dayjs';
 import type { Dayjs } from 'dayjs';
 import { useState } from 'react';
+import { DashboardBackground } from '@/components/dashboard-background';
+import {
+    MuiThemeProvider,
+    POPUP_BG,
+    POPUP_FG,
+    popupFg,
+} from '@/components/mui-theme-provider';
+import { CloseButton, PopupHeader } from '@/components/popup-ui';
 
 interface Invoice {
     id: number;
@@ -42,12 +49,6 @@ interface Props {
     invoices: Invoice[];
 }
 
-const darkTheme = createTheme({
-    palette: { mode: 'dark' },
-});
-
-const DARK_BG = '#1d232a';
-
 const formatCurrency = (value: number): string => {
     return new Intl.NumberFormat('en-US', {
         minimumFractionDigits: 0,
@@ -62,21 +63,21 @@ const chipSx = {
 };
 
 const inputSx = {
-    color: 'white',
-    '&::before': { borderBottomColor: 'white' },
-    '&::after': { borderBottomColor: 'white' },
-    '& input::placeholder': { color: 'rgba(255,255,255,0.5)' },
+    color: POPUP_FG,
+    '&::before': { borderBottomColor: POPUP_FG },
+    '&::after': { borderBottomColor: POPUP_FG },
+    '& input::placeholder': { color: popupFg(0.5) },
 };
 
 const datePickerSx = {
     '& .MuiOutlinedInput-root': {
-        '& fieldset': { borderColor: 'rgba(255,255,255,0.3)' },
-        '&:hover fieldset': { borderColor: 'white' },
-        '&.Mui-focused fieldset': { borderColor: 'white' },
+        '& fieldset': { borderColor: popupFg(0.3) },
+        '&:hover fieldset': { borderColor: POPUP_FG },
+        '&.Mui-focused fieldset': { borderColor: POPUP_FG },
     },
-    '& .MuiInputLabel-root': { color: 'rgba(255,255,255,0.5)' },
-    '& .MuiInputBase-input': { color: 'white' },
-    '& .MuiSvgIcon-root': { color: 'white' },
+    '& .MuiInputLabel-root': { color: popupFg(0.5) },
+    '& .MuiInputBase-input': { color: POPUP_FG },
+    '& .MuiSvgIcon-root': { color: POPUP_FG },
 };
 
 export default function InvoicesIndex({ invoices }: Props) {
@@ -324,7 +325,8 @@ export default function InvoicesIndex({ invoices }: Props) {
     };
 
     return (
-        <ThemeProvider theme={darkTheme}>
+        <MuiThemeProvider>
+            <DashboardBackground />
             <Head title="Invoices" />
 
             <Dialog
@@ -337,23 +339,17 @@ export default function InvoicesIndex({ invoices }: Props) {
                         height: '80vh',
                         display: 'flex',
                         flexDirection: 'column',
-                        bgcolor: DARK_BG,
+                        bgcolor: POPUP_BG,
                     },
                 }}
             >
-                <DialogTitle sx={{ p: 0, fontWeight: 'bold' }}>
-                    <div className="flex items-center justify-between px-4 py-3">
-                        <Typography variant="h6" fontWeight="bold">
-                            Invoices
-                        </Typography>
-                        <IconButton
-                            onClick={() => router.visit('/dashboard')}
-                            color="error"
-                        >
-                            <CloseIcon />
-                        </IconButton>
-                    </div>
-                    <Divider />
+                <DialogTitle sx={{ p: 0 }}>
+                    <PopupHeader
+                        icon={<ReceiptLongIcon fontSize="small" />}
+                        title="Invoices"
+                        subtitle="Pool invoices by month"
+                        onClose={() => router.visit('/dashboard')}
+                    />
                 </DialogTitle>
 
                 <DialogContent sx={{ p: 0, overflowY: 'auto', flex: 1 }}>
@@ -382,9 +378,7 @@ export default function InvoicesIndex({ invoices }: Props) {
                             </LocalizationProvider>
 
                             <FormControl variant="standard" fullWidth>
-                                <InputLabel
-                                    sx={{ color: 'rgba(255,255,255,0.7)' }}
-                                >
+                                <InputLabel sx={{ color: popupFg(0.7) }}>
                                     Pool
                                 </InputLabel>
                                 <Select
@@ -395,12 +389,12 @@ export default function InvoicesIndex({ invoices }: Props) {
                                         )
                                     }
                                     sx={{
-                                        color: 'white',
+                                        color: POPUP_FG,
                                         '&::before': {
-                                            borderBottomColor: 'white',
+                                            borderBottomColor: POPUP_FG,
                                         },
                                         '&::after': {
-                                            borderBottomColor: 'white',
+                                            borderBottomColor: POPUP_FG,
                                         },
                                     }}
                                 >
@@ -484,8 +478,7 @@ export default function InvoicesIndex({ invoices }: Props) {
                                                 paddingY: 1.5,
                                                 alignItems: 'center',
                                                 '&:hover': {
-                                                    bgcolor:
-                                                        'rgba(255,255,255,0.05)',
+                                                    bgcolor: popupFg(0.05),
                                                 },
                                             }}
                                             onClick={() => {
@@ -557,7 +550,7 @@ export default function InvoicesIndex({ invoices }: Props) {
                 fullWidth
                 maxWidth="sm"
                 PaperProps={{
-                    sx: { bgcolor: DARK_BG },
+                    sx: { bgcolor: POPUP_BG },
                 }}
             >
                 <DialogTitle sx={{ p: 0 }}>
@@ -565,15 +558,12 @@ export default function InvoicesIndex({ invoices }: Props) {
                         <Typography variant="h6" fontWeight="bold">
                             Invoice History By Month - {selectedYear}
                         </Typography>
-                        <IconButton
+                        <CloseButton
                             onClick={() => {
                                 setShowYearDetailModal(false);
                                 setSelectedYear(null);
                             }}
-                            color="error"
-                        >
-                            <CloseIcon />
-                        </IconButton>
+                        />
                     </div>
                     <Divider />
                 </DialogTitle>
@@ -690,7 +680,7 @@ export default function InvoicesIndex({ invoices }: Props) {
                     fullWidth
                     maxWidth="sm"
                     PaperProps={{
-                        sx: { bgcolor: DARK_BG },
+                        sx: { bgcolor: POPUP_BG },
                     }}
                 >
                     <DialogTitle sx={{ p: 0 }}>
@@ -698,16 +688,13 @@ export default function InvoicesIndex({ invoices }: Props) {
                             <Typography variant="h6" fontWeight="bold">
                                 Edit Invoice
                             </Typography>
-                            <IconButton
+                            <CloseButton
                                 onClick={() => {
                                     setEditingInvoice(null);
                                     setEditAmount('');
                                     setEditPoolSelection('big');
                                 }}
-                                color="error"
-                            >
-                                <CloseIcon />
-                            </IconButton>
+                            />
                         </div>
                         <Divider />
                     </DialogTitle>
@@ -733,9 +720,7 @@ export default function InvoicesIndex({ invoices }: Props) {
                                     variant="standard"
                                     sx={{ minWidth: 120 }}
                                 >
-                                    <InputLabel
-                                        sx={{ color: 'rgba(255,255,255,0.7)' }}
-                                    >
+                                    <InputLabel sx={{ color: popupFg(0.7) }}>
                                         Select Pool
                                     </InputLabel>
                                     <Select
@@ -760,12 +745,12 @@ export default function InvoicesIndex({ invoices }: Props) {
                                             }
                                         }}
                                         sx={{
-                                            color: 'white',
+                                            color: POPUP_FG,
                                             '&::before': {
-                                                borderBottomColor: 'white',
+                                                borderBottomColor: POPUP_FG,
                                             },
                                             '&::after': {
-                                                borderBottomColor: 'white',
+                                                borderBottomColor: POPUP_FG,
                                             },
                                         }}
                                     >
@@ -828,6 +813,6 @@ export default function InvoicesIndex({ invoices }: Props) {
                     </DialogContent>
                 </Dialog>
             )}
-        </ThemeProvider>
+        </MuiThemeProvider>
     );
 }

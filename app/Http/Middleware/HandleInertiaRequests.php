@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Support\DashboardSummary;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 
@@ -15,6 +16,20 @@ class HandleInertiaRequests extends Middleware
      * @var string
      */
     protected $rootView = 'app';
+
+    /**
+     * Routes whose page is a pop-up shown on top of the dashboard.
+     */
+    private const POPUP_PAGES = [
+        'members.index',
+        'trainings.index',
+        'membership-fees.index',
+        'attendance.index',
+        'unpaid-fees.index',
+        'staff.index',
+        'invoices.page',
+        'profit.index',
+    ];
 
     /**
      * Determines the current asset version.
@@ -33,47 +48,51 @@ class HandleInertiaRequests extends Middleware
      *
      * @return array<string, mixed>
      */
-public function share(Request $request): array
-{
-    return [
-        ...parent::share($request),
-        'auth' => [
-            'user' => $request->user(),
-        ],
-        'notifications' => $request->user()
-            ? [
-                'unread_count' => $request->user()->unreadNotifications()->count(),
-                'unread' => $request->user()->unreadNotifications()->latest()->take(5)->get()->map(fn ($notification) => [
-                    'id' => $notification->id,
-                    'message' => $notification->data['message'] ?? '',
-                    'url' => $this->notificationUrl($notification, $request->user()),
-                    'type' => $notification->data['type'] ?? '',
-                    'created_at' => $notification->created_at?->toDateTimeString(),
-                    'read_at' => $notification->read_at?->toDateTimeString(),
-                ])->values(),
-                'all' => $request->user()->notifications()->latest()->take(20)->get()->map(fn ($notification) => [
-                    'id' => $notification->id,
-                    'message' => $notification->data['message'] ?? '',
-                    'url' => $this->notificationUrl($notification, $request->user()),
-                    'type' => $notification->data['type'] ?? '',
-                    'created_at' => $notification->created_at?->toDateTimeString(),
-                    'read_at' => $notification->read_at?->toDateTimeString(),
-                ])->values(),
-            ]
-            : [
-                'unread_count' => 0,
-                'unread' => [],
-                'all' => [],
+    public function share(Request $request): array
+    {
+        return [
+            ...parent::share($request),
+            'auth' => [
+                'user' => $request->user(),
             ],
-    ];
-}
-
-private function notificationUrl(object $notification, object $user): string
-{
-    if (($notification->data['type'] ?? '') === 'salary_added' && $user->role === 'coach') {
-        return '/dashboard?salary=1';
+            // Dashboard card numbers for the pages that open as a pop-up over the dashboard
+            'dashboardSummary' => fn () => $request->user() && $request->routeIs(self::POPUP_PAGES)
+                ? DashboardSummary::for($request->user())
+                : null,
+            'notifications' => $request->user()
+                ? [
+                    'unread_count' => $request->user()->unreadNotifications()->count(),
+                    'unread' => $request->user()->unreadNotifications()->latest()->take(5)->get()->map(fn ($notification) => [
+                        'id' => $notification->id,
+                        'message' => $notification->data['message'] ?? '',
+                        'url' => $this->notificationUrl($notification, $request->user()),
+                        'type' => $notification->data['type'] ?? '',
+                        'created_at' => $notification->created_at?->toDateTimeString(),
+                        'read_at' => $notification->read_at?->toDateTimeString(),
+                    ])->values(),
+                    'all' => $request->user()->notifications()->latest()->take(20)->get()->map(fn ($notification) => [
+                        'id' => $notification->id,
+                        'message' => $notification->data['message'] ?? '',
+                        'url' => $this->notificationUrl($notification, $request->user()),
+                        'type' => $notification->data['type'] ?? '',
+                        'created_at' => $notification->created_at?->toDateTimeString(),
+                        'read_at' => $notification->read_at?->toDateTimeString(),
+                    ])->values(),
+                ]
+                : [
+                    'unread_count' => 0,
+                    'unread' => [],
+                    'all' => [],
+                ],
+        ];
     }
 
-    return $notification->data['url'] ?? '/dashboard';
-}
+    private function notificationUrl(object $notification, object $user): string
+    {
+        if (($notification->data['type'] ?? '') === 'salary_added' && $user->role === 'coach') {
+            return '/dashboard?salary=1';
+        }
+
+        return $notification->data['url'] ?? '/dashboard';
+    }
 }

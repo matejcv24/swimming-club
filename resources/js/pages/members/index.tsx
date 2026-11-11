@@ -1,10 +1,9 @@
 import { Head, router } from '@inertiajs/react';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
-import CloseIcon from '@mui/icons-material/Close';
 import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
+import GroupsIcon from '@mui/icons-material/Groups';
 import PersonAddAlt1Icon from '@mui/icons-material/PersonAddAlt1';
-import SearchIcon from '@mui/icons-material/Search';
 import Avatar from '@mui/material/Avatar';
 import Button from '@mui/material/Button';
 import Dialog from '@mui/material/Dialog';
@@ -15,7 +14,6 @@ import FormControl from '@mui/material/FormControl';
 import FormControlLabel from '@mui/material/FormControlLabel';
 import IconButton from '@mui/material/IconButton';
 import Input from '@mui/material/Input';
-import InputAdornment from '@mui/material/InputAdornment';
 import InputLabel from '@mui/material/InputLabel';
 import Link from '@mui/material/Link';
 import List from '@mui/material/List';
@@ -24,13 +22,26 @@ import ListItemButton from '@mui/material/ListItemButton';
 import ListItemText from '@mui/material/ListItemText';
 import MenuItem from '@mui/material/MenuItem';
 import Select from '@mui/material/Select';
-import { createTheme, ThemeProvider } from '@mui/material/styles';
 import Switch from '@mui/material/Switch';
 import Tab from '@mui/material/Tab';
 import Tabs from '@mui/material/Tabs';
-import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 import { useEffect, useState } from 'react';
+import { DashboardBackground } from '@/components/dashboard-background';
+import {
+    MuiThemeProvider,
+    POPUP_BG,
+    POPUP_FG,
+    popupFg,
+} from '@/components/mui-theme-provider';
+import {
+    avatarSx,
+    CloseButton,
+    PillSearchField,
+    PoolChip,
+    PopupHeader,
+    StatusDot,
+} from '@/components/popup-ui';
 
 interface Member {
     id: number;
@@ -49,17 +60,11 @@ interface Props {
     userRole: 'admin' | 'coach';
 }
 
-const darkTheme = createTheme({
-    palette: { mode: 'dark' },
-});
-
-const DARK_BG = '#1d232a';
-
 const inputSx = {
-    color: 'white',
-    '&::before': { borderBottomColor: 'white' },
-    '&::after': { borderBottomColor: 'white' },
-    '& input::placeholder': { color: 'rgba(255,255,255,0.5)' },
+    color: POPUP_FG,
+    '&::before': { borderBottomColor: POPUP_FG },
+    '&::after': { borderBottomColor: POPUP_FG },
+    '& input::placeholder': { color: popupFg(0.5) },
 };
 
 export default function MembersIndex({ members, userRole }: Props) {
@@ -196,7 +201,8 @@ export default function MembersIndex({ members, userRole }: Props) {
     };
 
     return (
-        <ThemeProvider theme={darkTheme}>
+        <MuiThemeProvider>
+            <DashboardBackground />
             <Head title="Members" />
 
             {/* Members List Modal */}
@@ -210,44 +216,33 @@ export default function MembersIndex({ members, userRole }: Props) {
                         height: '80vh',
                         display: 'flex',
                         flexDirection: 'column',
-                        bgcolor: DARK_BG,
+                        bgcolor: POPUP_BG,
                     },
                 }}
             >
                 {/* Header */}
                 <DialogTitle sx={{ p: 0 }}>
-                    <div className="flex items-center justify-between gap-3 px-4 py-3">
-                        <TextField
-                            variant="standard"
-                            placeholder="Search members..."
-                            value={search}
-                            onChange={(e) => setSearch(e.target.value)}
-                            size="small"
-                            InputProps={{
-                                startAdornment: (
-                                    <InputAdornment position="start">
-                                        <SearchIcon fontSize="small" />
-                                    </InputAdornment>
-                                ),
-                            }}
-                            sx={{ width: 180 }}
-                        />
-                        <div className="flex items-center">
-                            <IconButton
+                    <PopupHeader
+                        icon={<GroupsIcon fontSize="small" />}
+                        title="Members"
+                        subtitle={`${activeMembers.length} active · ${inactiveMembers.length} inactive`}
+                        actions={
+                            <Button
+                                variant="contained"
+                                size="small"
+                                startIcon={<PersonAddAlt1Icon />}
                                 onClick={() => setShowAddModal(true)}
-                                color="primary"
                             >
-                                <PersonAddAlt1Icon />
-                            </IconButton>
-                            <IconButton
-                                onClick={() => router.visit('/dashboard')}
-                                color="error"
-                            >
-                                <CloseIcon />
-                            </IconButton>
-                        </div>
-                    </div>
-                    <Divider />
+                                Add
+                            </Button>
+                        }
+                        onClose={() => router.visit('/dashboard')}
+                    />
+                    <PillSearchField
+                        value={search}
+                        onChange={setSearch}
+                        placeholder="Search members..."
+                    />
                     <Tabs
                         value={memberStatusTab}
                         onChange={(_, newValue) => setMemberStatusTab(newValue)}
@@ -258,7 +253,6 @@ export default function MembersIndex({ members, userRole }: Props) {
                         <Tab label={`Active (${activeMembers.length})`} />
                         <Tab label={`Inactive (${inactiveMembers.length})`} />
                     </Tabs>
-                    <Divider />
                 </DialogTitle>
 
                 {/* Members List */}
@@ -273,7 +267,7 @@ export default function MembersIndex({ members, userRole }: Props) {
                         </Typography>
                     ) : (
                         <List disablePadding>
-                            {filteredMembers.map((member) => (
+                            {filteredMembers.map((member, index) => (
                                 <ListItemButton
                                     key={member.id}
                                     divider
@@ -281,10 +275,11 @@ export default function MembersIndex({ members, userRole }: Props) {
                                     sx={{
                                         display: 'flex',
                                         alignItems: 'center',
+                                        px: 2.25,
                                     }}
                                 >
                                     <ListItemAvatar>
-                                        <Avatar>
+                                        <Avatar sx={avatarSx(index)}>
                                             {getInitials(member.name)}
                                         </Avatar>
                                     </ListItemAvatar>
@@ -298,30 +293,19 @@ export default function MembersIndex({ members, userRole }: Props) {
                                             </Typography>
                                         }
                                         secondary={
-                                            <Typography
-                                                variant="body2"
-                                                color="text.secondary"
-                                            >
-                                                {member.pool === 'big'
-                                                    ? 'Big Pool'
-                                                    : 'Small Pool'}{' '}
-                                                •{' '}
-                                                <span
-                                                    style={{
-                                                        color:
-                                                            member.status ===
-                                                            'active'
-                                                                ? '#4caf50' // green
-                                                                : '#f44336', // red
-                                                        fontWeight: 500,
-                                                    }}
-                                                >
-                                                    {member.status === 'active'
-                                                        ? 'Active'
-                                                        : 'Inactive'}
-                                                </span>
-                                            </Typography>
+                                            <span className="mt-1 flex items-center gap-2">
+                                                <PoolChip pool={member.pool} />
+                                                <StatusDot
+                                                    active={
+                                                        member.status ===
+                                                        'active'
+                                                    }
+                                                />
+                                            </span>
                                         }
+                                        secondaryTypographyProps={{
+                                            component: 'span',
+                                        }}
                                     />
                                     {/* Edit + Delete icons */}
                                     <div className="ml-auto flex items-center gap-1">
@@ -364,7 +348,7 @@ export default function MembersIndex({ members, userRole }: Props) {
                     fullWidth
                     maxWidth="xs"
                     PaperProps={{
-                        sx: { bgcolor: DARK_BG },
+                        sx: { bgcolor: POPUP_BG },
                     }}
                 >
                     <DialogTitle sx={{ p: 0 }}>
@@ -372,12 +356,9 @@ export default function MembersIndex({ members, userRole }: Props) {
                             <Typography variant="h6" fontWeight="bold">
                                 Delete Member
                             </Typography>
-                            <IconButton
+                            <CloseButton
                                 onClick={() => setDeleteMember(null)}
-                                color="error"
-                            >
-                                <CloseIcon />
-                            </IconButton>
+                            />
                         </div>
                         <Divider />
                     </DialogTitle>
@@ -426,7 +407,7 @@ export default function MembersIndex({ members, userRole }: Props) {
                 disableRestoreFocus
                 fullWidth
                 maxWidth="sm"
-                PaperProps={{ sx: { bgcolor: DARK_BG } }}
+                PaperProps={{ sx: { bgcolor: POPUP_BG } }}
             >
                 <DialogTitle sx={{ p: 0 }}>
                     <div className="flex items-center justify-between px-4 py-3">
@@ -436,12 +417,7 @@ export default function MembersIndex({ members, userRole }: Props) {
                         <Typography variant="h6" fontWeight="bold">
                             Member Details
                         </Typography>
-                        <IconButton
-                            onClick={() => setSelectedMember(null)}
-                            color="error"
-                        >
-                            <CloseIcon />
-                        </IconButton>
+                        <CloseButton onClick={() => setSelectedMember(null)} />
                     </div>
                     <Divider />
                 </DialogTitle>
@@ -538,7 +514,7 @@ export default function MembersIndex({ members, userRole }: Props) {
                 disableRestoreFocus
                 fullWidth
                 maxWidth="sm"
-                PaperProps={{ sx: { bgcolor: DARK_BG } }}
+                PaperProps={{ sx: { bgcolor: POPUP_BG } }}
             >
                 <DialogTitle sx={{ p: 0 }}>
                     <div className="flex items-center justify-between px-4 py-3">
@@ -569,12 +545,7 @@ export default function MembersIndex({ members, userRole }: Props) {
                         />
 
                         {/* RIGHT: Close button */}
-                        <IconButton
-                            onClick={() => setEditMember(null)}
-                            color="error"
-                        >
-                            <CloseIcon />
-                        </IconButton>
+                        <CloseButton onClick={() => setEditMember(null)} />
                     </div>
                     <Divider />
                 </DialogTitle>
@@ -613,7 +584,7 @@ export default function MembersIndex({ members, userRole }: Props) {
                         <FormControl fullWidth>
                             <InputLabel
                                 id="edit-pool-label"
-                                sx={{ color: 'rgba(255,255,255,0.5)' }}
+                                sx={{ color: popupFg(0.5) }}
                             >
                                 Pool
                             </InputLabel>
@@ -628,11 +599,11 @@ export default function MembersIndex({ members, userRole }: Props) {
                                     })
                                 }
                                 sx={{
-                                    color: 'white',
+                                    color: POPUP_FG,
                                     '& .MuiOutlinedInput-notchedOutline': {
-                                        borderColor: 'rgba(255,255,255,0.3)',
+                                        borderColor: popupFg(0.3),
                                     },
-                                    '& .MuiSvgIcon-root': { color: 'white' },
+                                    '& .MuiSvgIcon-root': { color: POPUP_FG },
                                 }}
                             >
                                 <MenuItem value="big">Big Pool</MenuItem>
@@ -715,7 +686,7 @@ export default function MembersIndex({ members, userRole }: Props) {
                     disableRestoreFocus
                     fullWidth
                     maxWidth="sm"
-                    PaperProps={{ sx: { bgcolor: DARK_BG } }}
+                    PaperProps={{ sx: { bgcolor: POPUP_BG } }}
                 >
                     <DialogTitle sx={{ p: 0 }}>
                         <div className="flex items-center justify-between px-4 py-3">
@@ -737,12 +708,9 @@ export default function MembersIndex({ members, userRole }: Props) {
                             </Typography>
 
                             {/* RIGHT: Close */}
-                            <IconButton
+                            <CloseButton
                                 onClick={() => setShowAddModal(false)}
-                                color="error"
-                            >
-                                <CloseIcon />
-                            </IconButton>
+                            />
                         </div>
                         <Divider />
                     </DialogTitle>
@@ -778,7 +746,7 @@ export default function MembersIndex({ members, userRole }: Props) {
                             <FormControl fullWidth>
                                 <InputLabel
                                     id="pool-label"
-                                    sx={{ color: 'rgba(255,255,255,0.5)' }}
+                                    sx={{ color: popupFg(0.5) }}
                                 >
                                     Pool
                                 </InputLabel>
@@ -793,13 +761,12 @@ export default function MembersIndex({ members, userRole }: Props) {
                                         })
                                     }
                                     sx={{
-                                        color: 'white',
+                                        color: POPUP_FG,
                                         '& .MuiOutlinedInput-notchedOutline': {
-                                            borderColor:
-                                                'rgba(255,255,255,0.3)',
+                                            borderColor: popupFg(0.3),
                                         },
                                         '& .MuiSvgIcon-root': {
-                                            color: 'white',
+                                            color: POPUP_FG,
                                         },
                                     }}
                                 >
@@ -875,6 +842,6 @@ export default function MembersIndex({ members, userRole }: Props) {
                     </DialogContent>
                 </Dialog>
             )}
-        </ThemeProvider>
+        </MuiThemeProvider>
     );
 }

@@ -1,5 +1,5 @@
 import { Head, router } from '@inertiajs/react';
-import CloseIcon from '@mui/icons-material/Close';
+import CreditCardIcon from '@mui/icons-material/CreditCard';
 import EditIcon from '@mui/icons-material/Edit';
 import Autocomplete from '@mui/material/Autocomplete';
 import Button from '@mui/material/Button';
@@ -16,7 +16,6 @@ import ListItem from '@mui/material/ListItem';
 import ListItemText from '@mui/material/ListItemText';
 import MenuItem from '@mui/material/MenuItem';
 import Select from '@mui/material/Select';
-import { createTheme, ThemeProvider } from '@mui/material/styles';
 import Table from '@mui/material/Table';
 import TableBody from '@mui/material/TableBody';
 import TableCell from '@mui/material/TableCell';
@@ -31,6 +30,15 @@ import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import dayjs from 'dayjs';
 import type { Dayjs } from 'dayjs';
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { DashboardBackground } from '@/components/dashboard-background';
+import {
+    MuiThemeProvider,
+    POPUP_BG,
+    POPUP_FG,
+    popupFg,
+} from '@/components/mui-theme-provider';
+import { CloseButton, PopupHeader } from '@/components/popup-ui';
+import { clearOnClick } from '@/lib/search-field';
 
 type PoolFilter = 'all' | 'big' | 'small';
 
@@ -75,21 +83,15 @@ interface Props {
     userRole: 'admin' | 'coach';
 }
 
-const darkTheme = createTheme({
-    palette: { mode: 'dark' },
-});
-
-const DARK_BG = '#1d232a';
-
 const inputSx = {
     '& .MuiOutlinedInput-root': {
-        '& fieldset': { borderColor: 'rgba(255,255,255,0.3)' },
-        '&:hover fieldset': { borderColor: 'white' },
-        '&.Mui-focused fieldset': { borderColor: 'white' },
+        '& fieldset': { borderColor: popupFg(0.3) },
+        '&:hover fieldset': { borderColor: POPUP_FG },
+        '&.Mui-focused fieldset': { borderColor: POPUP_FG },
     },
-    '& .MuiInputLabel-root': { color: 'rgba(255,255,255,0.5)' },
-    '& .MuiInputBase-input': { color: 'white' },
-    '& .MuiSvgIcon-root': { color: 'white' },
+    '& .MuiInputLabel-root': { color: popupFg(0.5) },
+    '& .MuiInputBase-input': { color: POPUP_FG },
+    '& .MuiSvgIcon-root': { color: POPUP_FG },
 };
 
 function PaymentMethodBadge({ fee }: { fee: Fee }) {
@@ -376,7 +378,8 @@ export default function MembershipFeesIndex({
     };
 
     return (
-        <ThemeProvider theme={darkTheme}>
+        <MuiThemeProvider>
+            <DashboardBackground />
             <Head title="Membership Fees" />
 
             <Dialog
@@ -386,25 +389,19 @@ export default function MembershipFeesIndex({
                 maxWidth="sm"
                 PaperProps={{
                     sx: {
-                        bgcolor: DARK_BG,
+                        bgcolor: POPUP_BG,
                         display: 'flex',
                         flexDirection: 'column',
                     },
                 }}
             >
                 <DialogTitle sx={{ p: 0 }}>
-                    <div className="flex items-center justify-between px-4 py-3">
-                        <Typography variant="h6" fontWeight="bold">
-                            Membership Fees
-                        </Typography>
-                        <IconButton
-                            onClick={() => router.visit('/dashboard')}
-                            color="error"
-                        >
-                            <CloseIcon />
-                        </IconButton>
-                    </div>
-                    <Divider />
+                    <PopupHeader
+                        icon={<CreditCardIcon fontSize="small" />}
+                        title="Membership Fees"
+                        subtitle="Record and review payments"
+                        onClose={() => router.visit('/dashboard')}
+                    />
                 </DialogTitle>
 
                 <DialogContent sx={{ overflowY: 'auto' }}>
@@ -420,6 +417,10 @@ export default function MembershipFeesIndex({
                                     label="Search member"
                                     variant="outlined"
                                     sx={inputSx}
+                                    {...clearOnClick(
+                                        selectedMember !== null,
+                                        () => handleMemberSelect(null),
+                                    )}
                                 />
                             )}
                         />
@@ -637,8 +638,7 @@ export default function MembershipFeesIndex({
                                                     paddingY: 1.5,
                                                     alignItems: 'center',
                                                     '&:hover': {
-                                                        bgcolor:
-                                                            'rgba(255,255,255,0.05)',
+                                                        bgcolor: popupFg(0.05),
                                                     },
                                                 }}
                                                 onClick={() => {
@@ -701,7 +701,7 @@ export default function MembershipFeesIndex({
                 fullWidth
                 maxWidth="sm"
                 PaperProps={{
-                    sx: { bgcolor: DARK_BG },
+                    sx: { bgcolor: POPUP_BG },
                 }}
             >
                 <DialogTitle sx={{ p: 0 }}>
@@ -709,12 +709,9 @@ export default function MembershipFeesIndex({
                         <Typography variant="h6" fontWeight="bold">
                             Payment History — {selectedMember?.name}
                         </Typography>
-                        <IconButton
+                        <CloseButton
                             onClick={() => setShowHistoryModal(false)}
-                            color="error"
-                        >
-                            <CloseIcon />
-                        </IconButton>
+                        />
                     </div>
                     <Divider />
                 </DialogTitle>
@@ -777,7 +774,7 @@ export default function MembershipFeesIndex({
                     fullWidth
                     maxWidth="sm"
                     PaperProps={{
-                        sx: { bgcolor: DARK_BG },
+                        sx: { bgcolor: POPUP_BG },
                     }}
                 >
                     <DialogTitle sx={{ p: 0 }}>
@@ -785,12 +782,7 @@ export default function MembershipFeesIndex({
                             <Typography variant="h6" fontWeight="bold">
                                 Edit Payment — {selectedMember?.name}
                             </Typography>
-                            <IconButton
-                                onClick={handleEditFeeClose}
-                                color="error"
-                            >
-                                <CloseIcon />
-                            </IconButton>
+                            <CloseButton onClick={handleEditFeeClose} />
                         </div>
                         <Divider />
                     </DialogTitle>
@@ -918,7 +910,7 @@ export default function MembershipFeesIndex({
                 fullWidth
                 maxWidth="sm"
                 PaperProps={{
-                    sx: { bgcolor: DARK_BG },
+                    sx: { bgcolor: POPUP_BG },
                 }}
             >
                 <DialogTitle sx={{ p: 0 }}>
@@ -926,15 +918,12 @@ export default function MembershipFeesIndex({
                         <Typography variant="h6" fontWeight="bold">
                             Membership Fees - {selectedYear}
                         </Typography>
-                        <IconButton
+                        <CloseButton
                             onClick={() => {
                                 setShowYearHistoryModal(false);
                                 setSelectedYear(null);
                             }}
-                            color="error"
-                        >
-                            <CloseIcon />
-                        </IconButton>
+                        />
                     </div>
                     <Divider />
                 </DialogTitle>
@@ -958,7 +947,7 @@ export default function MembershipFeesIndex({
                                         alignItems: 'center',
                                         cursor: 'pointer',
                                         '&:hover': {
-                                            bgcolor: 'rgba(255,255,255,0.05)',
+                                            bgcolor: popupFg(0.05),
                                         },
                                     }}
                                     onClick={() => {
@@ -1009,7 +998,7 @@ export default function MembershipFeesIndex({
                 fullWidth
                 maxWidth="md"
                 PaperProps={{
-                    sx: { bgcolor: DARK_BG },
+                    sx: { bgcolor: POPUP_BG },
                 }}
             >
                 <DialogTitle sx={{ p: 0 }}>
@@ -1020,16 +1009,13 @@ export default function MembershipFeesIndex({
                                 ? dayjs(selectedMonth).format('MMMM YYYY')
                                 : ''}
                         </Typography>
-                        <IconButton
+                        <CloseButton
                             onClick={() => {
                                 setShowMonthDetailModal(false);
                                 setSelectedMonth(null);
                                 setMonthPoolFilter('all');
                             }}
-                            color="error"
-                        >
-                            <CloseIcon />
-                        </IconButton>
+                        />
                     </div>
                     <Divider />
                 </DialogTitle>
@@ -1075,7 +1061,7 @@ export default function MembershipFeesIndex({
                                 <TableRow>
                                     <TableCell
                                         sx={{
-                                            color: 'white',
+                                            color: POPUP_FG,
                                             fontWeight: 'bold',
                                         }}
                                     >
@@ -1083,7 +1069,7 @@ export default function MembershipFeesIndex({
                                     </TableCell>
                                     <TableCell
                                         sx={{
-                                            color: 'white',
+                                            color: POPUP_FG,
                                             fontWeight: 'bold',
                                         }}
                                     >
@@ -1091,7 +1077,7 @@ export default function MembershipFeesIndex({
                                     </TableCell>
                                     <TableCell
                                         sx={{
-                                            color: 'white',
+                                            color: POPUP_FG,
                                             fontWeight: 'bold',
                                         }}
                                     >
@@ -1099,7 +1085,7 @@ export default function MembershipFeesIndex({
                                     </TableCell>
                                     <TableCell
                                         sx={{
-                                            color: 'white',
+                                            color: POPUP_FG,
                                             fontWeight: 'bold',
                                         }}
                                     >
@@ -1107,7 +1093,7 @@ export default function MembershipFeesIndex({
                                     </TableCell>
                                     <TableCell
                                         sx={{
-                                            color: 'white',
+                                            color: POPUP_FG,
                                             fontWeight: 'bold',
                                         }}
                                     >
@@ -1115,7 +1101,7 @@ export default function MembershipFeesIndex({
                                     </TableCell>
                                     <TableCell
                                         sx={{
-                                            color: 'white',
+                                            color: POPUP_FG,
                                             fontWeight: 'bold',
                                         }}
                                     >
@@ -1129,7 +1115,7 @@ export default function MembershipFeesIndex({
                                         <TableCell
                                             colSpan={6}
                                             sx={{
-                                                color: 'rgba(255,255,255,0.7)',
+                                                color: popupFg(0.7),
                                                 textAlign: 'center',
                                                 py: 4,
                                             }}
@@ -1140,36 +1126,36 @@ export default function MembershipFeesIndex({
                                 )}
                                 {filteredSelectedMonthFees.map((fee) => (
                                     <TableRow key={fee.id}>
-                                        <TableCell sx={{ color: 'white' }}>
+                                        <TableCell sx={{ color: POPUP_FG }}>
                                             {fee.member?.name ??
                                                 fee.member_name ??
                                                 '—'}
                                         </TableCell>
                                         <TableCell
                                             sx={{
-                                                color: 'white',
+                                                color: POPUP_FG,
                                                 textTransform: 'capitalize',
                                             }}
                                         >
                                             {fee.pool} pool
                                         </TableCell>
-                                        <TableCell sx={{ color: 'white' }}>
+                                        <TableCell sx={{ color: POPUP_FG }}>
                                             {dayjs(fee.start_date).format(
                                                 'DD.MM.YYYY',
                                             )}
                                         </TableCell>
-                                        <TableCell sx={{ color: 'white' }}>
+                                        <TableCell sx={{ color: POPUP_FG }}>
                                             {dayjs(fee.end_date).format(
                                                 'DD.MM.YYYY',
                                             )}
                                         </TableCell>
-                                        <TableCell sx={{ color: 'white' }}>
+                                        <TableCell sx={{ color: POPUP_FG }}>
                                             {formatCurrency(Number(fee.amount))}{' '}
                                             MKD
                                         </TableCell>
                                         <TableCell
                                             sx={{
-                                                color: 'white',
+                                                color: POPUP_FG,
                                                 textTransform: 'capitalize',
                                             }}
                                         >
@@ -1182,6 +1168,6 @@ export default function MembershipFeesIndex({
                     </TableContainer>
                 </DialogContent>
             </Dialog>
-        </ThemeProvider>
+        </MuiThemeProvider>
     );
 }

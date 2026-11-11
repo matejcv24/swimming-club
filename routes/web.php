@@ -5,6 +5,7 @@ use App\Http\Controllers\ClubParentController;
 use App\Http\Controllers\InvoiceController;
 use App\Http\Controllers\MemberController;
 use App\Http\Controllers\MembershipFeeController;
+use App\Http\Controllers\MonthlyReportController;
 use App\Http\Controllers\SalaryController;
 use App\Http\Controllers\StaffController;
 use App\Http\Controllers\TrainingController;
@@ -13,11 +14,9 @@ use App\Http\Controllers\ProfitController;
 use App\Http\Controllers\AttendanceController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\NotificationController;
-use Inertia\Inertia;
 
-Route::get('/', function () {
-    return Inertia::render('welcome');
-})->name('home');
+// The bare address goes to the login page (logged-in users are sent on to the dashboard)
+Route::redirect('/', '/login')->name('home');
 
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/dashboard', [AdminController::class, 'index'])->name('dashboard');
@@ -57,5 +56,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::delete('/invoices/{invoice}', [InvoiceController::class, 'destroy'])->name('invoices.destroy');
 
         Route::get('/profit', [ProfitController::class, 'index'])->name('profit.index');
+
+        Route::get('/reports/monthly', [MonthlyReportController::class, 'download'])->name('reports.monthly');
     });
 });

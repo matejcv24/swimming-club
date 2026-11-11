@@ -1,9 +1,8 @@
 import { Head, router } from '@inertiajs/react';
-import CloseIcon from '@mui/icons-material/Close';
+import CalendarMonthIcon from '@mui/icons-material/CalendarMonth';
 import EditIcon from '@mui/icons-material/Edit';
 import SearchIcon from '@mui/icons-material/Search';
 import Avatar from '@mui/material/Avatar';
-import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import Checkbox from '@mui/material/Checkbox';
 import Dialog from '@mui/material/Dialog';
@@ -16,7 +15,6 @@ import List from '@mui/material/List';
 import ListItem from '@mui/material/ListItem';
 import ListItemAvatar from '@mui/material/ListItemAvatar';
 import ListItemText from '@mui/material/ListItemText';
-import { createTheme, ThemeProvider } from '@mui/material/styles';
 import Tab from '@mui/material/Tab';
 import Tabs from '@mui/material/Tabs';
 import TextField from '@mui/material/TextField';
@@ -27,6 +25,15 @@ import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import dayjs from 'dayjs';
 import type { Dayjs } from 'dayjs';
 import { useCallback, useEffect, useState } from 'react';
+import { DashboardBackground } from '@/components/dashboard-background';
+import {
+    MuiThemeProvider,
+    POPUP_BG,
+    POPUP_FG,
+    popupFg,
+} from '@/components/mui-theme-provider';
+import { CloseButton, PopupHeader } from '@/components/popup-ui';
+import { clearOnClick } from '@/lib/search-field';
 
 interface Member {
     id: number;
@@ -37,12 +44,6 @@ interface Member {
 interface Props {
     members: Member[];
 }
-
-const darkTheme = createTheme({
-    palette: { mode: 'dark' },
-});
-
-const DARK_BG = '#1d232a';
 
 export default function TrainingsIndex({ members }: Props) {
     const [activeTab, setActiveTab] = useState(1);
@@ -147,8 +148,9 @@ export default function TrainingsIndex({ members }: Props) {
     const isNewSession = checkedIds.length === 0 && !editMode;
 
     return (
-        <ThemeProvider theme={darkTheme}>
-            <Head title="Attendance" />
+        <MuiThemeProvider>
+            <DashboardBackground />
+            <Head title="Trainings" />
 
             {/* Main Attendance Modal */}
             <Dialog
@@ -158,7 +160,7 @@ export default function TrainingsIndex({ members }: Props) {
                 maxWidth="sm"
                 PaperProps={{
                     sx: {
-                        bgcolor: DARK_BG,
+                        bgcolor: POPUP_BG,
                         display: 'flex',
                         flexDirection: 'column',
                     },
@@ -166,26 +168,20 @@ export default function TrainingsIndex({ members }: Props) {
             >
                 {/* Header */}
                 <DialogTitle sx={{ p: 0 }}>
-                    <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
-                        <div className="relative flex items-center">
-                            <Tabs
-                                value={activeTab}
-                                onChange={(_, val) => setActiveTab(val)}
-                                centered
-                                sx={{ flex: 1 }}
-                            >
-                                <Tab label="Big Pool" />
-                                <Tab label="Small Pool" />
-                            </Tabs>
-                            <IconButton
-                                onClick={() => router.visit('/dashboard')}
-                                color="error"
-                                sx={{ position: 'absolute', right: 8 }}
-                            >
-                                <CloseIcon />
-                            </IconButton>
-                        </div>
-                    </Box>
+                    <PopupHeader
+                        icon={<CalendarMonthIcon fontSize="small" />}
+                        title="Trainings"
+                        subtitle="Pick a day to see who trained"
+                        onClose={() => router.visit('/dashboard')}
+                    />
+                    <Tabs
+                        value={activeTab}
+                        onChange={(_, val) => setActiveTab(val)}
+                        variant="fullWidth"
+                    >
+                        <Tab label="Big pool" />
+                        <Tab label="Small pool" />
+                    </Tabs>
                 </DialogTitle>
 
                 {/* Date Calendar */}
@@ -210,7 +206,7 @@ export default function TrainingsIndex({ members }: Props) {
                 maxWidth="sm"
                 PaperProps={{
                     sx: {
-                        bgcolor: DARK_BG,
+                        bgcolor: POPUP_BG,
                         height: '70vh',
                         display: 'flex',
                         flexDirection: 'column',
@@ -227,6 +223,9 @@ export default function TrainingsIndex({ members }: Props) {
                             onChange={(e) =>
                                 setAttendanceSearch(e.target.value)
                             }
+                            {...clearOnClick(attendanceSearch !== '', () =>
+                                setAttendanceSearch(''),
+                            )}
                             size="small"
                             InputProps={{
                                 startAdornment: (
@@ -237,15 +236,15 @@ export default function TrainingsIndex({ members }: Props) {
                             }}
                             sx={{
                                 flex: 1,
-                                '& input': { color: 'white' },
+                                '& input': { color: POPUP_FG },
                                 '& .MuiInput-underline::before': {
-                                    borderBottomColor: 'rgba(255,255,255,0.3)',
+                                    borderBottomColor: popupFg(0.3),
                                 },
                                 '& .MuiInput-underline:hover::before': {
-                                    borderBottomColor: 'white',
+                                    borderBottomColor: POPUP_FG,
                                 },
                                 '& .MuiInput-underline::after': {
-                                    borderBottomColor: 'white',
+                                    borderBottomColor: POPUP_FG,
                                 },
                             }}
                         />
@@ -259,15 +258,12 @@ export default function TrainingsIndex({ members }: Props) {
                             >
                                 <EditIcon />
                             </IconButton>
-                            <IconButton
+                            <CloseButton
                                 onClick={() => {
                                     setShowAttendanceModal(false);
                                     setAttendanceSearch('');
                                 }}
-                                color="error"
-                            >
-                                <CloseIcon />
-                            </IconButton>
+                            />
                         </div>
                     </div>
                     {editMode && (
@@ -376,6 +372,6 @@ export default function TrainingsIndex({ members }: Props) {
                     )}
                 </div>
             </Dialog>
-        </ThemeProvider>
+        </MuiThemeProvider>
     );
 }
