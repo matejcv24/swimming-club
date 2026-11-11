@@ -1,26 +1,32 @@
 import { Head, router } from '@inertiajs/react';
-import CloseIcon from '@mui/icons-material/Close';
-import SearchIcon from '@mui/icons-material/Search';
+import AssignmentTurnedInIcon from '@mui/icons-material/AssignmentTurnedIn';
 import Avatar from '@mui/material/Avatar';
 import Chip from '@mui/material/Chip';
 import Dialog from '@mui/material/Dialog';
 import DialogContent from '@mui/material/DialogContent';
 import DialogTitle from '@mui/material/DialogTitle';
 import Divider from '@mui/material/Divider';
-import IconButton from '@mui/material/IconButton';
-import InputAdornment from '@mui/material/InputAdornment';
 import List from '@mui/material/List';
 import ListItem from '@mui/material/ListItem';
 import ListItemAvatar from '@mui/material/ListItemAvatar';
 import ListItemButton from '@mui/material/ListItemButton';
 import ListItemText from '@mui/material/ListItemText';
-import { createTheme, ThemeProvider } from '@mui/material/styles';
 import Tab from '@mui/material/Tab';
 import Tabs from '@mui/material/Tabs';
-import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 import dayjs from 'dayjs';
 import { useMemo, useState } from 'react';
+import { DashboardBackground } from '@/components/dashboard-background';
+import {
+    MuiThemeProvider,
+    POPUP_BG,
+    popupFg,
+} from '@/components/mui-theme-provider';
+import {
+    CloseButton,
+    PillSearchField,
+    PopupHeader,
+} from '@/components/popup-ui';
 
 interface Member {
     id: number;
@@ -42,12 +48,6 @@ interface Props {
     members: Member[];
     attendanceRows: AttendanceRow[];
 }
-
-const darkTheme = createTheme({
-    palette: { mode: 'dark' },
-});
-
-const DARK_BG = '#1d232a';
 
 const chipSx = {
     minWidth: '180px',
@@ -164,7 +164,8 @@ export default function AttendanceIndex({ members, attendanceRows }: Props) {
             .slice(0, 2);
 
     return (
-        <ThemeProvider theme={darkTheme}>
+        <MuiThemeProvider>
+            <DashboardBackground />
             <Head title="Attendance" />
 
             <Dialog
@@ -174,7 +175,7 @@ export default function AttendanceIndex({ members, attendanceRows }: Props) {
                 maxWidth="sm"
                 PaperProps={{
                     sx: {
-                        bgcolor: DARK_BG,
+                        bgcolor: POPUP_BG,
                         height: '80vh',
                         display: 'flex',
                         flexDirection: 'column',
@@ -182,54 +183,25 @@ export default function AttendanceIndex({ members, attendanceRows }: Props) {
                 }}
             >
                 <DialogTitle sx={{ p: 0 }}>
-                    <div className="flex items-center justify-between gap-3 px-4 py-3">
-                        <TextField
-                            variant="standard"
-                            placeholder="Search member..."
-                            value={attendanceSearch}
-                            onChange={(e) =>
-                                setAttendanceSearch(e.target.value)
-                            }
-                            size="small"
-                            InputProps={{
-                                startAdornment: (
-                                    <InputAdornment position="start">
-                                        <SearchIcon fontSize="small" />
-                                    </InputAdornment>
-                                ),
-                            }}
-                            sx={{
-                                width: 180,
-                                '& input': { color: 'white' },
-                                '& .MuiInput-underline::before': {
-                                    borderBottomColor: 'rgba(255,255,255,0.3)',
-                                },
-                                '& .MuiInput-underline:hover::before': {
-                                    borderBottomColor: 'white',
-                                },
-                                '& .MuiInput-underline::after': {
-                                    borderBottomColor: 'white',
-                                },
-                            }}
-                        />
-
-                        <IconButton
-                            onClick={() => router.visit('/dashboard')}
-                            color="error"
-                        >
-                            <CloseIcon />
-                        </IconButton>
-                    </div>
-                    <Divider />
+                    <PopupHeader
+                        icon={<AssignmentTurnedInIcon fontSize="small" />}
+                        title="Attendance"
+                        subtitle={`${activeTab === 0 ? 'Big pool' : 'Small pool'} · ${filteredMembers.length} ${filteredMembers.length === 1 ? 'member' : 'members'}`}
+                        onClose={() => router.visit('/dashboard')}
+                    />
+                    <PillSearchField
+                        value={attendanceSearch}
+                        onChange={setAttendanceSearch}
+                        placeholder="Search member..."
+                    />
                     <Tabs
                         value={activeTab}
                         onChange={(_, val) => setActiveTab(val)}
-                        centered
+                        variant="fullWidth"
                     >
-                        <Tab label="Big Pool" />
-                        <Tab label="Small Pool" />
+                        <Tab label="Big pool" />
+                        <Tab label="Small pool" />
                     </Tabs>
-                    <Divider />
                 </DialogTitle>
 
                 <DialogContent sx={{ p: 0, overflowY: 'auto', flex: 1 }}>
@@ -283,7 +255,7 @@ export default function AttendanceIndex({ members, attendanceRows }: Props) {
                 fullWidth
                 maxWidth="sm"
                 PaperProps={{
-                    sx: { bgcolor: DARK_BG },
+                    sx: { bgcolor: POPUP_BG },
                 }}
             >
                 <DialogTitle sx={{ p: 0 }}>
@@ -291,15 +263,12 @@ export default function AttendanceIndex({ members, attendanceRows }: Props) {
                         <Typography variant="h6" fontWeight="bold">
                             Attendance - {selectedMember?.name}
                         </Typography>
-                        <IconButton
+                        <CloseButton
                             onClick={() => {
                                 setShowMemberHistoryModal(false);
                                 setSelectedMember(null);
                             }}
-                            color="error"
-                        >
-                            <CloseIcon />
-                        </IconButton>
+                        />
                     </div>
                     <Divider />
                 </DialogTitle>
@@ -331,8 +300,7 @@ export default function AttendanceIndex({ members, attendanceRows }: Props) {
                                             alignItems: 'center',
                                             py: 1.5,
                                             '&:hover': {
-                                                bgcolor:
-                                                    'rgba(255,255,255,0.05)',
+                                                bgcolor: popupFg(0.05),
                                             },
                                         }}
                                         onClick={() =>
@@ -410,8 +378,7 @@ export default function AttendanceIndex({ members, attendanceRows }: Props) {
                                                 alignItems: 'center',
                                                 py: 1.5,
                                                 '&:hover': {
-                                                    bgcolor:
-                                                        'rgba(255,255,255,0.05)',
+                                                    bgcolor: popupFg(0.05),
                                                 },
                                             }}
                                             onClick={() => {
@@ -471,7 +438,7 @@ export default function AttendanceIndex({ members, attendanceRows }: Props) {
                 fullWidth
                 maxWidth="sm"
                 PaperProps={{
-                    sx: { bgcolor: DARK_BG },
+                    sx: { bgcolor: POPUP_BG },
                 }}
             >
                 <DialogTitle sx={{ p: 0 }}>
@@ -479,12 +446,9 @@ export default function AttendanceIndex({ members, attendanceRows }: Props) {
                         <Typography variant="h6" fontWeight="bold">
                             Attendance By Month - {currentYear}
                         </Typography>
-                        <IconButton
+                        <CloseButton
                             onClick={() => setShowCurrentYearMonthsModal(false)}
-                            color="error"
-                        >
-                            <CloseIcon />
-                        </IconButton>
+                        />
                     </div>
                     <Divider />
                 </DialogTitle>
@@ -507,7 +471,7 @@ export default function AttendanceIndex({ members, attendanceRows }: Props) {
                                         alignItems: 'center',
                                         cursor: 'pointer',
                                         '&:hover': {
-                                            bgcolor: 'rgba(255,255,255,0.05)',
+                                            bgcolor: popupFg(0.05),
                                         },
                                     }}
                                     onClick={() => {
@@ -542,7 +506,7 @@ export default function AttendanceIndex({ members, attendanceRows }: Props) {
                 fullWidth
                 maxWidth="sm"
                 PaperProps={{
-                    sx: { bgcolor: DARK_BG },
+                    sx: { bgcolor: POPUP_BG },
                 }}
             >
                 <DialogTitle sx={{ p: 0 }}>
@@ -553,15 +517,12 @@ export default function AttendanceIndex({ members, attendanceRows }: Props) {
                                 ? dayjs(selectedMonth).format('MMMM YYYY')
                                 : ''}
                         </Typography>
-                        <IconButton
+                        <CloseButton
                             onClick={() => {
                                 setShowMonthDatesModal(false);
                                 setSelectedMonth(null);
                             }}
-                            color="error"
-                        >
-                            <CloseIcon />
-                        </IconButton>
+                        />
                     </div>
                     <Divider />
                 </DialogTitle>
@@ -608,7 +569,7 @@ export default function AttendanceIndex({ members, attendanceRows }: Props) {
                 fullWidth
                 maxWidth="sm"
                 PaperProps={{
-                    sx: { bgcolor: DARK_BG },
+                    sx: { bgcolor: POPUP_BG },
                 }}
             >
                 <DialogTitle sx={{ p: 0 }}>
@@ -616,15 +577,12 @@ export default function AttendanceIndex({ members, attendanceRows }: Props) {
                         <Typography variant="h6" fontWeight="bold">
                             Attendance By Month - {selectedYear}
                         </Typography>
-                        <IconButton
+                        <CloseButton
                             onClick={() => {
                                 setShowYearDetailModal(false);
                                 setSelectedYear(null);
                             }}
-                            color="error"
-                        >
-                            <CloseIcon />
-                        </IconButton>
+                        />
                     </div>
                     <Divider />
                 </DialogTitle>
@@ -647,7 +605,7 @@ export default function AttendanceIndex({ members, attendanceRows }: Props) {
                                         alignItems: 'center',
                                         cursor: 'pointer',
                                         '&:hover': {
-                                            bgcolor: 'rgba(255,255,255,0.05)',
+                                            bgcolor: popupFg(0.05),
                                         },
                                     }}
                                     onClick={() => {
@@ -671,6 +629,6 @@ export default function AttendanceIndex({ members, attendanceRows }: Props) {
                     </List>
                 </DialogContent>
             </Dialog>
-        </ThemeProvider>
+        </MuiThemeProvider>
     );
 }

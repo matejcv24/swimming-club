@@ -1,6 +1,7 @@
 import { Link, router, usePage } from '@inertiajs/react';
 import { LogOut, Settings } from 'lucide-react';
 import { NotificationsMenu } from '@/components/notifications-menu';
+import { forgetThemeUser, ThemeToggle } from '@/components/theme-toggle';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
     DropdownMenu,
@@ -12,21 +13,6 @@ import {
 import { useInitials } from '@/hooks/use-initials';
 import type { User } from '@/types';
 
-function EnglishLanguageIndicator() {
-    return (
-        <div className="flex h-9 items-center gap-2 rounded-md px-2 text-sm font-medium">
-            <span
-                className="relative h-4 w-6 overflow-hidden rounded-[2px] bg-white shadow-[0_0_0_1px_rgba(0,0,0,0.2)]"
-                aria-hidden="true"
-            >
-                <span className="absolute top-1/2 left-0 h-1 w-full -translate-y-1/2 bg-red-600" />
-                <span className="absolute top-0 left-1/2 h-full w-1 -translate-x-1/2 bg-red-600" />
-            </span>
-            <span>EN</span>
-        </div>
-    );
-}
-
 export function AppHeaderActions() {
     const { auth } = usePage().props as {
         auth?: { user?: User | null };
@@ -34,16 +20,17 @@ export function AppHeaderActions() {
     const getInitials = useInitials();
 
     const handleLogout = () => {
+        forgetThemeUser();
         router.flushAll();
     };
 
     if (!auth?.user) {
-        return <EnglishLanguageIndicator />;
+        return <ThemeToggle />;
     }
 
     return (
         <div className="ml-auto flex max-w-full shrink-0 items-center gap-1">
-            <EnglishLanguageIndicator />
+            <ThemeToggle />
             <NotificationsMenu />
             <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -57,7 +44,7 @@ export function AppHeaderActions() {
                                 src={auth.user.avatar}
                                 alt={auth.user.name}
                             />
-                            <AvatarFallback className="bg-neutral-200 text-xs text-black dark:bg-neutral-700 dark:text-white">
+                            <AvatarFallback className="bg-hydra-blue text-xs font-bold text-white">
                                 {getInitials(auth.user.name)}
                             </AvatarFallback>
                         </Avatar>

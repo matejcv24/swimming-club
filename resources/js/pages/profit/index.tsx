@@ -1,17 +1,22 @@
 import { Head, router } from '@inertiajs/react';
-import CloseIcon from '@mui/icons-material/Close';
+import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import Chip from '@mui/material/Chip';
 import Dialog from '@mui/material/Dialog';
 import DialogContent from '@mui/material/DialogContent';
 import DialogTitle from '@mui/material/DialogTitle';
 import Divider from '@mui/material/Divider';
-import IconButton from '@mui/material/IconButton';
 import List from '@mui/material/List';
 import ListItem from '@mui/material/ListItem';
-import { createTheme, ThemeProvider } from '@mui/material/styles';
 import Typography from '@mui/material/Typography';
 import dayjs from 'dayjs';
 import { useState } from 'react';
+import { DashboardBackground } from '@/components/dashboard-background';
+import {
+    MuiThemeProvider,
+    POPUP_BG,
+    popupFg,
+} from '@/components/mui-theme-provider';
+import { CloseButton, PopupHeader } from '@/components/popup-ui';
 
 interface ProfitRow {
     month: string;
@@ -24,12 +29,6 @@ interface ProfitRow {
 interface Props {
     profits: ProfitRow[];
 }
-
-const darkTheme = createTheme({
-    palette: { mode: 'dark' },
-});
-
-const DARK_BG = '#1d232a';
 
 const chipSx = {
     minWidth: '220px',
@@ -98,7 +97,8 @@ export default function ProfitIndex({ profits }: Props) {
         : [];
 
     return (
-        <ThemeProvider theme={darkTheme}>
+        <MuiThemeProvider>
+            <DashboardBackground />
             <Head title="Profit" />
 
             <Dialog
@@ -111,23 +111,17 @@ export default function ProfitIndex({ profits }: Props) {
                         height: '80vh',
                         display: 'flex',
                         flexDirection: 'column',
-                        bgcolor: DARK_BG,
+                        bgcolor: POPUP_BG,
                     },
                 }}
             >
-                <DialogTitle sx={{ p: 0, fontWeight: 'bold' }}>
-                    <div className="flex items-center justify-between px-4 py-3">
-                        <Typography variant="h6" fontWeight="bold">
-                            Profit
-                        </Typography>
-                        <IconButton
-                            onClick={() => router.visit('/dashboard')}
-                            color="error"
-                        >
-                            <CloseIcon />
-                        </IconButton>
-                    </div>
-                    <Divider />
+                <DialogTitle sx={{ p: 0 }}>
+                    <PopupHeader
+                        icon={<TrendingUpIcon fontSize="small" />}
+                        title="Profit"
+                        subtitle="Fees minus invoices and salaries"
+                        onClose={() => router.visit('/dashboard')}
+                    />
                 </DialogTitle>
 
                 <DialogContent sx={{ p: 0, overflowY: 'auto', flex: 1 }}>
@@ -158,8 +152,7 @@ export default function ProfitIndex({ profits }: Props) {
                                             paddingY: 1.5,
                                             alignItems: 'center',
                                             '&:hover': {
-                                                bgcolor:
-                                                    'rgba(255,255,255,0.05)',
+                                                bgcolor: popupFg(0.05),
                                             },
                                         }}
                                         onClick={() =>
@@ -274,8 +267,7 @@ export default function ProfitIndex({ profits }: Props) {
                                                 paddingY: 1.5,
                                                 alignItems: 'center',
                                                 '&:hover': {
-                                                    bgcolor:
-                                                        'rgba(255,255,255,0.05)',
+                                                    bgcolor: popupFg(0.05),
                                                 },
                                             }}
                                             onClick={() => {
@@ -335,7 +327,7 @@ export default function ProfitIndex({ profits }: Props) {
                 fullWidth
                 maxWidth="sm"
                 PaperProps={{
-                    sx: { bgcolor: DARK_BG },
+                    sx: { bgcolor: POPUP_BG },
                 }}
             >
                 <DialogTitle sx={{ p: 0 }}>
@@ -343,12 +335,9 @@ export default function ProfitIndex({ profits }: Props) {
                         <Typography variant="h6" fontWeight="bold">
                             Profit History By Month
                         </Typography>
-                        <IconButton
+                        <CloseButton
                             onClick={() => setShowHistoryModal(false)}
-                            color="error"
-                        >
-                            <CloseIcon />
-                        </IconButton>
+                        />
                     </div>
                     <Divider />
                 </DialogTitle>
@@ -435,7 +424,7 @@ export default function ProfitIndex({ profits }: Props) {
                 fullWidth
                 maxWidth="sm"
                 PaperProps={{
-                    sx: { bgcolor: DARK_BG },
+                    sx: { bgcolor: POPUP_BG },
                 }}
             >
                 <DialogTitle sx={{ p: 0 }}>
@@ -443,15 +432,12 @@ export default function ProfitIndex({ profits }: Props) {
                         <Typography variant="h6" fontWeight="bold">
                             Profit History - {selectedYear}
                         </Typography>
-                        <IconButton
+                        <CloseButton
                             onClick={() => {
                                 setShowYearDetailModal(false);
                                 setSelectedYear(null);
                             }}
-                            color="error"
-                        >
-                            <CloseIcon />
-                        </IconButton>
+                        />
                     </div>
                     <Divider />
                 </DialogTitle>
@@ -527,6 +513,6 @@ export default function ProfitIndex({ profits }: Props) {
                     </List>
                 </DialogContent>
             </Dialog>
-        </ThemeProvider>
+        </MuiThemeProvider>
     );
 }

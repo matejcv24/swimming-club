@@ -1,22 +1,22 @@
 import { Head, router } from '@inertiajs/react';
-import CloseIcon from '@mui/icons-material/Close';
+import WarningIcon from '@mui/icons-material/Warning';
 import Avatar from '@mui/material/Avatar';
 import Dialog from '@mui/material/Dialog';
 import DialogContent from '@mui/material/DialogContent';
 import DialogTitle from '@mui/material/DialogTitle';
-import Divider from '@mui/material/Divider';
-import IconButton from '@mui/material/IconButton';
 import Link from '@mui/material/Link';
 import List from '@mui/material/List';
 import ListItem from '@mui/material/ListItem';
 import ListItemAvatar from '@mui/material/ListItemAvatar';
 import ListItemText from '@mui/material/ListItemText';
-import { createTheme, ThemeProvider } from '@mui/material/styles';
 import Tab from '@mui/material/Tab';
 import Tabs from '@mui/material/Tabs';
 import Typography from '@mui/material/Typography';
 import dayjs from 'dayjs';
 import { useState } from 'react';
+import { DashboardBackground } from '@/components/dashboard-background';
+import { MuiThemeProvider, POPUP_BG } from '@/components/mui-theme-provider';
+import { PopupHeader } from '@/components/popup-ui';
 
 interface UnpaidMember {
     id: number;
@@ -31,12 +31,6 @@ interface Props {
     bigPoolMembers: UnpaidMember[];
     smallPoolMembers: UnpaidMember[];
 }
-
-const darkTheme = createTheme({
-    palette: { mode: 'dark' },
-});
-
-const DARK_BG = '#1d232a';
 
 export default function UnpaidFeesIndex({
     bigPoolMembers,
@@ -55,7 +49,8 @@ export default function UnpaidFeesIndex({
             .slice(0, 2);
 
     return (
-        <ThemeProvider theme={darkTheme}>
+        <MuiThemeProvider>
+            <DashboardBackground />
             <Head title="Unpaid Fees" />
 
             <Dialog
@@ -68,23 +63,17 @@ export default function UnpaidFeesIndex({
                         height: '80vh',
                         display: 'flex',
                         flexDirection: 'column',
-                        bgcolor: DARK_BG,
+                        bgcolor: POPUP_BG,
                     },
                 }}
             >
                 <DialogTitle sx={{ p: 0 }}>
-                    <div className="flex items-center justify-between px-4 py-3">
-                        <Typography variant="h6" fontWeight="bold">
-                            Unpaid Fees
-                        </Typography>
-                        <IconButton
-                            onClick={() => router.visit('/dashboard')}
-                            color="error"
-                        >
-                            <CloseIcon />
-                        </IconButton>
-                    </div>
-                    <Divider />
+                    <PopupHeader
+                        icon={<WarningIcon fontSize="small" />}
+                        title="Unpaid Fees"
+                        subtitle={`${bigPoolMembers.length + smallPoolMembers.length} members to follow up`}
+                        onClose={() => router.visit('/dashboard')}
+                    />
                     <Tabs
                         value={tab}
                         onChange={(_, newValue) => setTab(newValue)}
@@ -92,12 +81,11 @@ export default function UnpaidFeesIndex({
                         textColor="inherit"
                         indicatorColor="primary"
                     >
-                        <Tab label={`Big Pool (${bigPoolMembers.length})`} />
+                        <Tab label={`Big pool (${bigPoolMembers.length})`} />
                         <Tab
-                            label={`Small Pool (${smallPoolMembers.length})`}
+                            label={`Small pool (${smallPoolMembers.length})`}
                         />
                     </Tabs>
-                    <Divider />
                 </DialogTitle>
 
                 <DialogContent sx={{ p: 0, overflowY: 'auto', flex: 1 }}>
@@ -182,6 +170,6 @@ export default function UnpaidFeesIndex({
                     )}
                 </DialogContent>
             </Dialog>
-        </ThemeProvider>
+        </MuiThemeProvider>
     );
 }
