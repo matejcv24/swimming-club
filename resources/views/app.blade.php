@@ -30,8 +30,9 @@
             }
         </style>
 
-        <link rel="icon" href="/favicon.ico" sizes="any">
-        <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+        {{-- ?v=: the host lets browsers keep icons for 7 days; bump it whenever an icon changes --}}
+        <link rel="icon" href="/favicon.ico?v=2" sizes="any">
+        <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=2">
 
         {{-- Installable app (PWA): name and icon on the phone's home screen --}}
         <link rel="manifest" href="/manifest.webmanifest">
