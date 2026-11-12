@@ -1,5 +1,15 @@
 import { Head, router } from '@inertiajs/react';
-import { X } from 'lucide-react';
+import NotificationsIcon from '@mui/icons-material/Notifications';
+import Dialog from '@mui/material/Dialog';
+import DialogContent from '@mui/material/DialogContent';
+import DialogTitle from '@mui/material/DialogTitle';
+import Tab from '@mui/material/Tab';
+import Tabs from '@mui/material/Tabs';
+import { useState } from 'react';
+import { DashboardBackground } from '@/components/dashboard-background';
+import { MuiThemeProvider, POPUP_BG } from '@/components/mui-theme-provider';
+import { NotificationIcon } from '@/components/notification-icon';
+import { IconBadge, PopupHeader } from '@/components/popup-ui';
 import type { AppNotification } from '@/types';
 
 type Props = {
@@ -22,41 +32,60 @@ export default function NotificationsIndex({
     unreadNotifications,
     allNotifications,
 }: Props) {
+    const [tab, setTab] = useState(0);
+    const shown = tab === 0 ? allNotifications : unreadNotifications;
+
+    // Marks the notification as read, then opens the page it is about
     const openNotification = (notification: AppNotification) => {
         router.post(`/notifications/${notification.id}/read`);
     };
 
     return (
-        <>
+        <MuiThemeProvider>
+            <DashboardBackground />
             <Head title="Notifications" />
 
-            <div className="flex h-full flex-1 flex-col gap-6 p-6">
-                <div className="flex items-center justify-between gap-4">
-                    <div>
-                        <h1 className="text-2xl font-bold">Notifications</h1>
-                        <p className="mt-1 text-sm text-muted-foreground">
-                            {unreadNotifications.length} new notification
-                            {unreadNotifications.length === 1 ? '' : 's'}
-                        </p>
-                    </div>
-                    <button
-                        type="button"
-                        onClick={() => router.visit('/dashboard')}
-                        className="relative flex size-11 items-center justify-center rounded-md border border-sidebar-border/70 bg-white transition hover:bg-gray-50 dark:bg-neutral-900 dark:hover:bg-neutral-800"
-                        aria-label="Close notifications"
+            <Dialog
+                open={true}
+                onClose={() => router.visit('/dashboard')}
+                fullWidth
+                maxWidth="sm"
+                PaperProps={{
+                    sx: {
+                        height: '80vh',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        bgcolor: POPUP_BG,
+                    },
+                }}
+            >
+                <DialogTitle sx={{ p: 0 }}>
+                    <PopupHeader
+                        icon={<NotificationsIcon fontSize="small" />}
+                        title="Notifications"
+                        subtitle={`${unreadNotifications.length} unread · ${allNotifications.length} in total`}
+                        onClose={() => router.visit('/dashboard')}
+                    />
+                    <Tabs
+                        value={tab}
+                        onChange={(_, value) => setTab(value)}
+                        variant="fullWidth"
                     >
-                        <X className="size-5" />
-                    </button>
-                </div>
+                        <Tab label={`All (${allNotifications.length})`} />
+                        <Tab label={`Unread (${unreadNotifications.length})`} />
+                    </Tabs>
+                </DialogTitle>
 
-                <div className="overflow-hidden rounded-lg border border-sidebar-border/70 bg-white dark:bg-neutral-900">
-                    {allNotifications.length === 0 ? (
-                        <div className="px-6 py-12 text-center text-sm text-muted-foreground">
-                            You have not received any notifications yet.
-                        </div>
+                <DialogContent sx={{ p: 0, overflowY: 'auto' }}>
+                    {shown.length === 0 ? (
+                        <p className="mt-12 text-center text-sm text-[var(--popup-muted)]">
+                            {tab === 0
+                                ? 'You have not received any notifications yet.'
+                                : 'No unread notifications.'}
+                        </p>
                     ) : (
-                        <div className="divide-y divide-sidebar-border/70">
-                            {allNotifications.map((notification) => {
+                        <div className="divide-y divide-[var(--popup-border)] px-2 pb-2">
+                            {shown.map((notification) => {
                                 const isUnread = !notification.read_at;
 
                                 return (
@@ -66,47 +95,42 @@ export default function NotificationsIndex({
                                         onClick={() =>
                                             openNotification(notification)
                                         }
-                                        className="flex w-full items-start gap-4 px-6 py-4 text-left transition hover:bg-gray-50 dark:hover:bg-neutral-800"
+                                        className="flex w-full cursor-pointer items-center gap-3 rounded-xl px-3 py-3 text-left transition hover:bg-[var(--popup-ghost)]"
                                     >
-                                        <span
-                                            className={`mt-2 size-2 shrink-0 rounded-full ${
-                                                isUnread
-                                                    ? 'bg-red-600'
-                                                    : 'bg-transparent'
-                                            }`}
-                                        />
+                                        <IconBadge>
+                                            <NotificationIcon
+                                                type={notification.type}
+                                            />
+                                        </IconBadge>
                                         <span className="min-w-0 flex-1">
                                             <span
-                                                className={`block text-sm leading-5 ${
+                                                className={`block text-sm leading-5 text-[var(--popup-fg)] ${
                                                     isUnread
-                                                        ? 'font-semibold'
-                                                        : 'font-medium'
+                                                        ? 'font-bold'
+                                                        : 'font-normal'
                                                 }`}
                                             >
                                                 {notification.message}
                                             </span>
-                                            <span className="mt-1 block text-xs text-muted-foreground">
+                                            <span className="mt-0.5 block text-xs text-[var(--popup-muted)]">
                                                 {formatNotificationDate(
                                                     notification.created_at,
                                                 )}
                                             </span>
                                         </span>
+                                        {isUnread && (
+                                            <span
+                                                className="size-2.5 flex-none rounded-full bg-hydra-blue"
+                                                aria-label="Unread"
+                                            />
+                                        )}
                                     </button>
                                 );
                             })}
                         </div>
                     )}
-                </div>
-            </div>
-        </>
+                </DialogContent>
+            </Dialog>
+        </MuiThemeProvider>
     );
 }
-
-NotificationsIndex.layout = {
-    breadcrumbs: [
-        {
-            title: 'Notifications',
-            href: '/notifications',
-        },
-    ],
-};

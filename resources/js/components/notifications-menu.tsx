@@ -1,12 +1,13 @@
 import { router, usePage } from '@inertiajs/react';
+import NotificationsIcon from '@mui/icons-material/Notifications';
 import { Bell, X } from 'lucide-react';
 import { useState } from 'react';
+import { NotificationIcon } from '@/components/notification-icon';
+import { IconBadge } from '@/components/popup-ui';
 import {
     DropdownMenu,
     DropdownMenuContent,
     DropdownMenuItem,
-    DropdownMenuLabel,
-    DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import type { NotificationSharedData } from '@/types';
@@ -43,7 +44,7 @@ export function NotificationsMenu() {
             <DropdownMenuTrigger asChild>
                 <button
                     type="button"
-                    className="relative flex size-9 items-center justify-center rounded-md text-foreground transition hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                    className="relative flex size-9 cursor-pointer items-center justify-center rounded-full text-foreground transition hover:bg-hydra-blue/15 hover:text-hydra-blue data-[state=open]:bg-hydra-blue/15 data-[state=open]:text-hydra-blue"
                     aria-label={open ? 'Close notifications' : 'Notifications'}
                 >
                     {open ? (
@@ -58,53 +59,72 @@ export function NotificationsMenu() {
                     )}
                 </button>
             </DropdownMenuTrigger>
+            {/* Same look as the pop-ups: rounded panel, icon badges, blue unread dot */}
             <DropdownMenuContent
                 side="bottom"
                 align="end"
-                className="w-64 max-w-[calc(100vw-2rem)] sm:w-80"
+                sideOffset={8}
+                className="w-72 max-w-[calc(100vw-2rem)] rounded-2xl border-[var(--popup-border)] bg-[var(--popup-bg)] p-2 text-[var(--popup-fg)] shadow-xl sm:w-[22rem]"
             >
-                <DropdownMenuLabel className="flex items-center justify-between gap-3">
-                    <span>New notifications</span>
-                    {unreadCount > 0 && (
-                        <span className="rounded-full bg-red-600 px-2 py-0.5 text-xs font-semibold text-white">
-                            {unreadCount}
-                        </span>
-                    )}
-                </DropdownMenuLabel>
-                <DropdownMenuSeparator />
+                <div className="flex items-center gap-3 px-2 pt-1.5 pb-2.5">
+                    <IconBadge>
+                        <NotificationsIcon fontSize="small" />
+                    </IconBadge>
+                    <div className="min-w-0">
+                        <p className="text-[15px] leading-tight font-extrabold">
+                            Notifications
+                        </p>
+                        <p className="text-xs text-[var(--popup-muted)]">
+                            {unreadCount === 0
+                                ? 'You are all caught up'
+                                : `${unreadCount} unread`}
+                        </p>
+                    </div>
+                </div>
 
                 {unreadNotifications.length === 0 ? (
-                    <div className="px-2 py-6 text-center text-sm text-muted-foreground">
+                    <p className="rounded-xl bg-[var(--popup-ghost)] px-3 py-5 text-center text-sm text-[var(--popup-muted)]">
                         No new notifications.
-                    </div>
+                    </p>
                 ) : (
-                    unreadNotifications.map((notification) => (
-                        <DropdownMenuItem
-                            key={notification.id}
-                            className="cursor-pointer items-start gap-3 py-3"
-                            onSelect={() => openNotification(notification.id)}
-                        >
-                            <span className="mt-1 size-2 shrink-0 rounded-full bg-red-600" />
-                            <span className="min-w-0 flex-1">
-                                <span className="block text-sm leading-5 whitespace-normal">
-                                    {notification.message}
+                    <div className="max-h-80 overflow-y-auto">
+                        {unreadNotifications.map((notification) => (
+                            <DropdownMenuItem
+                                key={notification.id}
+                                className="cursor-pointer items-center gap-3 rounded-xl px-2 py-2.5 focus:bg-[var(--popup-ghost)] focus:text-[var(--popup-fg)]"
+                                onSelect={() =>
+                                    openNotification(notification.id)
+                                }
+                            >
+                                <IconBadge>
+                                    <NotificationIcon
+                                        type={notification.type}
+                                    />
+                                </IconBadge>
+                                <span className="min-w-0 flex-1">
+                                    <span className="block text-sm leading-5 font-bold whitespace-normal">
+                                        {notification.message}
+                                    </span>
+                                    <span className="mt-0.5 block text-xs text-[var(--popup-muted)]">
+                                        {formatNotificationDate(
+                                            notification.created_at,
+                                        )}
+                                    </span>
                                 </span>
-                                <span className="mt-1 block text-xs text-muted-foreground">
-                                    {formatNotificationDate(
-                                        notification.created_at,
-                                    )}
-                                </span>
-                            </span>
-                        </DropdownMenuItem>
-                    ))
+                                <span
+                                    className="size-2.5 flex-none rounded-full bg-hydra-blue"
+                                    aria-label="Unread"
+                                />
+                            </DropdownMenuItem>
+                        ))}
+                    </div>
                 )}
 
-                <DropdownMenuSeparator />
                 <DropdownMenuItem
-                    className="cursor-pointer justify-center font-medium"
+                    className="mt-2 cursor-pointer justify-center rounded-full bg-hydra-blue py-2 text-sm font-bold text-white focus:bg-hydra-blue/90 focus:text-white"
                     onSelect={() => router.visit('/notifications')}
                 >
-                    See more
+                    See all notifications
                 </DropdownMenuItem>
             </DropdownMenuContent>
         </DropdownMenu>

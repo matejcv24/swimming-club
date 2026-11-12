@@ -29,6 +29,7 @@ class HandleInertiaRequests extends Middleware
         'staff.index',
         'invoices.page',
         'profit.index',
+        'notifications.index',
     ];
 
     /**

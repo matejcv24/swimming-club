@@ -725,27 +725,33 @@ export default function MembershipFeesIndex({
                                 sx={{
                                     px: 2,
                                     display: 'flex',
-                                    flexWrap: 'wrap',
+                                    flexWrap: 'nowrap',
                                     justifyContent: 'space-between',
                                     alignItems: 'center',
                                     gap: 1,
                                 }}
                             >
+                                {/* Start and end on their own lines, so long month
+                                    names never push the amount and buttons around */}
                                 <ListItemText
                                     primary={
                                         <Typography variant="body2">
-                                            {dayjs(fee.start_date).format(
-                                                'DD MMM YYYY',
-                                            )}{' '}
-                                            →{' '}
-                                            {dayjs(fee.end_date).format(
-                                                'DD MMM YYYY',
-                                            )}
+                                            <span className="block">
+                                                {dayjs(fee.start_date).format(
+                                                    'DD MMMM YYYY',
+                                                )}{' '}
+                                                →
+                                            </span>
+                                            <span className="block">
+                                                {dayjs(fee.end_date).format(
+                                                    'DD MMMM YYYY',
+                                                )}
+                                            </span>
                                         </Typography>
                                     }
                                     sx={{ flex: '1 1 auto', minWidth: 0 }}
                                 />
-                                <div className="flex items-center gap-1">
+                                <div className="flex flex-none items-center gap-1">
                                     <PaymentMethodBadge fee={fee} />
                                     {userRole === 'admin' && (
                                         <IconButton

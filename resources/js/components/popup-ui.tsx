@@ -13,9 +13,12 @@ import { clearOnClick } from '@/lib/search-field';
 export function IconBadge({
     children,
     tone = 'brand',
+    className = 'size-[38px]',
 }: {
     children: ReactNode;
     tone?: 'brand' | 'red' | 'green';
+    /** Size classes; 38px by default. */
+    className?: string;
 }) {
     const color =
         tone === 'red'
@@ -26,7 +29,7 @@ export function IconBadge({
 
     return (
         <span
-            className={`flex size-[38px] flex-none items-center justify-center rounded-full bg-white shadow-[0_0_0_1px_#dbe7f0,0_2px_6px_rgba(0,16,49,0.12)] dark:bg-hydra-navy dark:shadow-[0_0_0_1px_rgb(186_230_253/0.14)] ${color}`}
+            className={`flex ${className} flex-none items-center justify-center rounded-full bg-white shadow-[0_0_0_1px_#dbe7f0,0_2px_6px_rgba(0,16,49,0.12)] dark:bg-hydra-navy dark:shadow-[0_0_0_1px_rgb(186_230_253/0.14)] ${color}`}
         >
             {children}
         </span>

@@ -38,12 +38,17 @@ const formatCurrency = (value: number): string =>
 const card =
     'rounded-2xl border border-border bg-card text-left shadow-sm transition duration-200 ease-in-out hover:-translate-y-0.5 hover:shadow-lg cursor-pointer';
 
+// Icons and badges grow on computer screens, where the cards fill the screen
+const iconSx = { fontSize: { xs: 20, md: 28 } };
+const badgeSize = 'size-[38px] md:size-12';
+
 function StatCard({
     icon,
     tone,
     label,
     period,
     onClick,
+    wide = false,
     children,
 }: {
     icon: ReactNode;
@@ -51,20 +56,39 @@ function StatCard({
     label: string;
     period: string;
     onClick?: () => void;
+    /** Spans both columns on computers. */
+    wide?: boolean;
     children: ReactNode;
 }) {
+    // Phones: icon on the left; "Label (period)" and the value centred in the card.
+    // Computers: icon, label and period on the left like the other cards; the value on
+    // the right, or centred in the wide Profit card (three columns, the outer two equal).
     return (
-        <button onClick={onClick} className={`${card} p-4`}>
-            <div className="flex items-center gap-2.5">
-                <IconBadge tone={tone}>{icon}</IconBadge>
-                <div>
-                    <p className="text-[13px] font-semibold text-muted-foreground">
+        <button
+            onClick={onClick}
+            className={`${card} relative grid min-h-0 items-center justify-items-center gap-2 px-16 py-5 text-center md:justify-items-stretch md:gap-6 md:px-7 md:py-2 md:text-left ${wide ? 'md:col-span-2 md:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)]' : 'md:grid-cols-[minmax(0,1fr)_auto]'}`}
+        >
+            <div className="contents md:flex md:min-w-0 md:items-center md:gap-4">
+                <IconBadge
+                    tone={tone}
+                    className={`${badgeSize} absolute top-1/2 left-5 -translate-y-1/2 md:static md:translate-y-0`}
+                >
+                    {icon}
+                </IconBadge>
+                <div className="min-w-0 text-center md:text-left">
+                    <p className="text-[13px] font-semibold text-muted-foreground md:text-base">
                         {label}
+                        <span className="font-normal md:hidden">
+                            {' '}
+                            ({period})
+                        </span>
                     </p>
-                    <p className="text-xs text-muted-foreground">{period}</p>
+                    <p className="hidden text-sm text-muted-foreground md:block">
+                        {period}
+                    </p>
                 </div>
             </div>
-            {children}
+            <div>{children}</div>
         </button>
     );
 }
@@ -80,11 +104,11 @@ function Amount({
 }) {
     return (
         <p
-            className={`mt-3 text-[28px] font-extrabold tracking-tight ${className}`}
+            className={`text-[28px] font-extrabold tracking-tight md:text-[2.75rem] md:leading-none ${className}`}
         >
             {value}
             {unit && (
-                <span className="ml-1 text-[13px] font-semibold tracking-normal text-muted-foreground">
+                <span className="ml-1.5 text-[13px] font-semibold tracking-normal text-muted-foreground md:text-lg">
                     {unit}
                 </span>
             )}
@@ -97,18 +121,24 @@ function NavCard({
     icon,
     title,
     description,
+    wide = false,
 }: {
     href: string;
     icon: ReactNode;
     title: string;
     description: string;
+    /** Spans both columns (the last card when the count is odd). */
+    wide?: boolean;
 }) {
     return (
-        <a href={href} className={`${card} flex items-center gap-3 p-4`}>
-            <IconBadge>{icon}</IconBadge>
+        <a
+            href={href}
+            className={`${card} flex min-h-0 items-center gap-3 p-5 md:gap-5 md:px-7 md:py-2 ${wide ? 'md:col-span-2' : ''}`}
+        >
+            <IconBadge className={badgeSize}>{icon}</IconBadge>
             <div className="min-w-0">
-                <h2 className="text-[15px] font-bold">{title}</h2>
-                <p className="truncate text-[12.5px] text-muted-foreground">
+                <h2 className="text-[15px] font-bold md:text-xl">{title}</h2>
+                <p className="truncate text-[12.5px] text-muted-foreground md:text-sm">
                     {description}
                 </p>
             </div>
@@ -133,126 +163,121 @@ export function DashboardCards({
     const profitDown = profitTotal < 0;
 
     return (
-        <div className="flex h-full flex-1 flex-col gap-4 p-6">
-            <div
-                className={`grid gap-3.5 ${isAdmin ? 'sm:grid-cols-2 xl:grid-cols-4' : 'sm:grid-cols-2'}`}
-            >
-                {isAdmin && (
-                    <StatCard
-                        icon={
-                            profitDown ? (
-                                <TrendingDownIcon fontSize="small" />
-                            ) : (
-                                <TrendingUpIcon fontSize="small" />
-                            )
-                        }
-                        tone={profitDown ? 'red' : 'green'}
-                        label="Profit"
-                        period={period}
-                        onClick={() => router.visit('/profit')}
-                    >
-                        <Amount
-                            value={formatCurrency(profitTotal)}
-                            unit="MKD"
-                            className={
-                                profitDown ? 'text-red-500' : 'text-green-500'
-                            }
-                        />
-                    </StatCard>
-                )}
-
-                {isAdmin && (
-                    <StatCard
-                        icon={<ReceiptLongIcon fontSize="small" />}
-                        label="Invoices"
-                        period={period}
-                        onClick={() => router.visit('/invoices')}
-                    >
-                        <Amount
-                            value={formatCurrency(invoiceTotal)}
-                            unit="MKD"
-                        />
-                    </StatCard>
-                )}
-
-                {isAdmin && (
-                    <StatCard
-                        icon={<DescriptionIcon fontSize="small" />}
-                        label="Monthly report"
-                        period="Fees, invoices, salaries"
-                        onClick={onOpenReport}
-                    >
-                        <span className="mt-3.5 inline-flex items-center gap-1.5 rounded-full bg-hydra-blue px-3.5 py-2 text-[13px] font-bold text-white">
-                            <DownloadIcon sx={{ fontSize: 16 }} />
-                            Download PDF
-                        </span>
-                    </StatCard>
-                )}
-
-                {userRole === 'coach' && (
-                    <StatCard
-                        icon={<PaymentsIcon fontSize="small" />}
-                        label="Salary"
-                        period={period}
-                        onClick={onOpenSalary}
-                    >
-                        <Amount
-                            value={formatCurrency(coachSalaryTotal)}
-                            unit="MKD"
-                        />
-                    </StatCard>
-                )}
-
+        // Phones: one column. Computers: two columns filling exactly the screen below
+        // the header (4rem plus the 1rem gap below it), rows sharing the height, so the
+        // dashboard never scrolls.
+        <div className="grid flex-1 gap-4 p-4 md:h-[calc(100svh-5rem)] md:flex-none md:auto-rows-[minmax(0,1fr)] md:grid-cols-2 md:gap-3 md:px-6 md:pt-0 md:pb-4">
+            {isAdmin && (
                 <StatCard
-                    icon={<WarningIcon fontSize="small" />}
-                    tone={unpaidFees > 0 ? 'red' : 'green'}
-                    label="Unpaid fees"
-                    period="Members to follow up"
-                    onClick={() => router.visit('/unpaid-fees')}
+                    icon={
+                        profitDown ? (
+                            <TrendingDownIcon sx={iconSx} />
+                        ) : (
+                            <TrendingUpIcon sx={iconSx} />
+                        )
+                    }
+                    tone={profitDown ? 'red' : 'green'}
+                    label="Profit"
+                    period={period}
+                    wide
+                    onClick={() => router.visit('/profit')}
                 >
                     <Amount
-                        value={unpaidFees}
+                        value={formatCurrency(profitTotal)}
+                        unit="MKD"
                         className={
-                            unpaidFees > 0 ? 'text-red-500' : 'text-green-500'
+                            profitDown ? 'text-red-500' : 'text-green-500'
                         }
                     />
                 </StatCard>
-            </div>
+            )}
 
-            <div className="grid gap-3.5 md:grid-cols-2 xl:grid-cols-3">
-                <NavCard
-                    href="/members"
-                    icon={<GroupsIcon fontSize="small" />}
-                    title="Members"
-                    description={`${activeMembers} active ${activeMembers === 1 ? 'member' : 'members'}`}
-                />
-                <NavCard
-                    href="/trainings"
-                    icon={<CalendarMonthIcon fontSize="small" />}
-                    title="Trainings"
-                    description="Calendar by pool"
-                />
-                <NavCard
-                    href="/membership-fees"
-                    icon={<CreditCardIcon fontSize="small" />}
-                    title="Membership Fees"
-                    description="Record and review payments"
-                />
-                <NavCard
-                    href="/attendance"
-                    icon={<AssignmentTurnedInIcon fontSize="small" />}
-                    title="Attendance"
-                    description="Per member and pool"
-                />
-                {isAdmin && (
-                    <NavCard
-                        href="/staff"
-                        icon={<PersonIcon fontSize="small" />}
-                        title="Staff"
-                        description="Coaches and salaries"
+            {isAdmin && (
+                <StatCard
+                    icon={<ReceiptLongIcon sx={iconSx} />}
+                    label="Invoices"
+                    period={period}
+                    onClick={() => router.visit('/invoices')}
+                >
+                    <Amount value={formatCurrency(invoiceTotal)} unit="MKD" />
+                </StatCard>
+            )}
+
+            {isAdmin && (
+                <StatCard
+                    icon={<DescriptionIcon sx={iconSx} />}
+                    label="Monthly report"
+                    period="Fees, invoices, salaries"
+                    onClick={onOpenReport}
+                >
+                    <span className="inline-flex w-fit items-center gap-1.5 rounded-full bg-hydra-blue px-3.5 py-2 text-[13px] font-bold text-white md:px-5 md:py-2.5 md:text-base">
+                        <DownloadIcon sx={{ fontSize: { xs: 16, md: 20 } }} />
+                        Download PDF
+                    </span>
+                </StatCard>
+            )}
+
+            {userRole === 'coach' && (
+                <StatCard
+                    icon={<PaymentsIcon sx={iconSx} />}
+                    label="Salary"
+                    period={period}
+                    onClick={onOpenSalary}
+                >
+                    <Amount
+                        value={formatCurrency(coachSalaryTotal)}
+                        unit="MKD"
                     />
-                )}
-            </div>
+                </StatCard>
+            )}
+
+            <StatCard
+                icon={<WarningIcon sx={iconSx} />}
+                tone={unpaidFees > 0 ? 'red' : 'green'}
+                label="Unpaid fees"
+                period="Members to follow up"
+                onClick={() => router.visit('/unpaid-fees')}
+            >
+                <Amount
+                    value={unpaidFees}
+                    className={
+                        unpaidFees > 0 ? 'text-red-500' : 'text-green-500'
+                    }
+                />
+            </StatCard>
+
+            <NavCard
+                href="/members"
+                icon={<GroupsIcon sx={iconSx} />}
+                title="Members"
+                description={`${activeMembers} active ${activeMembers === 1 ? 'member' : 'members'}`}
+            />
+            <NavCard
+                href="/trainings"
+                icon={<CalendarMonthIcon sx={iconSx} />}
+                title="Trainings"
+                description="Calendar by group"
+            />
+            <NavCard
+                href="/membership-fees"
+                icon={<CreditCardIcon sx={iconSx} />}
+                title="Membership Fees"
+                description="Record and review payments"
+            />
+            <NavCard
+                href="/attendance"
+                icon={<AssignmentTurnedInIcon sx={iconSx} />}
+                title="Attendance"
+                description="Per member and group"
+            />
+            {isAdmin && (
+                <NavCard
+                    href="/staff"
+                    icon={<PersonIcon sx={iconSx} />}
+                    title="Staff"
+                    description="Coaches and salaries"
+                />
+            )}
         </div>
     );
 }

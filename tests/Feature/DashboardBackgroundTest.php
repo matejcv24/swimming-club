@@ -17,7 +17,7 @@ class DashboardBackgroundTest extends TestCase
         $admin = User::factory()->create(['role' => 'admin']);
         Invoice::create(['month' => now()->startOfYear()->toDateString(), 'pool' => 'big', 'amount' => 1200]);
 
-        foreach (['/members', '/trainings', '/membership-fees', '/attendance', '/unpaid-fees', '/staff', '/invoices', '/profit'] as $url) {
+        foreach (['/members', '/trainings', '/membership-fees', '/attendance', '/unpaid-fees', '/staff', '/invoices', '/profit', '/notifications'] as $url) {
             $this->actingAs($admin)
                 ->get($url)
                 ->assertOk()
@@ -46,7 +46,7 @@ class DashboardBackgroundTest extends TestCase
         $admin = User::factory()->create(['role' => 'admin']);
 
         $this->actingAs($admin)
-            ->get('/notifications')
+            ->get('/settings/profile')
             ->assertInertia(fn (Assert $page) => $page->where('dashboardSummary', null));
     }
 
