@@ -2,6 +2,14 @@
     AddType application/manifest+json .webmanifest
 </IfModule>
 
+# Built files carry an 8-character version code in their name (app-HGClWz4U.js) and
+# get a new name every release, so browsers may keep them for a year.
+<IfModule mod_headers.c>
+    <FilesMatch "-[A-Za-z0-9_-]{8}\.(js|css|woff2?)$">
+        Header set Cache-Control "public, max-age=31536000, immutable"
+    </FilesMatch>
+</IfModule>
+
 <IfModule mod_rewrite.c>
     <IfModule mod_negotiation.c>
         Options -MultiViews -Indexes

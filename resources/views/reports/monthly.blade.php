@@ -350,7 +350,7 @@
             <table class="data">
                 <thead>
                     <tr>
-                        <th>Pool</th>
+                        <th>Group</th>
                         <th class="num" style="width: 25%;">Amount</th>
                     </tr>
                 </thead>

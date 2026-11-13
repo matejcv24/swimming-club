@@ -71,19 +71,10 @@ class HandleInertiaRequests extends Middleware
                         'created_at' => $notification->created_at?->toDateTimeString(),
                         'read_at' => $notification->read_at?->toDateTimeString(),
                     ])->values(),
-                    'all' => $request->user()->notifications()->latest()->take(20)->get()->map(fn ($notification) => [
-                        'id' => $notification->id,
-                        'message' => $notification->data['message'] ?? '',
-                        'url' => $this->notificationUrl($notification, $request->user()),
-                        'type' => $notification->data['type'] ?? '',
-                        'created_at' => $notification->created_at?->toDateTimeString(),
-                        'read_at' => $notification->read_at?->toDateTimeString(),
-                    ])->values(),
                 ]
                 : [
                     'unread_count' => 0,
                     'unread' => [],
-                    'all' => [],
                 ],
         ];
     }

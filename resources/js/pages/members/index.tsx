@@ -462,7 +462,7 @@ export default function MembersIndex({ members, userRole }: Props) {
                                     variant="caption"
                                     color="text.secondary"
                                 >
-                                    Pool
+                                    Group
                                 </Typography>
                                 <Typography variant="body1">
                                     {selectedMember.pool === 'big'
@@ -586,12 +586,12 @@ export default function MembersIndex({ members, userRole }: Props) {
                                 id="edit-pool-label"
                                 sx={{ color: popupFg(0.5) }}
                             >
-                                Pool
+                                Group
                             </InputLabel>
                             <Select
                                 labelId="edit-pool-label"
                                 value={editForm.pool}
-                                label="Pool"
+                                label="Group"
                                 onChange={(e) =>
                                     setEditForm({
                                         ...editForm,
@@ -748,12 +748,12 @@ export default function MembersIndex({ members, userRole }: Props) {
                                     id="pool-label"
                                     sx={{ color: popupFg(0.5) }}
                                 >
-                                    Pool
+                                    Group
                                 </InputLabel>
                                 <Select
                                     labelId="pool-label"
                                     value={form.pool}
-                                    label="Pool"
+                                    label="Group"
                                     onChange={(e) =>
                                         setForm({
                                             ...form,
