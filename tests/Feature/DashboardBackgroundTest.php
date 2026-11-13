@@ -2,7 +2,10 @@
 
 namespace Tests\Feature;
 
+use App\Models\ClubParent;
 use App\Models\Invoice;
+use App\Models\Member;
+use App\Models\MembershipFee;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Inertia\Testing\AssertableInertia as Assert;
@@ -48,6 +51,34 @@ class DashboardBackgroundTest extends TestCase
         $this->actingAs($admin)
             ->get('/settings/profile')
             ->assertInertia(fn (Assert $page) => $page->where('dashboardSummary', null));
+    }
+
+    public function test_unpaid_fees_and_active_members_are_counted_correctly()
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $parent = ClubParent::create(['name' => 'Parent', 'phone' => '070000000']);
+        $member = fn (string $name, string $status = 'active') => Member::create(['name' => $name, 'pool' => 'big', 'status' => $status, 'parent_id' => $parent->id]);
+        $fee = fn (Member $m, string $start, string $end) => MembershipFee::create(['member_id' => $m->id, 'member_name' => $m->name, 'pool' => 'big', 'amount' => 1000, 'payment_method' => 'cash', 'start_date' => $start, 'end_date' => $end]);
+
+        // Paid: an old fee that ran out, but a newer one still running
+        $paid = $member('Paid');
+        $fee($paid, now()->subMonths(2)->toDateString(), now()->subMonth()->toDateString());
+        $fee($paid, now()->subWeek()->toDateString(), now()->addWeeks(3)->toDateString());
+
+        // Unpaid: latest fee ended yesterday
+        $fee($member('Expired'), now()->subMonth()->toDateString(), now()->subDay()->toDateString());
+
+        // Unpaid: never paid
+        $member('Never paid');
+
+        // Not counted at all: inactive
+        $member('Gone', 'inactive');
+
+        $this->actingAs($admin)
+            ->get('/dashboard')
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('activeMembers', 3)
+                ->where('unpaidFees', 2));
     }
 
     public function test_dashboard_still_gets_its_numbers()

@@ -10,5 +10,4 @@ export type AppNotification = {
 export type NotificationSharedData = {
     unread_count: number;
     unread: AppNotification[];
-    all: AppNotification[];
 };

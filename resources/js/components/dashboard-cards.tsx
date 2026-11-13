@@ -1,4 +1,4 @@
-import { router } from '@inertiajs/react';
+import { Link, router } from '@inertiajs/react';
 import AssignmentTurnedInIcon from '@mui/icons-material/AssignmentTurnedIn';
 import CalendarMonthIcon from '@mui/icons-material/CalendarMonth';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
@@ -35,6 +35,12 @@ const formatCurrency = (value: number): string =>
         maximumFractionDigits: 2,
     }).format(value);
 
+// Sections open inside the app (no full page reload) and start loading as soon as the
+// pointer is over a card. Loaded pages are kept only briefly so numbers are never stale.
+const PREFETCH_FOR = '5s';
+const prefetchOnHover = (href: string) => () =>
+    router.prefetch(href, { method: 'get' }, { cacheFor: PREFETCH_FOR });
+
 const card =
     'rounded-2xl border border-border bg-card text-left shadow-sm transition duration-200 ease-in-out hover:-translate-y-0.5 hover:shadow-lg cursor-pointer';
 
@@ -48,6 +54,7 @@ function StatCard({
     label,
     period,
     onClick,
+    onHover,
     wide = false,
     children,
 }: {
@@ -56,6 +63,8 @@ function StatCard({
     label: string;
     period: string;
     onClick?: () => void;
+    /** Start loading the page the card opens. */
+    onHover?: () => void;
     /** Spans both columns on computers. */
     wide?: boolean;
     children: ReactNode;
@@ -66,6 +75,8 @@ function StatCard({
     return (
         <button
             onClick={onClick}
+            onMouseEnter={onHover}
+            onFocus={onHover}
             className={`${card} relative grid min-h-0 items-center justify-items-center gap-2 px-16 py-5 text-center md:justify-items-stretch md:gap-6 md:px-7 md:py-2 md:text-left ${wide ? 'md:col-span-2 md:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)]' : 'md:grid-cols-[minmax(0,1fr)_auto]'}`}
         >
             <div className="contents md:flex md:min-w-0 md:items-center md:gap-4">
@@ -131,8 +142,10 @@ function NavCard({
     wide?: boolean;
 }) {
     return (
-        <a
+        <Link
             href={href}
+            prefetch
+            cacheFor={PREFETCH_FOR}
             className={`${card} flex min-h-0 items-center gap-3 p-5 md:gap-5 md:px-7 md:py-2 ${wide ? 'md:col-span-2' : ''}`}
         >
             <IconBadge className={badgeSize}>{icon}</IconBadge>
@@ -143,7 +156,7 @@ function NavCard({
                 </p>
             </div>
             <ChevronRightIcon className="ml-auto text-muted-foreground" />
-        </a>
+        </Link>
     );
 }
 
@@ -181,6 +194,7 @@ export function DashboardCards({
                     period={period}
                     wide
                     onClick={() => router.visit('/profit')}
+                    onHover={prefetchOnHover('/profit')}
                 >
                     <Amount
                         value={formatCurrency(profitTotal)}
@@ -198,6 +212,7 @@ export function DashboardCards({
                     label="Invoices"
                     period={period}
                     onClick={() => router.visit('/invoices')}
+                    onHover={prefetchOnHover('/invoices')}
                 >
                     <Amount value={formatCurrency(invoiceTotal)} unit="MKD" />
                 </StatCard>
@@ -237,6 +252,7 @@ export function DashboardCards({
                 label="Unpaid fees"
                 period="Members to follow up"
                 onClick={() => router.visit('/unpaid-fees')}
+                onHover={prefetchOnHover('/unpaid-fees')}
             >
                 <Amount
                     value={unpaidFees}

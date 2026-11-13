@@ -1030,12 +1030,12 @@ export default function MembershipFeesIndex({
                     <div className="grid gap-3 px-4 py-3 sm:grid-cols-3">
                         <FormControl sx={inputSx}>
                             <InputLabel id="month-pool-filter-label">
-                                Pool
+                                Group
                             </InputLabel>
                             <Select
                                 labelId="month-pool-filter-label"
                                 value={monthPoolFilter}
-                                label="Pool"
+                                label="Group"
                                 onChange={(e) =>
                                     setMonthPoolFilter(
                                         e.target.value as PoolFilter,
@@ -1079,7 +1079,7 @@ export default function MembershipFeesIndex({
                                             fontWeight: 'bold',
                                         }}
                                     >
-                                        Pool
+                                        Group
                                     </TableCell>
                                     <TableCell
                                         sx={{

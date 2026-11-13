@@ -28,19 +28,20 @@ class DashboardSummary
             ? (float) Salary::where('user_id', $user->id)->whereYear('month', $currentYear)->sum('amount')
             : 0.0;
 
-        $unpaidFees = Member::where('status', 'active')
-            ->with(['membershipFees' => fn ($query) => $query->orderBy('end_date', 'desc')])
-            ->get()
-            ->filter(function ($member) use ($today) {
-                $latestFee = $member->membershipFees->first();
+        // One query: each active member with only the end date of their latest fee
+        // (instead of loading every fee they ever paid), used for both counts.
+        $activeMembers = Member::where('status', 'active')
+            ->withMax('membershipFees', 'end_date')
+            ->get(['id']);
 
-                return ! $latestFee || Carbon::parse($latestFee->end_date)->lt($today);
-            })
+        $unpaidFees = $activeMembers
+            ->filter(fn ($member) => ! $member->membership_fees_max_end_date
+                || Carbon::parse($member->membership_fees_max_end_date)->lt($today))
             ->count();
 
         return [
             'userRole' => $user->role,
-            'activeMembers' => Member::where('status', 'active')->count(),
+            'activeMembers' => $activeMembers->count(),
             'unpaidFees' => $unpaidFees,
             'invoiceTotal' => $invoiceTotal,
             'profitTotal' => $membershipTotal - $salaryTotal - $invoiceTotal,

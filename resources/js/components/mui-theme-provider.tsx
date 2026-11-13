@@ -109,7 +109,8 @@ const components: Components<Theme> = {
 const shared = {
     shape: { borderRadius: 12 },
     typography: {
-        fontFamily: "'Instrument Sans', ui-sans-serif, system-ui, sans-serif",
+        fontFamily:
+            "'Instrument Sans Variable', 'Instrument Sans', ui-sans-serif, system-ui, sans-serif",
     },
     components,
 };
