@@ -49,6 +49,8 @@ class GroupTest extends TestCase
     public function test_only_admins_open_the_groups_page_from_the_dashboard()
     {
         $ana = $this->member('Ana', $this->group('Big pool'));
+        // Inactive members are not listed
+        $this->member('Old Bojan', $this->group('Big pool'))->update(['status' => 'inactive']);
 
         $this->actingAs($this->admin())
             ->get('/groups')

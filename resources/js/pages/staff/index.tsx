@@ -1,6 +1,6 @@
 import { Head, router } from '@inertiajs/react';
+import AttachMoneyIcon from '@mui/icons-material/AttachMoney';
 import EditIcon from '@mui/icons-material/Edit';
-import PaymentsIcon from '@mui/icons-material/Payments';
 import PersonIcon from '@mui/icons-material/Person';
 import PersonAddAlt1Icon from '@mui/icons-material/PersonAddAlt1';
 import Avatar from '@mui/material/Avatar';
@@ -371,13 +371,14 @@ export default function StaffIndex({ staff }: Props) {
                                         <Button
                                             variant="contained"
                                             size="small"
-                                            startIcon={<PaymentsIcon />}
+                                            aria-label={`Add salary for ${member.name}`}
+                                            title="Add salary"
                                             onClick={() =>
                                                 handleCoachClick(member)
                                             }
-                                            sx={{ whiteSpace: 'nowrap' }}
+                                            sx={{ minWidth: 0, px: 1.25 }}
                                         >
-                                            Add Salary
+                                            <AttachMoneyIcon fontSize="small" />
                                         </Button>
                                         <IconButton
                                             size="small"
