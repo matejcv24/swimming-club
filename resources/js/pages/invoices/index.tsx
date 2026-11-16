@@ -269,7 +269,13 @@ export default function InvoicesIndex({ invoices }: Props) {
         }
     };
 
+    // The "are you sure" pop-up before deleting the invoice being edited
+    const [confirmDelete, setConfirmDelete] = useState(false);
+    const [deletingInvoice, setDeletingInvoice] = useState(false);
+
     const handleDeleteInvoice = async (id: number) => {
+        setDeletingInvoice(true);
+
         try {
             const response = await fetch(`/invoices/${id}`, {
                 method: 'DELETE',
@@ -280,6 +286,7 @@ export default function InvoicesIndex({ invoices }: Props) {
 
             if (response.ok) {
                 setInvoiceList(invoiceList.filter((inv) => inv.id !== id));
+                setConfirmDelete(false);
                 setEditingInvoice(null);
                 setEditAmount('');
             } else {
@@ -288,6 +295,8 @@ export default function InvoicesIndex({ invoices }: Props) {
         } catch (error) {
             console.error('Error deleting invoice:', error);
         }
+
+        setDeletingInvoice(false);
     };
 
     return (
@@ -699,14 +708,13 @@ export default function InvoicesIndex({ invoices }: Props) {
                                 >
                                     Update
                                 </Button>
+                                {/* Asks first (Delete Invoice pop-up below) */}
                                 <Button
-                                    variant="outlined"
+                                    variant="contained"
                                     fullWidth
                                     size="medium"
                                     color="error"
-                                    onClick={() =>
-                                        handleDeleteInvoice(editingInvoice.id)
-                                    }
+                                    onClick={() => setConfirmDelete(true)}
                                 >
                                     Delete
                                 </Button>
@@ -725,6 +733,76 @@ export default function InvoicesIndex({ invoices }: Props) {
                     </DialogContent>
                 </Dialog>
             )}
+
+            {/* Delete Invoice Confirmation Modal (like Delete Member) */}
+            <Dialog
+                open={confirmDelete && !!editingInvoice}
+                onClose={() => !deletingInvoice && setConfirmDelete(false)}
+                disableRestoreFocus
+                fullWidth
+                maxWidth="xs"
+                PaperProps={{
+                    sx: { bgcolor: POPUP_BG },
+                }}
+            >
+                <DialogTitle sx={{ p: 0 }}>
+                    <div className="flex items-center justify-between px-4 py-3">
+                        <Typography variant="h6" fontWeight="bold">
+                            Delete Invoice
+                        </Typography>
+                        <CloseButton
+                            onClick={() =>
+                                !deletingInvoice && setConfirmDelete(false)
+                            }
+                        />
+                    </div>
+                    <Divider />
+                </DialogTitle>
+
+                <DialogContent>
+                    {editingInvoice && (
+                        <div className="flex flex-col gap-4 py-4">
+                            <Typography variant="body1">
+                                Are you sure you want to delete the invoice{' '}
+                                <strong>{invoiceLabel(editingInvoice)}</strong>{' '}
+                                for{' '}
+                                <strong>
+                                    {dayjs(editingInvoice.month).format(
+                                        'MMMM YYYY',
+                                    )}
+                                </strong>
+                                ?
+                            </Typography>
+                            <Typography variant="body2" color="text.secondary">
+                                This cannot be undone.
+                            </Typography>
+                            <div className="flex gap-3">
+                                <Button
+                                    variant="contained"
+                                    color="error"
+                                    fullWidth
+                                    size="medium"
+                                    onClick={() =>
+                                        handleDeleteInvoice(editingInvoice.id)
+                                    }
+                                    disabled={deletingInvoice}
+                                >
+                                    Yes
+                                </Button>
+                                <Button
+                                    variant="outlined"
+                                    fullWidth
+                                    size="medium"
+                                    onClick={() => setConfirmDelete(false)}
+                                    disabled={deletingInvoice}
+                                >
+                                    No
+                                </Button>
+                            </div>
+                        </div>
+                    )}
+                </DialogContent>
+            </Dialog>
         </MuiThemeProvider>
     );
 }
