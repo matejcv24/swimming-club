@@ -36,6 +36,21 @@ const components: Components<Theme> = {
             },
         },
     },
+    // A field's small label sitting on its border gets the pop-up's background and a
+    // little room each side, so the border line never runs into the letters, whatever
+    // font the device uses (Cyrillic comes from the system font) or zoom it shows at.
+    MuiInputLabel: {
+        styleOverrides: {
+            root: {
+                '&.MuiInputLabel-outlined.MuiInputLabel-shrink': {
+                    backgroundColor: 'var(--popup-bg)',
+                    paddingInline: 5,
+                    marginLeft: -5,
+                    overflow: 'visible',
+                },
+            },
+        },
+    },
     MuiButton: {
         defaultProps: { disableElevation: true },
         styleOverrides: {

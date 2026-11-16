@@ -12,6 +12,8 @@ class TrainingAttendanceNotification extends Notification
     public function __construct(
         public string $message,
         public string $url,
+        // What happened, worded in the reader's language when shown (NotificationText)
+        public array $text = [],
     ) {}
 
     public function via(object $notifiable): array
@@ -23,6 +25,7 @@ class TrainingAttendanceNotification extends Notification
     {
         return [
             'message' => $this->message,
+            'text' => $this->text,
             'url' => $this->url,
             'type' => 'training_attendance',
         ];

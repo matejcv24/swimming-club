@@ -1,6 +1,7 @@
 import Dialog from '@mui/material/Dialog';
 import { POPUP_BG } from '@/components/mui-theme-provider';
 import { POPUP_FADE } from '@/hooks/use-page-popup';
+import { t } from '@/lib/i18n';
 
 /**
  * Grey placeholder shapes shown while data is on its way (slow internet), so
@@ -25,7 +26,7 @@ export function ListSkeleton({
     avatar?: boolean;
 }) {
     return (
-        <div role="status" aria-label="Loading" className="flex flex-col">
+        <div role="status" aria-label={t('Loading')} className="flex flex-col">
             {Array.from({ length: rows }, (_, index) => (
                 <div
                     key={index}
@@ -52,7 +53,7 @@ export function CardsSkeleton({ cards = 3 }: { cards?: number }) {
     return (
         <div
             role="status"
-            aria-label="Loading"
+            aria-label={t('Loading')}
             className="flex flex-col gap-2.5"
         >
             {Array.from({ length: cards }, (_, index) => (

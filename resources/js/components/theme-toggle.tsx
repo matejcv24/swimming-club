@@ -6,6 +6,7 @@ import Switch from '@mui/material/Switch';
 import Tooltip from '@mui/material/Tooltip';
 import { useEffect } from 'react';
 import { syncAppearance, useAppearance } from '@/hooks/use-appearance';
+import { t } from '@/lib/i18n';
 import type { User } from '@/types';
 
 const ThemeSwitch = styled(Switch)({
@@ -82,7 +83,9 @@ export function ThemeToggle() {
 
     return (
         <Tooltip
-            title={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
+            title={
+                isDark ? t('Switch to light mode') : t('Switch to dark mode')
+            }
         >
             <ThemeSwitch
                 checked={isDark}
@@ -94,8 +97,8 @@ export function ThemeToggle() {
                 slotProps={{
                     input: {
                         'aria-label': isDark
-                            ? 'Dark mode on. Switch to light mode'
-                            : 'Light mode on. Switch to dark mode',
+                            ? t('Dark mode on. Switch to light mode')
+                            : t('Light mode on. Switch to dark mode'),
                     },
                 }}
             />

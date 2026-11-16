@@ -7,6 +7,7 @@ import Tab from '@mui/material/Tab';
 import Tabs from '@mui/material/Tabs';
 import { useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
+import { t } from '@/lib/i18n';
 import { clearOnClick } from '@/lib/search-field';
 
 /**
@@ -43,7 +44,7 @@ export function IconBadge({
 export function CloseButton({ sx, ...props }: IconButtonProps) {
     return (
         <IconButton
-            aria-label="Close"
+            aria-label={t('Close')}
             {...props}
             sx={[
                 {
@@ -262,7 +263,7 @@ export function StatusDot({ active }: { active: boolean }) {
             <span
                 className={`size-[7px] rounded-full ${active ? 'bg-green-500' : 'bg-red-500'}`}
             />
-            {active ? 'Active' : 'Inactive'}
+            {active ? t('Active') : t('Inactive')}
         </span>
     );
 }

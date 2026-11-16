@@ -21,6 +21,7 @@ import { CloseButton } from '@/components/popup-ui';
 import { PopupSkeleton } from '@/components/skeletons';
 import { useDashboardScroll } from '@/hooks/use-dashboard-scroll';
 import { usePendingPopup } from '@/hooks/use-pending-popup';
+import { t, tc } from '@/lib/i18n';
 
 interface Salary {
     id: number;
@@ -152,7 +153,7 @@ export default function Dashboard({
                 />
             )}
 
-            <Head title="Dashboard" />
+            <Head title={t('Dashboard')} />
             <DashboardCards
                 userRole={userRole}
                 activeMembers={activeMembers}
@@ -181,7 +182,7 @@ export default function Dashboard({
                 <DialogTitle sx={{ p: 0 }}>
                     <div className="flex items-center justify-between px-4 py-3">
                         <Typography variant="h6" fontWeight="bold">
-                            Salary
+                            {t('Salary')}
                         </Typography>
                         <CloseButton
                             onClick={() => setShowSalaryModal(false)}
@@ -201,7 +202,7 @@ export default function Dashboard({
                                     letterSpacing: 1,
                                 }}
                             >
-                                Salary History By Month
+                                {t('Salary History By Month')}
                             </Typography>
 
                             {currentYearLastSalary ? (
@@ -244,10 +245,10 @@ export default function Dashboard({
                                                     variant="caption"
                                                     color="primary"
                                                 >
-                                                    {
-                                                        currentYearSalaryMonths.length
-                                                    }{' '}
-                                                    months
+                                                    {tc(
+                                                        ':count month|:count months',
+                                                        currentYearSalaryMonths.length,
+                                                    )}
                                                 </Typography>
                                             )}
                                         </div>
@@ -264,8 +265,12 @@ export default function Dashboard({
                                     variant="body2"
                                     color="text.secondary"
                                 >
-                                    No salary payments recorded for{' '}
-                                    {currentYear}.
+                                    {t(
+                                        'No salary payments recorded for :year.',
+                                        {
+                                            year: currentYear,
+                                        },
+                                    )}
                                 </Typography>
                             )}
                         </div>
@@ -281,7 +286,7 @@ export default function Dashboard({
                                     letterSpacing: 1,
                                 }}
                             >
-                                Salary History By Year
+                                {t('Salary History By Year')}
                             </Typography>
 
                             {sortedSalaryYears.length > 0 ? (
@@ -325,11 +330,11 @@ export default function Dashboard({
                                                     variant="caption"
                                                     color="primary"
                                                 >
-                                                    {
+                                                    {tc(
+                                                        ':count month|:count months',
                                                         salaryYearGroups[year]
-                                                            .monthCount
-                                                    }{' '}
-                                                    months
+                                                            .monthCount,
+                                                    )}
                                                 </Typography>
                                             </div>
 
@@ -349,7 +354,7 @@ export default function Dashboard({
                                     variant="body2"
                                     color="text.secondary"
                                 >
-                                    No past-year salary history yet.
+                                    {t('No past-year salary history yet.')}
                                 </Typography>
                             )}
                         </div>
@@ -370,7 +375,7 @@ export default function Dashboard({
                 <DialogTitle sx={{ p: 0 }}>
                     <div className="flex items-center justify-between px-4 py-3">
                         <Typography variant="h6" fontWeight="bold">
-                            Salary History By Month
+                            {t('Salary History By Month')}
                         </Typography>
                         <CloseButton
                             onClick={() => setShowSalaryHistoryModal(false)}
@@ -435,7 +440,9 @@ export default function Dashboard({
                 <DialogTitle sx={{ p: 0 }}>
                     <div className="flex items-center justify-between px-4 py-3">
                         <Typography variant="h6" fontWeight="bold">
-                            Salary History - {selectedSalaryYear}
+                            {t('Salary History - :year', {
+                                year: selectedSalaryYear ?? '',
+                            })}
                         </Typography>
                         <CloseButton
                             onClick={() => {

@@ -13,6 +13,7 @@ import Select from '@mui/material/Select';
 import dayjs from 'dayjs';
 import { useState } from 'react';
 import { PopupHeader } from '@/components/popup-ui';
+import { t } from '@/lib/i18n';
 
 const MONTHS = [
     'January',
@@ -28,6 +29,13 @@ const MONTHS = [
     'November',
     'December',
 ];
+
+// The months as shown in the app's language (the file name keeps English ones)
+const MONTH_NAMES = Array.from({ length: 12 }, (_, i) => {
+    const name = dayjs().month(i).format('MMMM');
+
+    return name.charAt(0).toUpperCase() + name.slice(1);
+});
 
 type Props = {
     open: boolean;
@@ -91,7 +99,7 @@ export default function MonthlyReportDialog({
             setTimeout(() => URL.revokeObjectURL(url), 10_000);
             onClose();
         } catch {
-            setError('The report could not be generated. Please try again.');
+            setError(t('The report could not be generated. Please try again.'));
         } finally {
             setDownloading(false);
         }
@@ -108,20 +116,23 @@ export default function MonthlyReportDialog({
             <DialogTitle sx={{ p: 0 }}>
                 <PopupHeader
                     icon={<DescriptionIcon fontSize="small" />}
-                    title="Monthly report"
-                    subtitle="Fees, invoices and salaries for one month"
+                    title={t('Monthly report')}
+                    subtitle={t('Fees, invoices and salaries for one month')}
                     onClose={() => !downloading && onClose()}
                 />
             </DialogTitle>
 
             <DialogContent sx={{ p: 0 }}>
-                <div className="flex flex-col gap-4 px-[18px] pt-1 pb-[18px]">
+                {/* pt-3: room for the fields' floating labels, which the scroll area would clip */}
+                <div className="flex flex-col gap-4 px-[18px] pt-3 pb-[18px]">
                     <div className="grid grid-cols-2 gap-3">
                         <FormControl fullWidth>
-                            <InputLabel id="report-year-label">Year</InputLabel>
+                            <InputLabel id="report-year-label">
+                                {t('Year')}
+                            </InputLabel>
                             <Select
                                 labelId="report-year-label"
-                                label="Year"
+                                label={t('Year')}
                                 value={year}
                                 onChange={(e) =>
                                     changeYear(Number(e.target.value))
@@ -137,17 +148,17 @@ export default function MonthlyReportDialog({
 
                         <FormControl fullWidth>
                             <InputLabel id="report-month-label">
-                                Month
+                                {t('Month')}
                             </InputLabel>
                             <Select
                                 labelId="report-month-label"
-                                label="Month"
+                                label={t('Month')}
                                 value={month}
                                 onChange={(e) =>
                                     setMonth(Number(e.target.value))
                                 }
                             >
-                                {MONTHS.slice(0, lastSelectableMonth).map(
+                                {MONTH_NAMES.slice(0, lastSelectableMonth).map(
                                     (name, i) => (
                                         <MenuItem key={name} value={i + 1}>
                                             {name}
@@ -174,7 +185,7 @@ export default function MonthlyReportDialog({
                             )
                         }
                     >
-                        {downloading ? 'Generating...' : 'Download PDF'}
+                        {downloading ? t('Generating...') : t('Download PDF')}
                     </Button>
                 </div>
             </DialogContent>

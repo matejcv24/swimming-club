@@ -64,7 +64,7 @@ class MonthlyReport
             ->tap(fn ($q) => $inMonth($q, 'month'))
             ->get()
             ->map(fn (Salary $salary) => [
-                'coach' => $salary->user?->name ?? 'Unknown coach',
+                'coach' => $salary->user?->name ?? __('Unknown coach'),
                 'amount' => (float) $salary->amount,
             ])
             ->sortBy('coach', SORT_NATURAL | SORT_FLAG_CASE)

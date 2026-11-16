@@ -26,6 +26,7 @@ import {
 import { PopupHeader } from '@/components/popup-ui';
 import { usePagePopup } from '@/hooks/use-page-popup';
 import { useGroups } from '@/lib/groups';
+import { t, tc } from '@/lib/i18n';
 
 interface UnpaidMember {
     id: number;
@@ -81,7 +82,7 @@ export default function UnpaidFeesIndex({ unpaidMembers }: Props) {
     return (
         <MuiThemeProvider>
             <DashboardBackground />
-            <Head title="Unpaid Fees" />
+            <Head title={t('Unpaid Fees')} />
 
             <Dialog
                 {...popup.dialogProps}
@@ -99,8 +100,11 @@ export default function UnpaidFeesIndex({ unpaidMembers }: Props) {
                 <DialogTitle sx={{ p: 0 }}>
                     <PopupHeader
                         icon={<WarningIcon fontSize="small" />}
-                        title="Unpaid Fees"
-                        subtitle={`${unpaidMembers.length} members to follow up`}
+                        title={t('Unpaid Fees')}
+                        subtitle={tc(
+                            ':count member late with payment|:count members late with payment',
+                            unpaidMembers.length,
+                        )}
                         onClose={popup.close}
                     />
                     <div className="px-[18px] pb-3">
@@ -109,11 +113,11 @@ export default function UnpaidFeesIndex({ unpaidMembers }: Props) {
                                 id="unpaid-group-label"
                                 sx={{ color: popupFg(0.5) }}
                             >
-                                Group
+                                {t('Group')}
                             </InputLabel>
                             <Select
                                 labelId="unpaid-group-label"
-                                label="Group"
+                                label={t('Group')}
                                 value={activeFilter}
                                 onChange={(e) =>
                                     setGroupFilter(
@@ -131,7 +135,9 @@ export default function UnpaidFeesIndex({ unpaidMembers }: Props) {
                                 }}
                             >
                                 <MenuItem value="all">
-                                    All ({unpaidMembers.length})
+                                    {t('All (:count)', {
+                                        count: unpaidMembers.length,
+                                    })}
                                 </MenuItem>
                                 {groups.map((group) => (
                                     <MenuItem key={group.id} value={group.id}>
@@ -151,8 +157,8 @@ export default function UnpaidFeesIndex({ unpaidMembers }: Props) {
                             sx={{ textAlign: 'center', mt: 6 }}
                         >
                             {activeFilter === 'all'
-                                ? 'No overdue members.'
-                                : 'No overdue members in this group.'}
+                                ? t('No overdue members.')
+                                : t('No overdue members in this group.')}
                         </Typography>
                     ) : (
                         <List disablePadding>
@@ -181,7 +187,7 @@ export default function UnpaidFeesIndex({ unpaidMembers }: Props) {
                                                     color="text.secondary"
                                                     sx={{ display: 'block' }}
                                                 >
-                                                    Parent:{' '}
+                                                    {t('Parent:')}{' '}
                                                     {member.parentName ?? '-'}
                                                 </Typography>
                                                 <Typography
@@ -190,7 +196,7 @@ export default function UnpaidFeesIndex({ unpaidMembers }: Props) {
                                                     color="text.secondary"
                                                     sx={{ display: 'block' }}
                                                 >
-                                                    Phone:{' '}
+                                                    {t('Phone:')}{' '}
                                                     {member.phone ? (
                                                         <Link
                                                             href={`tel:${member.phone.replace(/[^\d+]/g, '')}`}
@@ -208,12 +214,12 @@ export default function UnpaidFeesIndex({ unpaidMembers }: Props) {
                                                     color="error"
                                                     sx={{ display: 'block' }}
                                                 >
-                                                    Expired:{' '}
+                                                    {t('Expired:')}{' '}
                                                     {member.latest_end_date
                                                         ? dayjs(
                                                               member.latest_end_date,
                                                           ).format('DD.MM.YYYY')
-                                                        : 'No recorded fee'}
+                                                        : t('No recorded fee')}
                                                 </Typography>
                                             </>
                                         }

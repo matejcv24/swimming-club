@@ -1,18 +1,19 @@
 import { router } from '@inertiajs/react';
 import { useEffect, useState } from 'react';
+import { t } from '@/lib/i18n';
 
 /** The pop-ups the dashboard opens, by address, with the title they show. */
 const POPUP_TITLES: Record<string, string> = {
-    '/members': 'Members',
-    '/trainings': 'Trainings',
-    '/membership-fees': 'Membership Fees',
-    '/attendance': 'Attendance',
-    '/unpaid-fees': 'Unpaid Fees',
-    '/staff': 'Staff',
-    '/invoices': 'Invoices',
-    '/profit': 'Profit',
-    '/groups': 'Groups',
-    '/notifications': 'Notifications',
+    '/members': t('Members'),
+    '/trainings': t('Trainings'),
+    '/membership-fees': t('Membership Fees'),
+    '/attendance': t('Attendance'),
+    '/unpaid-fees': t('Unpaid Fees'),
+    '/staff': t('Staff'),
+    '/invoices': t('Invoices'),
+    '/profit': t('Profit'),
+    '/groups': t('Groups'),
+    '/notifications': t('Notifications'),
 };
 
 // Pages that arrive faster than this (already loaded, or a quick connection) open

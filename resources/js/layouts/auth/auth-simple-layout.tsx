@@ -1,3 +1,4 @@
+import { LanguageSwitch } from '@/components/language-switch';
 import type { AuthLayoutProps } from '@/types';
 
 export default function AuthSimpleLayout({
@@ -8,7 +9,12 @@ export default function AuthSimpleLayout({
     return (
         // Club navy, the same color as the logo's background and the app icon.
         // "light" keeps these pages in light colors even when dark mode is on.
-        <div className="light flex min-h-svh flex-col items-center justify-center bg-hydra-navy px-4 py-10">
+        <div className="light relative flex min-h-svh flex-col items-center justify-center bg-hydra-navy px-4 py-10">
+            {/* MK / EN, so the language can be chosen before logging in */}
+            <div className="absolute top-3 right-3 text-white">
+                <LanguageSwitch />
+            </div>
+
             <div className="flex w-full max-w-sm flex-col items-center gap-6">
                 <img
                     src="/images/hydra-logo.webp"

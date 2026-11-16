@@ -4,6 +4,7 @@ namespace App\Http\Middleware;
 
 use App\Models\Group;
 use App\Support\DashboardSummary;
+use App\Support\NotificationText;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 
@@ -91,7 +92,7 @@ class HandleInertiaRequests extends Middleware
                     'unread_count' => $request->user()->unreadNotifications()->count(),
                     'unread' => $request->user()->unreadNotifications()->latest()->take(5)->get()->map(fn ($notification) => [
                         'id' => $notification->id,
-                        'message' => $notification->data['message'] ?? '',
+                        'message' => NotificationText::of($notification->data),
                         'url' => $this->notificationUrl($notification, $request->user()),
                         'type' => $notification->data['type'] ?? '',
                         'created_at' => $notification->created_at?->toDateTimeString(),

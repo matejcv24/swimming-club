@@ -8,6 +8,7 @@ import MenuItem from '@mui/material/MenuItem';
 import Select from '@mui/material/Select';
 import { POPUP_FG, popupFg } from '@/components/mui-theme-provider';
 import type { ClubGroup } from '@/lib/groups';
+import { t } from '@/lib/i18n';
 
 /** A coach works with all groups, or with the chosen ones. */
 export type CoachGroups = { all_groups: boolean; group_ids: number[] };
@@ -20,14 +21,14 @@ export function coachGroupsLabel(
     groups: ClubGroup[],
 ): string {
     if (value.all_groups) {
-        return 'All groups';
+        return t('All groups');
     }
 
     const names = groups
         .filter((group) => value.group_ids.includes(group.id))
         .map((group) => group.name);
 
-    return names.length > 0 ? names.join(', ') : 'No groups';
+    return names.length > 0 ? names.join(', ') : t('No groups');
 }
 
 /** Drop-down for the groups a coach is assigned to: all, or one or more. */
@@ -69,12 +70,12 @@ export function CoachGroupsField({
     return (
         <FormControl fullWidth required error={!!error}>
             <InputLabel id={id} sx={{ color: popupFg(0.5) }}>
-                Groups
+                {t('Groups')}
             </InputLabel>
             <Select
                 labelId={id}
                 multiple
-                label="Groups"
+                label={t('Groups')}
                 value={selected}
                 onChange={(e) =>
                     handleChange(
@@ -95,8 +96,8 @@ export function CoachGroupsField({
                 <MenuItem value={ALL}>
                     <Checkbox checked={value.all_groups} />
                     <ListItemText
-                        primary="All groups"
-                        secondary="Including groups added later"
+                        primary={t('All groups')}
+                        secondary={t('Including groups added later')}
                     />
                 </MenuItem>
                 <Divider />
@@ -114,7 +115,9 @@ export function CoachGroupsField({
             </Select>
             <FormHelperText>
                 {error ??
-                    'The coach only sees, adds and edits members, trainings and payments of these groups.'}
+                    t(
+                        'The coach only sees, adds and edits members, trainings and payments of these groups.',
+                    )}
             </FormHelperText>
         </FormControl>
     );

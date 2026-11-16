@@ -33,6 +33,7 @@ import {
 import { CardsSkeleton } from '@/components/skeletons';
 import { usePagePopup } from '@/hooks/use-page-popup';
 import { groupNameOf, useGroups } from '@/lib/groups';
+import { t, tc } from '@/lib/i18n';
 
 interface Member {
     id: number;
@@ -213,7 +214,7 @@ export default function AttendanceIndex({ members }: Props) {
     return (
         <MuiThemeProvider>
             <DashboardBackground />
-            <Head title="Attendance" />
+            <Head title={t('Attendance')} />
 
             <Dialog
                 {...popup.dialogProps}
@@ -231,14 +232,14 @@ export default function AttendanceIndex({ members }: Props) {
                 <DialogTitle sx={{ p: 0 }}>
                     <PopupHeader
                         icon={<AssignmentTurnedInIcon fontSize="small" />}
-                        title="Attendance"
-                        subtitle={`${activeFilter === 'all' ? 'All groups' : groupNameOf(groups, activeFilter)} · ${filteredMembers.length} ${filteredMembers.length === 1 ? 'member' : 'members'}`}
+                        title={t('Attendance')}
+                        subtitle={`${activeFilter === 'all' ? t('All groups') : groupNameOf(groups, activeFilter)} · ${tc(':count member|:count members', filteredMembers.length)}`}
                         onClose={popup.close}
                     />
                     <PillSearchField
                         value={attendanceSearch}
                         onChange={setAttendanceSearch}
-                        placeholder="Search member..."
+                        placeholder={t('Search member...')}
                     />
                     {groups.length > 0 && (
                         <div className="px-[18px] pt-4 pb-3">
@@ -247,11 +248,11 @@ export default function AttendanceIndex({ members }: Props) {
                                     id="attendance-group-label"
                                     sx={{ color: popupFg(0.5) }}
                                 >
-                                    Group
+                                    {t('Group')}
                                 </InputLabel>
                                 <Select
                                     labelId="attendance-group-label"
-                                    label="Group"
+                                    label={t('Group')}
                                     value={activeFilter}
                                     onChange={(e) =>
                                         setGroupFilter(
@@ -272,7 +273,9 @@ export default function AttendanceIndex({ members }: Props) {
                                 >
                                     {showAll && (
                                         <MenuItem value="all">
-                                            All ({members.length})
+                                            {t('All (:count)', {
+                                                count: members.length,
+                                            })}
                                         </MenuItem>
                                     )}
                                     {groups.map((group) => (
@@ -317,10 +320,9 @@ export default function AttendanceIndex({ members }: Props) {
                                         >
                                             {activeFilter === 'all' &&
                                                 `${groupNameOf(groups, member.group_id)} · `}
-                                            Attendances:{' '}
-                                            {
-                                                member.current_month_attendances_count
-                                            }
+                                            {t('Attendances: :count', {
+                                                count: member.current_month_attendances_count,
+                                            })}
                                         </Typography>
                                     }
                                 />
@@ -346,7 +348,9 @@ export default function AttendanceIndex({ members }: Props) {
                 <DialogTitle sx={{ p: 0 }}>
                     <div className="flex items-center justify-between px-4 py-3">
                         <Typography variant="h6" fontWeight="bold">
-                            Attendance - {selectedMember?.name}
+                            {t('Attendance - :name', {
+                                name: selectedMember?.name ?? '',
+                            })}
                         </Typography>
                         <CloseButton
                             onClick={() => {
@@ -374,7 +378,7 @@ export default function AttendanceIndex({ members }: Props) {
                                         letterSpacing: 1,
                                     }}
                                 >
-                                    Attendances By Month
+                                    {t('Attendances By Month')}
                                 </Typography>
 
                                 {currentMonthData ? (
@@ -418,16 +422,21 @@ export default function AttendanceIndex({ members }: Props) {
                                                         variant="caption"
                                                         color="primary"
                                                     >
-                                                        {
-                                                            currentYearMonths.length
-                                                        }{' '}
-                                                        months
+                                                        {tc(
+                                                            ':count month|:count months',
+                                                            currentYearMonths.length,
+                                                        )}
                                                     </Typography>
                                                 )}
                                             </div>
 
                                             <Chip
-                                                label={`Attendances: ${currentMonthData.total}`}
+                                                label={t(
+                                                    'Attendances: :count',
+                                                    {
+                                                        count: currentMonthData.total,
+                                                    },
+                                                )}
                                                 color="success"
                                                 size="small"
                                                 sx={chipSx}
@@ -439,7 +448,9 @@ export default function AttendanceIndex({ members }: Props) {
                                         variant="body2"
                                         color="text.secondary"
                                     >
-                                        No attendances recorded this month.
+                                        {t(
+                                            'No attendances recorded this month.',
+                                        )}
                                     </Typography>
                                 )}
                             </div>
@@ -455,7 +466,7 @@ export default function AttendanceIndex({ members }: Props) {
                                         letterSpacing: 1,
                                     }}
                                 >
-                                    Attendances By Year
+                                    {t('Attendances By Year')}
                                 </Typography>
 
                                 {sortedYears.length > 0 ? (
@@ -499,16 +510,23 @@ export default function AttendanceIndex({ members }: Props) {
                                                         variant="caption"
                                                         color="primary"
                                                     >
-                                                        {
+                                                        {tc(
+                                                            ':count month|:count months',
                                                             yearGroups[year]
-                                                                .monthCount
-                                                        }{' '}
-                                                        months
+                                                                .monthCount,
+                                                        )}
                                                     </Typography>
                                                 </div>
 
                                                 <Chip
-                                                    label={`Attendances: ${yearGroups[year].total}`}
+                                                    label={t(
+                                                        'Attendances: :count',
+                                                        {
+                                                            count: yearGroups[
+                                                                year
+                                                            ].total,
+                                                        },
+                                                    )}
                                                     color="success"
                                                     size="small"
                                                     sx={chipSx}
@@ -521,7 +539,7 @@ export default function AttendanceIndex({ members }: Props) {
                                         variant="body2"
                                         color="text.secondary"
                                     >
-                                        No attendance history yet.
+                                        {t('No attendance history yet.')}
                                     </Typography>
                                 )}
                             </div>
@@ -543,7 +561,9 @@ export default function AttendanceIndex({ members }: Props) {
                 <DialogTitle sx={{ p: 0 }}>
                     <div className="flex items-center justify-between px-4 py-3">
                         <Typography variant="h6" fontWeight="bold">
-                            Attendance By Month - {currentYear}
+                            {t('Attendance By Month - :year', {
+                                year: currentYear,
+                            })}
                         </Typography>
                         <CloseButton
                             onClick={() => setShowCurrentYearMonthsModal(false)}
@@ -583,7 +603,9 @@ export default function AttendanceIndex({ members }: Props) {
                                     </Typography>
 
                                     <Chip
-                                        label={`Attendances: ${monthData.total}`}
+                                        label={t('Attendances: :count', {
+                                            count: monthData.total,
+                                        })}
                                         color="success"
                                         size="small"
                                         sx={chipSx}
@@ -611,10 +633,11 @@ export default function AttendanceIndex({ members }: Props) {
                 <DialogTitle sx={{ p: 0 }}>
                     <div className="flex items-center justify-between px-4 py-3">
                         <Typography variant="h6" fontWeight="bold">
-                            Attendance Dates -{' '}
-                            {selectedMonth
-                                ? dayjs(selectedMonth).format('MMMM YYYY')
-                                : ''}
+                            {t('Attendance Dates - :month', {
+                                month: selectedMonth
+                                    ? dayjs(selectedMonth).format('MMMM YYYY')
+                                    : '',
+                            })}
                         </Typography>
                         <CloseButton
                             onClick={() => {
@@ -652,7 +675,7 @@ export default function AttendanceIndex({ members }: Props) {
                             color="text.secondary"
                             sx={{ p: 3, textAlign: 'center' }}
                         >
-                            No attendance dates recorded for this month.
+                            {t('No attendance dates recorded for this month.')}
                         </Typography>
                     )}
                 </DialogContent>
@@ -674,7 +697,9 @@ export default function AttendanceIndex({ members }: Props) {
                 <DialogTitle sx={{ p: 0 }}>
                     <div className="flex items-center justify-between px-4 py-3">
                         <Typography variant="h6" fontWeight="bold">
-                            Attendance By Month - {selectedYear}
+                            {t('Attendance By Month - :year', {
+                                year: selectedYear ?? '',
+                            })}
                         </Typography>
                         <CloseButton
                             onClick={() => {
@@ -717,7 +742,9 @@ export default function AttendanceIndex({ members }: Props) {
                                     </Typography>
 
                                     <Chip
-                                        label={`Attendances: ${monthData.total}`}
+                                        label={t('Attendances: :count', {
+                                            count: monthData.total,
+                                        })}
                                         color="success"
                                         size="small"
                                         sx={chipSx}

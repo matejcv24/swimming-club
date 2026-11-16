@@ -104,10 +104,10 @@ class GroupController extends Controller
         ]);
 
         if ($hasMembers && empty($validated['move_to_group_id'])) {
-            throw ValidationException::withMessages(['move_to_group_id' => 'Choose where its members go.']);
+            throw ValidationException::withMessages(['move_to_group_id' => __('Choose where its members go.')]);
         }
 
-        DB::transaction(function () use ($group, $validated, $hasMembers, $members, $removedIds) {
+        DB::transaction(function () use ($validated, $hasMembers, $members, $removedIds) {
             if ($hasMembers) {
                 $target = Group::findOrFail($validated['move_to_group_id']);
 

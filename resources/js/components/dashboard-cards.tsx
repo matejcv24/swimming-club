@@ -16,6 +16,7 @@ import WorkspacesIcon from '@mui/icons-material/Workspaces';
 import type { ReactNode } from 'react';
 import { IconBadge } from '@/components/popup-ui';
 import { useGroups } from '@/lib/groups';
+import { t, tc } from '@/lib/i18n';
 
 export type DashboardSummary = {
     userRole: 'admin' | 'coach';
@@ -184,7 +185,7 @@ export function DashboardCards({
     onOpenSalary,
     onOpenReport,
 }: Props) {
-    const period = `${new Date().getFullYear()} so far`;
+    const period = t(':year so far', { year: new Date().getFullYear() });
     const isAdmin = userRole === 'admin';
     const groups = useGroups();
     const subgroupCount = groups.reduce(
@@ -193,11 +194,11 @@ export function DashboardCards({
     );
     const groupsDescription =
         groups.length === 0
-            ? 'Create your first group'
+            ? t('Create your first group')
             : [
-                  `${groups.length} ${groups.length === 1 ? 'group' : 'groups'}`,
+                  tc(':count group|:count groups', groups.length),
                   subgroupCount > 0 &&
-                      `${subgroupCount} ${subgroupCount === 1 ? 'subgroup' : 'subgroups'}`,
+                      tc(':count subgroup|:count subgroups', subgroupCount),
               ]
                   .filter(Boolean)
                   .join(' · ');
@@ -218,7 +219,7 @@ export function DashboardCards({
                         )
                     }
                     tone={profitDown ? 'red' : 'green'}
-                    label="Profit"
+                    label={t('Profit')}
                     period={period}
                     onClick={() =>
                         router.visit('/profit', { preserveScroll: true })
@@ -238,7 +239,7 @@ export function DashboardCards({
             {isAdmin && (
                 <StatCard
                     icon={<ReceiptLongIcon sx={iconSx} />}
-                    label="Invoices"
+                    label={t('Invoices')}
                     period={period}
                     onClick={() =>
                         router.visit('/invoices', { preserveScroll: true })
@@ -252,14 +253,14 @@ export function DashboardCards({
             {isAdmin && (
                 <StatCard
                     icon={<DescriptionIcon sx={iconSx} />}
-                    label="Monthly report"
+                    label={t('Monthly report')}
                     periodBelow
-                    period="Fees, invoices, salaries"
+                    period={t('Fees, invoices, salaries')}
                     onClick={onOpenReport}
                 >
                     <span className="inline-flex w-fit items-center gap-1.5 rounded-full bg-hydra-blue px-3.5 py-2 text-[13px] font-bold text-white md:px-5 md:py-2.5 md:text-base">
                         <DownloadIcon sx={{ fontSize: { xs: 16, md: 20 } }} />
-                        Download PDF
+                        {t('Download PDF')}
                     </span>
                 </StatCard>
             )}
@@ -267,7 +268,7 @@ export function DashboardCards({
             {userRole === 'coach' && (
                 <StatCard
                     icon={<PaymentsIcon sx={iconSx} />}
-                    label="Salary"
+                    label={t('Salary')}
                     period={period}
                     onClick={onOpenSalary}
                 >
@@ -281,9 +282,9 @@ export function DashboardCards({
             <StatCard
                 icon={<WarningIcon sx={iconSx} />}
                 tone={unpaidFees > 0 ? 'red' : 'green'}
-                label="Unpaid fees"
+                label={t('Unpaid fees')}
                 periodBelow
-                period="Members to follow up"
+                period={t('Members late with payment')}
                 onClick={() =>
                     router.visit('/unpaid-fees', { preserveScroll: true })
                 }
@@ -302,7 +303,7 @@ export function DashboardCards({
                 <NavCard
                     href="/groups"
                     icon={<WorkspacesIcon sx={iconSx} />}
-                    title="Groups"
+                    title={t('Groups')}
                     description={groupsDescription}
                 />
             )}
@@ -310,33 +311,36 @@ export function DashboardCards({
             <NavCard
                 href="/members"
                 icon={<GroupsIcon sx={iconSx} />}
-                title="Members"
-                description={`${activeMembers} active ${activeMembers === 1 ? 'member' : 'members'}`}
+                title={t('Members')}
+                description={tc(
+                    ':count active member|:count active members',
+                    activeMembers,
+                )}
             />
             <NavCard
                 href="/trainings"
                 icon={<CalendarMonthIcon sx={iconSx} />}
-                title="Trainings"
-                description="Calendar by group"
+                title={t('Trainings')}
+                description={t('Attendance by day')}
             />
             <NavCard
                 href="/membership-fees"
                 icon={<CreditCardIcon sx={iconSx} />}
-                title="Membership Fees"
-                description="Record and review payments"
+                title={t('Membership Fees')}
+                description={t('Record and review payments')}
             />
             <NavCard
                 href="/attendance"
                 icon={<AssignmentTurnedInIcon sx={iconSx} />}
-                title="Attendance"
-                description="Per member and group"
+                title={t('Attendance')}
+                description={t('Per member and group')}
             />
             {isAdmin && (
                 <NavCard
                     href="/staff"
                     icon={<PersonIcon sx={iconSx} />}
-                    title="Staff"
-                    description="Coaches and salaries"
+                    title={t('Staff')}
+                    description={t('Coaches and salaries')}
                 />
             )}
         </div>

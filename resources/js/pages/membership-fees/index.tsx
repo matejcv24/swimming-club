@@ -41,6 +41,7 @@ import { CloseButton, PopupHeader } from '@/components/popup-ui';
 import { CardsSkeleton } from '@/components/skeletons';
 import { usePagePopup } from '@/hooks/use-page-popup';
 import { groupNameOf, useGroups } from '@/lib/groups';
+import { locale, pickerLocaleText, t, tc } from '@/lib/i18n';
 import { clearOnClick } from '@/lib/search-field';
 
 /** 'all' or one group's id */
@@ -100,6 +101,9 @@ const inputSx = {
     '& .MuiSvgIcon-root': { color: POPUP_FG },
 };
 
+const methodLabel = (method: 'cash' | 'card') =>
+    method === 'card' ? t('Card') : t('Cash');
+
 function PaymentMethodBadge({ fee }: { fee: Fee }) {
     return (
         <div
@@ -119,12 +123,8 @@ function PaymentMethodBadge({ fee }: { fee: Fee }) {
                 color="success"
                 size="small"
             />
-            <Typography
-                variant="caption"
-                color="text.secondary"
-                sx={{ textTransform: 'capitalize' }}
-            >
-                {fee.payment_method}
+            <Typography variant="caption" color="text.secondary">
+                {methodLabel(fee.payment_method)}
             </Typography>
         </div>
     );
@@ -389,7 +389,7 @@ export default function MembershipFeesIndex({
     return (
         <MuiThemeProvider>
             <DashboardBackground />
-            <Head title="Membership Fees" />
+            <Head title={t('Membership Fees')} />
 
             <Dialog
                 {...popup.dialogProps}
@@ -406,8 +406,8 @@ export default function MembershipFeesIndex({
                 <DialogTitle sx={{ p: 0 }}>
                     <PopupHeader
                         icon={<CreditCardIcon fontSize="small" />}
-                        title="Membership Fees"
-                        subtitle="Record and review payments"
+                        title={t('Membership Fees')}
+                        subtitle={t('Record and review payments')}
                         onClose={popup.close}
                     />
                 </DialogTitle>
@@ -422,7 +422,7 @@ export default function MembershipFeesIndex({
                             renderInput={(params) => (
                                 <TextField
                                     {...params}
-                                    label="Search member"
+                                    label={t('Search member')}
                                     variant="outlined"
                                     sx={inputSx}
                                     {...clearOnClick(
@@ -444,7 +444,9 @@ export default function MembershipFeesIndex({
                                             letterSpacing: 1,
                                         }}
                                     >
-                                        Last Payment — {selectedMember.name}
+                                        {t('Last Payment — :name', {
+                                            name: selectedMember.name,
+                                        })}
                                     </Typography>
 
                                     {loadingFees ? (
@@ -455,7 +457,7 @@ export default function MembershipFeesIndex({
                                             color="text.secondary"
                                             sx={{ mt: 1 }}
                                         >
-                                            No payments recorded yet.
+                                            {t('No payments recorded yet.')}
                                         </Typography>
                                     ) : (
                                         <List disablePadding sx={{ mt: 1 }}>
@@ -499,9 +501,12 @@ export default function MembershipFeesIndex({
                                                                 variant="caption"
                                                                 color="primary"
                                                             >
-                                                                Click to see all{' '}
-                                                                {fees.length}{' '}
-                                                                payments
+                                                                {t(
+                                                                    'Click to see all :count payments',
+                                                                    {
+                                                                        count: fees.length,
+                                                                    },
+                                                                )}
                                                             </Typography>
                                                         ) : null
                                                     }
@@ -529,12 +534,12 @@ export default function MembershipFeesIndex({
                                 letterSpacing: 1,
                             }}
                         >
-                            Record New Payment
+                            {t('Record New Payment')}
                         </Typography>
 
                         <div className="flex gap-3">
                             <TextField
-                                label="Amount (MKD)"
+                                label={t('Amount (MKD)')}
                                 variant="outlined"
                                 type="number"
                                 value={amount}
@@ -548,34 +553,42 @@ export default function MembershipFeesIndex({
                                 }}
                             >
                                 <InputLabel id="payment-method-label">
-                                    Method
+                                    {t('Method')}
                                 </InputLabel>
                                 <Select
                                     labelId="payment-method-label"
                                     value={paymentMethod}
-                                    label="Method"
+                                    label={t('Method')}
                                     onChange={(e) =>
                                         setPaymentMethod(
                                             e.target.value as 'cash' | 'card',
                                         )
                                     }
                                 >
-                                    <MenuItem value="cash">Cash</MenuItem>
-                                    <MenuItem value="card">Card</MenuItem>
+                                    <MenuItem value="cash">
+                                        {t('Cash')}
+                                    </MenuItem>
+                                    <MenuItem value="card">
+                                        {t('Card')}
+                                    </MenuItem>
                                 </Select>
                             </FormControl>
                         </div>
 
-                        <LocalizationProvider dateAdapter={AdapterDayjs}>
+                        <LocalizationProvider
+                            dateAdapter={AdapterDayjs}
+                            adapterLocale={locale}
+                            localeText={pickerLocaleText}
+                        >
                             <DatePicker
-                                label="Start Date"
+                                label={t('Start Date')}
                                 value={startDate}
                                 onChange={(val) => setStartDate(val)}
                                 sx={inputSx}
                                 format="DD/MM/YYYY"
                             />
                             <DatePicker
-                                label="End Date"
+                                label={t('End Date')}
                                 value={endDate}
                                 onChange={(val) => setEndDate(val)}
                                 minDate={startDate ?? undefined}
@@ -597,7 +610,7 @@ export default function MembershipFeesIndex({
                                     !endDate
                                 }
                             >
-                                Save
+                                {t('Save')}
                             </Button>
                             <Button
                                 variant="outlined"
@@ -605,7 +618,7 @@ export default function MembershipFeesIndex({
                                 size="medium"
                                 onClick={handleCancel}
                             >
-                                Cancel
+                                {t('Cancel')}
                             </Button>
                         </div>
 
@@ -621,7 +634,7 @@ export default function MembershipFeesIndex({
                                         letterSpacing: 1,
                                     }}
                                 >
-                                    Membership Fees By Year
+                                    {t('Membership Fees By Year')}
                                 </Typography>
 
                                 {allFees === undefined ? (
@@ -668,16 +681,24 @@ export default function MembershipFeesIndex({
                                                         variant="caption"
                                                         color="primary"
                                                     >
-                                                        {
+                                                        {tc(
+                                                            ':count month|:count months',
                                                             yearGroups[year]
-                                                                .monthCount
-                                                        }{' '}
-                                                        months
+                                                                .monthCount,
+                                                        )}
                                                     </Typography>
                                                 </div>
 
                                                 <Chip
-                                                    label={`Total: ${formatCurrency(yearGroups[year].total)} MKD`}
+                                                    label={t(
+                                                        'Total: :amount MKD',
+                                                        {
+                                                            amount: formatCurrency(
+                                                                yearGroups[year]
+                                                                    .total,
+                                                            ),
+                                                        },
+                                                    )}
                                                     color="success"
                                                     size="small"
                                                 />
@@ -689,7 +710,7 @@ export default function MembershipFeesIndex({
                                         variant="body2"
                                         color="text.secondary"
                                     >
-                                        No membership fees recorded yet.
+                                        {t('No membership fees recorded yet.')}
                                     </Typography>
                                 )}
                             </div>
@@ -711,7 +732,9 @@ export default function MembershipFeesIndex({
                 <DialogTitle sx={{ p: 0 }}>
                     <div className="flex items-center justify-between px-4 py-3">
                         <Typography variant="h6" fontWeight="bold">
-                            Payment History — {selectedMember?.name}
+                            {t('Payment History — :name', {
+                                name: selectedMember?.name ?? '',
+                            })}
                         </Typography>
                         <CloseButton
                             onClick={() => setShowHistoryModal(false)}
@@ -764,7 +787,7 @@ export default function MembershipFeesIndex({
                                             onClick={() =>
                                                 handleEditFeeOpen(fee)
                                             }
-                                            aria-label="edit payment"
+                                            aria-label={t('Edit payment')}
                                         >
                                             <EditIcon fontSize="small" />
                                         </IconButton>
@@ -790,7 +813,9 @@ export default function MembershipFeesIndex({
                     <DialogTitle sx={{ p: 0 }}>
                         <div className="flex items-center justify-between px-4 py-3">
                             <Typography variant="h6" fontWeight="bold">
-                                Edit Payment — {selectedMember?.name}
+                                {t('Edit Payment — :name', {
+                                    name: selectedMember?.name ?? '',
+                                })}
                             </Typography>
                             <CloseButton onClick={handleEditFeeClose} />
                         </div>
@@ -801,7 +826,7 @@ export default function MembershipFeesIndex({
                         <div className="flex flex-col gap-6 py-4">
                             <div className="flex gap-3">
                                 <TextField
-                                    label="Amount (MKD)"
+                                    label={t('Amount (MKD)')}
                                     variant="outlined"
                                     type="number"
                                     value={editFeeForm.amount}
@@ -821,12 +846,12 @@ export default function MembershipFeesIndex({
                                     }}
                                 >
                                     <InputLabel id="edit-payment-method-label">
-                                        Method
+                                        {t('Method')}
                                     </InputLabel>
                                     <Select
                                         labelId="edit-payment-method-label"
                                         value={editFeeForm.payment_method}
-                                        label="Method"
+                                        label={t('Method')}
                                         onChange={(e) =>
                                             setEditFeeForm({
                                                 ...editFeeForm,
@@ -835,15 +860,23 @@ export default function MembershipFeesIndex({
                                             })
                                         }
                                     >
-                                        <MenuItem value="cash">Cash</MenuItem>
-                                        <MenuItem value="card">Card</MenuItem>
+                                        <MenuItem value="cash">
+                                            {t('Cash')}
+                                        </MenuItem>
+                                        <MenuItem value="card">
+                                            {t('Card')}
+                                        </MenuItem>
                                     </Select>
                                 </FormControl>
                             </div>
 
-                            <LocalizationProvider dateAdapter={AdapterDayjs}>
+                            <LocalizationProvider
+                                dateAdapter={AdapterDayjs}
+                                adapterLocale={locale}
+                                localeText={pickerLocaleText}
+                            >
                                 <DatePicker
-                                    label="Start Date"
+                                    label={t('Start Date')}
                                     value={editFeeForm.start_date}
                                     onChange={(val) =>
                                         setEditFeeForm({
@@ -855,7 +888,7 @@ export default function MembershipFeesIndex({
                                     format="DD/MM/YYYY"
                                 />
                                 <DatePicker
-                                    label="End Date"
+                                    label={t('End Date')}
                                     value={editFeeForm.end_date}
                                     onChange={(val) =>
                                         setEditFeeForm({
@@ -894,7 +927,7 @@ export default function MembershipFeesIndex({
                                         !editFeeForm.end_date
                                     }
                                 >
-                                    Save
+                                    {t('Save')}
                                 </Button>
                                 <Button
                                     variant="outlined"
@@ -902,7 +935,7 @@ export default function MembershipFeesIndex({
                                     size="medium"
                                     onClick={handleEditFeeClose}
                                 >
-                                    Cancel
+                                    {t('Cancel')}
                                 </Button>
                             </div>
                         </div>
@@ -926,7 +959,9 @@ export default function MembershipFeesIndex({
                 <DialogTitle sx={{ p: 0 }}>
                     <div className="flex items-center justify-between px-4 py-3">
                         <Typography variant="h6" fontWeight="bold">
-                            Membership Fees - {selectedYear}
+                            {t('Membership Fees - :year', {
+                                year: selectedYear ?? '',
+                            })}
                         </Typography>
                         <CloseButton
                             onClick={() => {
@@ -986,7 +1021,11 @@ export default function MembershipFeesIndex({
                                     </div>
 
                                     <Chip
-                                        label={`Total: ${formatCurrency(monthData.total)} MKD`}
+                                        label={t('Total: :amount MKD', {
+                                            amount: formatCurrency(
+                                                monthData.total,
+                                            ),
+                                        })}
                                         color="success"
                                         size="small"
                                     />
@@ -1014,10 +1053,11 @@ export default function MembershipFeesIndex({
                 <DialogTitle sx={{ p: 0 }}>
                     <div className="flex items-center justify-between px-4 py-3">
                         <Typography variant="h6" fontWeight="bold">
-                            Membership Details —{' '}
-                            {selectedMonth
-                                ? dayjs(selectedMonth).format('MMMM YYYY')
-                                : ''}
+                            {t('Membership Details — :month', {
+                                month: selectedMonth
+                                    ? dayjs(selectedMonth).format('MMMM YYYY')
+                                    : '',
+                            })}
                         </Typography>
                         <CloseButton
                             onClick={() => {
@@ -1034,12 +1074,12 @@ export default function MembershipFeesIndex({
                     <div className="grid gap-3 px-4 py-3 sm:grid-cols-3">
                         <FormControl sx={inputSx}>
                             <InputLabel id="month-pool-filter-label">
-                                Group
+                                {t('Group')}
                             </InputLabel>
                             <Select
                                 labelId="month-pool-filter-label"
                                 value={monthPoolFilter}
-                                label="Group"
+                                label={t('Group')}
                                 onChange={(e) =>
                                     setMonthPoolFilter(
                                         e.target.value === 'all'
@@ -1048,7 +1088,7 @@ export default function MembershipFeesIndex({
                                     )
                                 }
                             >
-                                <MenuItem value="all">All</MenuItem>
+                                <MenuItem value="all">{t('All')}</MenuItem>
                                 {groups.map((group) => (
                                     <MenuItem key={group.id} value={group.id}>
                                         {group.name}
@@ -1057,13 +1097,13 @@ export default function MembershipFeesIndex({
                             </Select>
                         </FormControl>
                         <TextField
-                            label="Paid Memberships"
+                            label={t('Paid Memberships')}
                             value={filteredSelectedMonthFees.length}
                             InputProps={{ readOnly: true }}
                             sx={inputSx}
                         />
                         <TextField
-                            label="Total Value"
+                            label={t('Total Value')}
                             value={`${formatCurrency(filteredSelectedMonthTotal)} MKD`}
                             InputProps={{ readOnly: true }}
                             sx={inputSx}
@@ -1080,7 +1120,7 @@ export default function MembershipFeesIndex({
                                             fontWeight: 'bold',
                                         }}
                                     >
-                                        Member
+                                        {t('Member')}
                                     </TableCell>
                                     <TableCell
                                         sx={{
@@ -1088,7 +1128,7 @@ export default function MembershipFeesIndex({
                                             fontWeight: 'bold',
                                         }}
                                     >
-                                        Group
+                                        {t('Group')}
                                     </TableCell>
                                     <TableCell
                                         sx={{
@@ -1096,7 +1136,7 @@ export default function MembershipFeesIndex({
                                             fontWeight: 'bold',
                                         }}
                                     >
-                                        Start Date
+                                        {t('Start Date')}
                                     </TableCell>
                                     <TableCell
                                         sx={{
@@ -1104,7 +1144,7 @@ export default function MembershipFeesIndex({
                                             fontWeight: 'bold',
                                         }}
                                     >
-                                        End Date
+                                        {t('End Date')}
                                     </TableCell>
                                     <TableCell
                                         sx={{
@@ -1112,7 +1152,7 @@ export default function MembershipFeesIndex({
                                             fontWeight: 'bold',
                                         }}
                                     >
-                                        Amount
+                                        {t('Amount')}
                                     </TableCell>
                                     <TableCell
                                         sx={{
@@ -1120,7 +1160,7 @@ export default function MembershipFeesIndex({
                                             fontWeight: 'bold',
                                         }}
                                     >
-                                        Method
+                                        {t('Method')}
                                     </TableCell>
                                 </TableRow>
                             </TableHead>
@@ -1135,7 +1175,9 @@ export default function MembershipFeesIndex({
                                                 py: 4,
                                             }}
                                         >
-                                            No payments recorded for this group.
+                                            {t(
+                                                'No payments recorded for this group.',
+                                            )}
                                         </TableCell>
                                     </TableRow>
                                 )}
@@ -1170,10 +1212,9 @@ export default function MembershipFeesIndex({
                                         <TableCell
                                             sx={{
                                                 color: POPUP_FG,
-                                                textTransform: 'capitalize',
                                             }}
                                         >
-                                            {fee.payment_method}
+                                            {methodLabel(fee.payment_method)}
                                         </TableCell>
                                     </TableRow>
                                 ))}

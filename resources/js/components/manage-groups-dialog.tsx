@@ -29,6 +29,7 @@ import type { MemberDetails } from '@/components/member-details-dialog';
 import { POPUP_BG } from '@/components/mui-theme-provider';
 import { CloseButton, PopupHeader } from '@/components/popup-ui';
 import type { ClubGroup, ClubSubgroup } from '@/lib/groups';
+import { t, tc } from '@/lib/i18n';
 
 const fieldSx = {
     height: 40,
@@ -45,7 +46,7 @@ const fieldSx = {
 const visitOptions = { preserveScroll: true, preserveState: true } as const;
 
 const membersLabel = (count: number) =>
-    `${count} ${count === 1 ? 'member' : 'members'}`;
+    tc(':count member|:count members', count);
 
 /** What is being deleted: a main group, or a subgroup of `parent`. */
 type Deleting = { item: ClubSubgroup; parent: ClubGroup | null };
@@ -103,7 +104,7 @@ export function ManageGroupsDialog({
             setDeleteError(null);
         },
         onError: (errors: Record<string, string>) =>
-            onError(Object.values(errors)[0] ?? 'Something went wrong.'),
+            onError(Object.values(errors)[0] ?? t('Something went wrong.')),
         onFinish: () => setBusy(false),
     });
 
@@ -230,10 +231,12 @@ export function ManageGroupsDialog({
                     sx={fieldSx}
                 />
                 {changed && (
-                    <Tooltip title="Save name">
+                    <Tooltip title={t('Save name')}>
                         <IconButton
                             color="primary"
-                            aria-label={`Save name of ${item.name}`}
+                            aria-label={t('Save name of :name', {
+                                name: item.name,
+                            })}
                             disabled={busy}
                             onClick={() => rename(item)}
                         >
@@ -266,8 +269,10 @@ export function ManageGroupsDialog({
                 <DialogTitle sx={{ p: 0 }}>
                     <PopupHeader
                         icon={<GroupsIcon fontSize="small" />}
-                        title="Groups"
-                        subtitle="Groups and their subgroups, e.g. Big pool → 18:00"
+                        title={t('Groups')}
+                        subtitle={t(
+                            'Groups and their subgroups, e.g. Big pool → 18:00',
+                        )}
                         onClose={onClose}
                     />
                 </DialogTitle>
@@ -286,9 +291,9 @@ export function ManageGroupsDialog({
                                 fullWidth
                                 value={newName}
                                 onChange={(e) => setNewName(e.target.value)}
-                                placeholder="New group name"
+                                placeholder={t('New group name')}
                                 inputProps={{
-                                    'aria-label': 'New group name',
+                                    'aria-label': t('New group name'),
                                     maxLength: 60,
                                 }}
                                 sx={fieldSx}
@@ -300,7 +305,7 @@ export function ManageGroupsDialog({
                                 disabled={busy || newName.trim() === ''}
                                 sx={{ flex: 'none' }}
                             >
-                                Add
+                                {t('Add')}
                             </Button>
                         </form>
 
@@ -315,7 +320,7 @@ export function ManageGroupsDialog({
 
                         {groups.length === 0 && (
                             <p className="py-6 text-center text-sm text-[var(--popup-muted)]">
-                                No groups yet. Add the first one above.
+                                {t('No groups yet. Add the first one above.')}
                             </p>
                         )}
 
@@ -329,12 +334,17 @@ export function ManageGroupsDialog({
                                     <div className="flex items-center gap-1.5">
                                         {renameField(
                                             group,
-                                            `Name of group ${group.name}`,
+                                            t('Name of group :name', {
+                                                name: group.name,
+                                            }),
                                         )}
-                                        <Tooltip title="Add subgroup">
+                                        <Tooltip title={t('Add subgroup')}>
                                             <IconButton
                                                 color="primary"
-                                                aria-label={`Add subgroup to ${group.name}`}
+                                                aria-label={t(
+                                                    'Add subgroup to :name',
+                                                    { name: group.name },
+                                                )}
                                                 disabled={busy}
                                                 onClick={() =>
                                                     startSubgroup(group)
@@ -343,10 +353,13 @@ export function ManageGroupsDialog({
                                                 <AddCircleIcon fontSize="small" />
                                             </IconButton>
                                         </Tooltip>
-                                        <Tooltip title="Delete group">
+                                        <Tooltip title={t('Delete group')}>
                                             <IconButton
                                                 color="error"
-                                                aria-label={`Delete group ${group.name}`}
+                                                aria-label={t(
+                                                    'Delete group :name',
+                                                    { name: group.name },
+                                                )}
                                                 disabled={busy}
                                                 onClick={() =>
                                                     startDelete(group, null)
@@ -368,11 +381,7 @@ export function ManageGroupsDialog({
                                             }
                                         />
                                         {group.subgroups.length > 0 &&
-                                            ` · ${group.subgroups.length} ${
-                                                group.subgroups.length === 1
-                                                    ? 'subgroup'
-                                                    : 'subgroups'
-                                            }`}
+                                            ` · ${tc(':count subgroup|:count subgroups', group.subgroups.length)}`}
                                     </p>
 
                                     {(group.subgroups.length > 0 ||
@@ -383,12 +392,30 @@ export function ManageGroupsDialog({
                                                     <div className="flex items-center gap-1.5">
                                                         {renameField(
                                                             subgroup,
-                                                            `Name of subgroup ${subgroup.name} of ${group.name}`,
+                                                            t(
+                                                                'Name of subgroup :subgroup of :group',
+                                                                {
+                                                                    subgroup:
+                                                                        subgroup.name,
+                                                                    group: group.name,
+                                                                },
+                                                            ),
                                                         )}
-                                                        <Tooltip title="Delete subgroup">
+                                                        <Tooltip
+                                                            title={t(
+                                                                'Delete subgroup',
+                                                            )}
+                                                        >
                                                             <IconButton
                                                                 color="error"
-                                                                aria-label={`Delete subgroup ${subgroup.name} of ${group.name}`}
+                                                                aria-label={t(
+                                                                    'Delete subgroup :subgroup of :group',
+                                                                    {
+                                                                        subgroup:
+                                                                            subgroup.name,
+                                                                        group: group.name,
+                                                                    },
+                                                                )}
                                                                 disabled={busy}
                                                                 onClick={() =>
                                                                     startDelete(
@@ -441,19 +468,32 @@ export function ManageGroupsDialog({
                                                                         .value,
                                                                 )
                                                             }
-                                                            placeholder="New subgroup name, e.g. 18:00"
+                                                            placeholder={t(
+                                                                'New subgroup name, e.g. 18:00',
+                                                            )}
                                                             inputProps={{
-                                                                'aria-label': `New subgroup name for ${group.name}`,
+                                                                'aria-label': t(
+                                                                    'New subgroup name for :name',
+                                                                    {
+                                                                        name: group.name,
+                                                                    },
+                                                                ),
                                                                 maxLength: 60,
                                                             }}
                                                             sx={fieldSx}
                                                         />
-                                                        <Tooltip title="Add subgroup">
+                                                        <Tooltip
+                                                            title={t(
+                                                                'Add subgroup',
+                                                            )}
+                                                        >
                                                             <span>
                                                                 <IconButton
                                                                     type="submit"
                                                                     color="primary"
-                                                                    aria-label="Save subgroup"
+                                                                    aria-label={t(
+                                                                        'Save subgroup',
+                                                                    )}
                                                                     disabled={
                                                                         busy ||
                                                                         newSubgroupName.trim() ===
@@ -464,9 +504,13 @@ export function ManageGroupsDialog({
                                                                 </IconButton>
                                                             </span>
                                                         </Tooltip>
-                                                        <Tooltip title="Cancel">
+                                                        <Tooltip
+                                                            title={t('Cancel')}
+                                                        >
                                                             <IconButton
-                                                                aria-label="Cancel new subgroup"
+                                                                aria-label={t(
+                                                                    'Cancel new subgroup',
+                                                                )}
                                                                 onClick={() =>
                                                                     setAddingTo(
                                                                         null,
@@ -501,8 +545,8 @@ export function ManageGroupsDialog({
                     <div className="flex items-center justify-between px-4 py-3">
                         <Typography variant="h6" fontWeight="bold">
                             {deleting?.parent
-                                ? 'Delete Subgroup'
-                                : 'Delete Group'}
+                                ? t('Delete Subgroup')
+                                : t('Delete Group')}
                         </Typography>
                         <CloseButton onClick={closeDelete} />
                     </div>
@@ -513,7 +557,7 @@ export function ManageGroupsDialog({
                     {deleting && (
                         <div className="flex flex-col gap-4 py-4">
                             <Typography variant="body1">
-                                Are you sure you want to delete{' '}
+                                {t('Are you sure you want to delete')}{' '}
                                 <strong>
                                     {deleting.parent
                                         ? `${deleting.parent.name} · ${deleting.item.name}`
@@ -527,11 +571,14 @@ export function ManageGroupsDialog({
                                     variant="body2"
                                     color="text.secondary"
                                 >
-                                    Its subgroups (
-                                    {deletingSubgroups
-                                        .map((s) => s.name)
-                                        .join(', ')}
-                                    ) will be deleted too.
+                                    {t(
+                                        'Its subgroups (:names) will be deleted too.',
+                                        {
+                                            names: deletingSubgroups
+                                                .map((s) => s.name)
+                                                .join(', '),
+                                        },
+                                    )}
                                 </Typography>
                             )}
 
@@ -539,15 +586,19 @@ export function ManageGroupsDialog({
                                 (destinations.length > 0 ? (
                                     <FormControl fullWidth size="small">
                                         <InputLabel id="move-members-label">
-                                            Move its{' '}
-                                            {membersLabel(
-                                                deleting.item.members_count,
-                                            )}{' '}
-                                            to
+                                            {t('Move its :members to', {
+                                                members: membersLabel(
+                                                    deleting.item.members_count,
+                                                ),
+                                            })}
                                         </InputLabel>
                                         <Select
                                             labelId="move-members-label"
-                                            label={`Move its ${membersLabel(deleting.item.members_count)} to`}
+                                            label={t('Move its :members to', {
+                                                members: membersLabel(
+                                                    deleting.item.members_count,
+                                                ),
+                                            })}
                                             value={moveTo}
                                             onChange={(e) =>
                                                 setMoveTo(
@@ -567,14 +618,16 @@ export function ManageGroupsDialog({
                                     </FormControl>
                                 ) : (
                                     <Typography variant="body2" color="error">
-                                        Add another group first, so its members
-                                        have somewhere to go.
+                                        {t(
+                                            'Add another group first, so its members have somewhere to go.',
+                                        )}
                                     </Typography>
                                 ))}
 
                             <Typography variant="body2" color="text.secondary">
-                                Past trainings, payments and invoices keep its
-                                name.
+                                {t(
+                                    'Past trainings, payments and invoices keep its name.',
+                                )}
                             </Typography>
 
                             {deleteError && (
@@ -601,7 +654,7 @@ export function ManageGroupsDialog({
                                                 moveTo === ''))
                                     }
                                 >
-                                    Yes
+                                    {t('Yes')}
                                 </Button>
                                 <Button
                                     variant="outlined"
@@ -610,7 +663,7 @@ export function ManageGroupsDialog({
                                     onClick={closeDelete}
                                     disabled={busy}
                                 >
-                                    No
+                                    {t('No')}
                                 </Button>
                             </div>
                         </div>

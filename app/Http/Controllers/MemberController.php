@@ -6,6 +6,7 @@ use App\Models\ClubParent;
 use App\Models\Member;
 use App\Models\User;
 use App\Notifications\MemberChangedNotification;
+use App\Support\NotificationText;
 use Illuminate\Http\Request;
 use Illuminate\Notifications\DatabaseNotification;
 use Illuminate\Support\Facades\Auth;
@@ -39,7 +40,7 @@ class MemberController extends Controller
                 // Coaches add and move members only within their groups
                 function ($attribute, $value, $fail) {
                     if (! Auth::user()->canSeeGroup($value)) {
-                        $fail('Choose one of your groups.');
+                        $fail(__('Choose one of your groups.'));
                     }
                 },
             ],
@@ -70,8 +71,12 @@ class MemberController extends Controller
 
             foreach ($admins as $admin) {
                 $admin->notify(new MemberChangedNotification(
-                    Auth::user()->name . ' added a new member ' . $member->name,
-                    '/members?member=' . $member->id
+                    Auth::user()->name.' added a new member '.$member->name,
+                    '/members?member='.$member->id,
+                    NotificationText::make(':user added a new member :member', [
+                        'user' => Auth::user()->name,
+                        'member' => $member->name,
+                    ]),
                 ));
             }
         }
@@ -101,7 +106,7 @@ class MemberController extends Controller
                 // Coaches add and move members only within their groups
                 function ($attribute, $value, $fail) {
                     if (! Auth::user()->canSeeGroup($value)) {
-                        $fail('Choose one of your groups.');
+                        $fail(__('Choose one of your groups.'));
                     }
                 },
             ],
@@ -161,8 +166,13 @@ class MemberController extends Controller
 
             foreach ($admins as $admin) {
                 $admin->notify(new MemberChangedNotification(
-                    Auth::user()->name . ' updated ' . $changeSummary . ' for ' . $member->name,
-                    '/members?member=' . $member->id
+                    Auth::user()->name.' updated '.$changeSummary.' for '.$member->name,
+                    '/members?member='.$member->id,
+                    NotificationText::make(':user updated :changes for :member', [
+                        'user' => Auth::user()->name,
+                        'changes' => $changes,
+                        'member' => $member->name,
+                    ]),
                 ));
             }
         }
@@ -178,7 +188,7 @@ class MemberController extends Controller
 
             // Remove notifications that link to this member, they would point to nothing
             DatabaseNotification::query()
-                ->where('data', 'like', '%member=' . $member->id . '%')
+                ->where('data', 'like', '%member='.$member->id.'%')
                 ->get()
                 ->filter(function (DatabaseNotification $notification) use ($member) {
                     parse_str((string) parse_url($notification->data['url'] ?? '', PHP_URL_QUERY), $query);
@@ -191,7 +201,7 @@ class MemberController extends Controller
 
             $member->delete();
 
-            if ($parent && !$parent->members()->exists()) {
+            if ($parent && ! $parent->members()->exists()) {
                 $parent->delete();
             }
         });

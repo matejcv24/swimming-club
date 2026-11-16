@@ -11,6 +11,7 @@ import { MuiThemeProvider, POPUP_BG } from '@/components/mui-theme-provider';
 import { NotificationIcon } from '@/components/notification-icon';
 import { IconBadge, PopupHeader } from '@/components/popup-ui';
 import { usePagePopup } from '@/hooks/use-page-popup';
+import { locale, t } from '@/lib/i18n';
 import type { AppNotification } from '@/types';
 
 type Props = {
@@ -23,7 +24,7 @@ function formatNotificationDate(value: string | null) {
         return '';
     }
 
-    return new Intl.DateTimeFormat(undefined, {
+    return new Intl.DateTimeFormat(locale, {
         dateStyle: 'medium',
         timeStyle: 'short',
     }).format(new Date(value));
@@ -46,7 +47,7 @@ export default function NotificationsIndex({
     return (
         <MuiThemeProvider>
             <DashboardBackground />
-            <Head title="Notifications" />
+            <Head title={t('Notifications')} />
 
             <Dialog
                 {...popup.dialogProps}
@@ -64,8 +65,11 @@ export default function NotificationsIndex({
                 <DialogTitle sx={{ p: 0 }}>
                     <PopupHeader
                         icon={<NotificationsIcon fontSize="small" />}
-                        title="Notifications"
-                        subtitle={`${unreadNotifications.length} unread · ${allNotifications.length} in total`}
+                        title={t('Notifications')}
+                        subtitle={t(':unread unread · :total in total', {
+                            unread: unreadNotifications.length,
+                            total: allNotifications.length,
+                        })}
                         onClose={popup.close}
                     />
                     <Tabs
@@ -73,8 +77,16 @@ export default function NotificationsIndex({
                         onChange={(_, value) => setTab(value)}
                         variant="fullWidth"
                     >
-                        <Tab label={`All (${allNotifications.length})`} />
-                        <Tab label={`Unread (${unreadNotifications.length})`} />
+                        <Tab
+                            label={t('All (:count)', {
+                                count: allNotifications.length,
+                            })}
+                        />
+                        <Tab
+                            label={t('Unread (:count)', {
+                                count: unreadNotifications.length,
+                            })}
+                        />
                     </Tabs>
                 </DialogTitle>
 
@@ -82,8 +94,10 @@ export default function NotificationsIndex({
                     {shown.length === 0 ? (
                         <p className="mt-12 text-center text-sm text-[var(--popup-muted)]">
                             {tab === 0
-                                ? 'You have not received any notifications yet.'
-                                : 'No unread notifications.'}
+                                ? t(
+                                      'You have not received any notifications yet.',
+                                  )
+                                : t('No unread notifications.')}
                         </p>
                     ) : (
                         <div className="divide-y divide-[var(--popup-border)] px-2 pb-2">
@@ -123,7 +137,7 @@ export default function NotificationsIndex({
                                         {isUnread && (
                                             <span
                                                 className="size-2.5 flex-none rounded-full bg-hydra-blue"
-                                                aria-label="Unread"
+                                                aria-label={t('Unread')}
                                             />
                                         )}
                                     </button>

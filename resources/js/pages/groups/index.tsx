@@ -5,6 +5,7 @@ import type { MemberDetails } from '@/components/member-details-dialog';
 import { MuiThemeProvider } from '@/components/mui-theme-provider';
 import { usePagePopup } from '@/hooks/use-page-popup';
 import { useGroups } from '@/lib/groups';
+import { t } from '@/lib/i18n';
 
 /** The club's groups and subgroups, opened from the dashboard (admins only). */
 export default function GroupsIndex({ members }: { members: MemberDetails[] }) {
@@ -15,7 +16,7 @@ export default function GroupsIndex({ members }: { members: MemberDetails[] }) {
     return (
         <MuiThemeProvider>
             <DashboardBackground />
-            <Head title="Groups" />
+            <Head title={t('Groups')} />
 
             <ManageGroupsDialog
                 open={popup.dialogProps.open}
