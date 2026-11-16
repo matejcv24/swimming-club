@@ -12,8 +12,10 @@ import ReceiptLongIcon from '@mui/icons-material/ReceiptLong';
 import TrendingDownIcon from '@mui/icons-material/TrendingDown';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import WarningIcon from '@mui/icons-material/Warning';
+import WorkspacesIcon from '@mui/icons-material/Workspaces';
 import type { ReactNode } from 'react';
 import { IconBadge } from '@/components/popup-ui';
+import { useGroups } from '@/lib/groups';
 
 export type DashboardSummary = {
     userRole: 'admin' | 'coach';
@@ -56,6 +58,7 @@ function StatCard({
     onClick,
     onHover,
     wide = false,
+    periodBelow = false,
     children,
 }: {
     icon: ReactNode;
@@ -67,6 +70,8 @@ function StatCard({
     onHover?: () => void;
     /** Spans both columns on computers. */
     wide?: boolean;
+    /** Phones: the period on its own line under the label, not "(period)" beside it. */
+    periodBelow?: boolean;
     children: ReactNode;
 }) {
     // Phones: icon on the left; "Label (period)" and the value centred in the card.
@@ -87,14 +92,19 @@ function StatCard({
                     {icon}
                 </IconBadge>
                 <div className="min-w-0 text-center md:text-left">
-                    <p className="text-[13px] font-semibold text-muted-foreground md:text-base">
+                    {/* Same title and description sizes as the other cards */}
+                    <h2 className="text-[15px] font-bold md:text-xl">
                         {label}
-                        <span className="font-normal md:hidden">
-                            {' '}
-                            ({period})
-                        </span>
-                    </p>
-                    <p className="hidden text-sm text-muted-foreground md:block">
+                        {!periodBelow && (
+                            <span className="text-[12.5px] font-normal text-muted-foreground md:hidden">
+                                {' '}
+                                ({period})
+                            </span>
+                        )}
+                    </h2>
+                    <p
+                        className={`truncate text-[12.5px] text-muted-foreground md:block md:text-sm ${periodBelow ? '' : 'hidden'}`}
+                    >
                         {period}
                     </p>
                 </div>
@@ -133,6 +143,7 @@ function NavCard({
     title,
     description,
     wide = false,
+    className = '',
 }: {
     href: string;
     icon: ReactNode;
@@ -140,13 +151,15 @@ function NavCard({
     description: string;
     /** Spans both columns (the last card when the count is odd). */
     wide?: boolean;
+    className?: string;
 }) {
     return (
         <Link
             href={href}
             prefetch
             cacheFor={PREFETCH_FOR}
-            className={`${card} flex min-h-0 items-center gap-3 p-5 md:gap-5 md:px-7 md:py-2 ${wide ? 'md:col-span-2' : ''}`}
+            preserveScroll
+            className={`${card} flex min-h-0 items-center gap-3 p-5 md:gap-5 md:px-7 md:py-2 ${wide ? 'md:col-span-2' : ''} ${className}`}
         >
             <IconBadge className={badgeSize}>{icon}</IconBadge>
             <div className="min-w-0">
@@ -173,6 +186,21 @@ export function DashboardCards({
 }: Props) {
     const period = `${new Date().getFullYear()} so far`;
     const isAdmin = userRole === 'admin';
+    const groups = useGroups();
+    const subgroupCount = groups.reduce(
+        (sum, group) => sum + group.subgroups.length,
+        0,
+    );
+    const groupsDescription =
+        groups.length === 0
+            ? 'Create your first group'
+            : [
+                  `${groups.length} ${groups.length === 1 ? 'group' : 'groups'}`,
+                  subgroupCount > 0 &&
+                      `${subgroupCount} ${subgroupCount === 1 ? 'subgroup' : 'subgroups'}`,
+              ]
+                  .filter(Boolean)
+                  .join(' · ');
     const profitDown = profitTotal < 0;
 
     return (
@@ -192,8 +220,9 @@ export function DashboardCards({
                     tone={profitDown ? 'red' : 'green'}
                     label="Profit"
                     period={period}
-                    wide
-                    onClick={() => router.visit('/profit')}
+                    onClick={() =>
+                        router.visit('/profit', { preserveScroll: true })
+                    }
                     onHover={prefetchOnHover('/profit')}
                 >
                     <Amount
@@ -211,7 +240,9 @@ export function DashboardCards({
                     icon={<ReceiptLongIcon sx={iconSx} />}
                     label="Invoices"
                     period={period}
-                    onClick={() => router.visit('/invoices')}
+                    onClick={() =>
+                        router.visit('/invoices', { preserveScroll: true })
+                    }
                     onHover={prefetchOnHover('/invoices')}
                 >
                     <Amount value={formatCurrency(invoiceTotal)} unit="MKD" />
@@ -222,6 +253,7 @@ export function DashboardCards({
                 <StatCard
                     icon={<DescriptionIcon sx={iconSx} />}
                     label="Monthly report"
+                    periodBelow
                     period="Fees, invoices, salaries"
                     onClick={onOpenReport}
                 >
@@ -250,8 +282,11 @@ export function DashboardCards({
                 icon={<WarningIcon sx={iconSx} />}
                 tone={unpaidFees > 0 ? 'red' : 'green'}
                 label="Unpaid fees"
+                periodBelow
                 period="Members to follow up"
-                onClick={() => router.visit('/unpaid-fees')}
+                onClick={() =>
+                    router.visit('/unpaid-fees', { preserveScroll: true })
+                }
                 onHover={prefetchOnHover('/unpaid-fees')}
             >
                 <Amount
@@ -261,6 +296,16 @@ export function DashboardCards({
                     }
                 />
             </StatCard>
+
+            {/* Right after Unpaid fees (phones: below it; computers: next to Members) */}
+            {isAdmin && (
+                <NavCard
+                    href="/groups"
+                    icon={<WorkspacesIcon sx={iconSx} />}
+                    title="Groups"
+                    description={groupsDescription}
+                />
+            )}
 
             <NavCard
                 href="/members"

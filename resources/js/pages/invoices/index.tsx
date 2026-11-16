@@ -1,4 +1,4 @@
-import { Head, router, usePage } from '@inertiajs/react';
+import { Head, usePage } from '@inertiajs/react';
 import EditIcon from '@mui/icons-material/Edit';
 import ReceiptLongIcon from '@mui/icons-material/ReceiptLong';
 import Button from '@mui/material/Button';
@@ -8,13 +8,12 @@ import DialogContent from '@mui/material/DialogContent';
 import DialogTitle from '@mui/material/DialogTitle';
 import Divider from '@mui/material/Divider';
 import FormControl from '@mui/material/FormControl';
-import IconButton from '@mui/material/IconButton';
-import Input from '@mui/material/Input';
 import InputLabel from '@mui/material/InputLabel';
 import List from '@mui/material/List';
 import ListItem from '@mui/material/ListItem';
 import MenuItem from '@mui/material/MenuItem';
 import Select from '@mui/material/Select';
+import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
@@ -30,20 +29,39 @@ import {
     popupFg,
 } from '@/components/mui-theme-provider';
 import { CloseButton, PopupHeader } from '@/components/popup-ui';
+import { usePagePopup } from '@/hooks/use-page-popup';
+import { groupNameOf, useGroups } from '@/lib/groups';
 
 interface Invoice {
     id: number;
     month: string;
-    pool: 'big' | 'small';
+    // Optional: an invoice may be for one group or for no group in particular
+    group_id: number | null;
+    // The group as it was, so invoices of a deleted group keep its name
+    group?: { id: number; name: string } | null;
     amount: number;
 }
 
-interface GroupedInvoiceByMonth {
+interface InvoicesByMonth {
     month: string;
-    big_pool: number;
-    small_pool: number;
+    invoices: Invoice[];
     total: number;
 }
+
+const toInvoice = (raw: Invoice | Record<string, unknown>): Invoice => {
+    const data = raw as Invoice & { amount: number | string };
+
+    return {
+        id: data.id,
+        month: String(data.month).slice(0, 10),
+        group_id: data.group_id ?? null,
+        group: data.group ?? null,
+        amount:
+            typeof data.amount === 'string'
+                ? parseFloat(data.amount)
+                : data.amount,
+    };
+};
 
 interface Props {
     invoices: Invoice[];
@@ -62,14 +80,8 @@ const chipSx = {
     justifyContent: 'center',
 };
 
-const inputSx = {
-    color: POPUP_FG,
-    '&::before': { borderBottomColor: POPUP_FG },
-    '&::after': { borderBottomColor: POPUP_FG },
-    '& input::placeholder': { color: popupFg(0.5) },
-};
-
-const datePickerSx = {
+// Outlined fields with a floating label, as in the rest of the app
+const fieldSx = {
     '& .MuiOutlinedInput-root': {
         '& fieldset': { borderColor: popupFg(0.3) },
         '&:hover fieldset': { borderColor: POPUP_FG },
@@ -81,59 +93,46 @@ const datePickerSx = {
 };
 
 export default function InvoicesIndex({ invoices }: Props) {
+    // Fades in and out over the dashboard
+    const popup = usePagePopup();
     const page = usePage();
     const csrfToken = (page.props as any).csrf_token;
 
     console.log('Page props:', page.props);
     console.log('CSRF Token from props:', csrfToken);
 
+    const groups = useGroups();
     const [invoiceList, setInvoiceList] = useState<Invoice[]>(
-        invoices.map((inv) => ({
-            ...inv,
-            amount:
-                typeof inv.amount === 'string'
-                    ? parseFloat(inv.amount)
-                    : inv.amount,
-        })),
+        invoices.map(toInvoice),
     );
     const [invoiceMonth, setInvoiceMonth] = useState<Dayjs | null>(null);
-    const [invoicePool, setInvoicePool] = useState<'big' | 'small'>('big');
+    // '' = no specific group (counts toward the total only)
+    const [invoiceGroupId, setInvoiceGroupId] = useState<number | ''>('');
     const [invoiceAmount, setInvoiceAmount] = useState('');
     const [showYearDetailModal, setShowYearDetailModal] = useState(false);
     const [selectedYear, setSelectedYear] = useState<string | null>(null);
     const [editingInvoice, setEditingInvoice] = useState<Invoice | null>(null);
     const [editAmount, setEditAmount] = useState('');
-    const [editPoolSelection, setEditPoolSelection] = useState<'big' | 'small'>(
-        'big',
-    );
     const [isSaving, setIsSaving] = useState(false);
 
-    // Get unique months and group invoices
-    const groupedInvoices: Record<string, GroupedInvoiceByMonth> = {};
+    const invoiceLabel = (invoice: Invoice) =>
+        invoice.group_id === null
+            ? 'No specific group'
+            : groupNameOf(groups, invoice.group_id, invoice.group?.name);
+
+    // Invoices per month: one line per group (or without one) and their total
+    const groupedInvoices: Record<string, InvoicesByMonth> = {};
     invoiceList.forEach((inv) => {
         if (!groupedInvoices[inv.month]) {
             groupedInvoices[inv.month] = {
                 month: inv.month,
-                big_pool: 0,
-                small_pool: 0,
+                invoices: [],
                 total: 0,
             };
         }
 
-        const amount =
-            typeof inv.amount === 'string'
-                ? parseFloat(inv.amount)
-                : inv.amount;
-
-        if (inv.pool === 'big') {
-            groupedInvoices[inv.month].big_pool = amount;
-        } else {
-            groupedInvoices[inv.month].small_pool = amount;
-        }
-
-        groupedInvoices[inv.month].total =
-            groupedInvoices[inv.month].big_pool +
-            groupedInvoices[inv.month].small_pool;
+        groupedInvoices[inv.month].invoices.push(inv);
+        groupedInvoices[inv.month].total += inv.amount;
     });
 
     const sortedMonths = Object.keys(groupedInvoices).sort().reverse();
@@ -165,90 +164,62 @@ export default function InvoicesIndex({ invoices }: Props) {
           )
         : [];
 
+    const resetForm = () => {
+        setInvoiceMonth(null);
+        setInvoiceGroupId('');
+        setInvoiceAmount('');
+    };
+
     const handleSaveInvoice = async () => {
-        console.log('handleSaveInvoice called');
-        console.log(
-            'Invoiced inputs - Month:',
-            invoiceMonth?.format('YYYY-MM-DD'),
-            'Amount:',
-            invoiceAmount,
-            'Pool:',
-            invoicePool,
-        );
-        console.log('CSRF Token available:', csrfToken);
-
-        if (!invoiceMonth || !invoiceAmount) {
-            console.log('Missing required fields');
-
+        if (!invoiceMonth || !invoiceAmount || !csrfToken) {
             return;
         }
 
-        if (!csrfToken) {
-            console.error('CSRF token is missing!');
+        const amount = parseFloat(invoiceAmount);
 
+        if (isNaN(amount) || amount < 0) {
             return;
         }
 
         setIsSaving(true);
-
-        const monthStr = invoiceMonth.format('YYYY-MM-DD');
-        const amount = parseFloat(invoiceAmount);
-
-        if (isNaN(amount) || amount < 0) {
-            console.error('Invalid amount - NaN or negative');
-            setIsSaving(false);
-
-            return;
-        }
-
-        const payload = {
-            month: monthStr,
-            pool: invoicePool,
-            amount: amount,
-        };
-        console.log('Sending payload:', payload);
 
         try {
             const response = await fetch('/invoices', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
+                    Accept: 'application/json',
                     'X-CSRF-TOKEN': csrfToken,
                 },
-                body: JSON.stringify(payload),
+                body: JSON.stringify({
+                    month: invoiceMonth.format('YYYY-MM-DD'),
+                    group_id: invoiceGroupId === '' ? null : invoiceGroupId,
+                    amount,
+                }),
             });
 
-            console.log('Response status:', response.status);
-
             if (response.ok) {
-                const data = await response.json();
-                console.log('Response data:', data);
-
-                const newInvoice: Invoice = {
-                    id: data.id,
-                    month: data.month,
-                    pool: data.pool,
-                    amount: parseFloat(data.amount),
+                const saved = toInvoice(await response.json());
+                const group = groups.find((g) => g.id === saved.group_id);
+                const withGroup = {
+                    ...saved,
+                    group: group ? { id: group.id, name: group.name } : null,
                 };
 
-                setInvoiceList([newInvoice, ...invoiceList]);
-                setInvoiceMonth(null);
-                setInvoicePool('big');
-                setInvoiceAmount('');
-                console.log('Invoice saved successfully');
-            } else {
-                const errorData = await response
-                    .json()
-                    .catch(() => ({ error: 'Unable to parse error' }));
-                console.error(
-                    'Error saving invoice - Status:',
-                    response.status,
-                    'Error:',
-                    errorData,
+                // The same month and group again updates that invoice, so replace it
+                setInvoiceList((list) =>
+                    list.some((inv) => inv.id === withGroup.id)
+                        ? list.map((inv) =>
+                              inv.id === withGroup.id ? withGroup : inv,
+                          )
+                        : [withGroup, ...list],
                 );
+                resetForm();
+            } else {
+                console.error('Error saving invoice', response.status);
             }
         } catch (error) {
-            console.error('Exception in handleSaveInvoice:', error);
+            console.error('Error saving invoice:', error);
         } finally {
             setIsSaving(false);
         }
@@ -278,13 +249,9 @@ export default function InvoicesIndex({ invoices }: Props) {
             });
 
             if (response.ok) {
-                const updated = await response.json();
-                // Update with proper typing
                 const updatedInvoice: Invoice = {
-                    id: updated.id,
-                    month: updated.month,
-                    pool: updated.pool,
-                    amount: parseFloat(updated.amount),
+                    ...editingInvoice,
+                    amount: toInvoice(await response.json()).amount,
                 };
                 setInvoiceList(
                     invoiceList.map((inv) =>
@@ -293,7 +260,6 @@ export default function InvoicesIndex({ invoices }: Props) {
                 );
                 setEditingInvoice(null);
                 setEditAmount('');
-                setEditPoolSelection('big');
             } else {
                 const errorData = await response.json();
                 console.error('Error updating invoice:', errorData);
@@ -330,8 +296,7 @@ export default function InvoicesIndex({ invoices }: Props) {
             <Head title="Invoices" />
 
             <Dialog
-                open={true}
-                onClose={() => router.visit('/dashboard')}
+                {...popup.dialogProps}
                 fullWidth
                 maxWidth="sm"
                 PaperProps={{
@@ -347,8 +312,8 @@ export default function InvoicesIndex({ invoices }: Props) {
                     <PopupHeader
                         icon={<ReceiptLongIcon fontSize="small" />}
                         title="Invoices"
-                        subtitle="Pool invoices by month"
-                        onClose={() => router.visit('/dashboard')}
+                        subtitle="Invoices by month, per group or in total"
+                        onClose={popup.close}
                     />
                 </DialogTitle>
 
@@ -373,50 +338,53 @@ export default function InvoicesIndex({ invoices }: Props) {
                                     value={invoiceMonth}
                                     onChange={(val) => setInvoiceMonth(val)}
                                     views={['month', 'year']}
-                                    sx={datePickerSx}
+                                    sx={fieldSx}
                                 />
                             </LocalizationProvider>
 
-                            <FormControl variant="standard" fullWidth>
-                                <InputLabel sx={{ color: popupFg(0.7) }}>
-                                    Pool
+                            <FormControl fullWidth sx={fieldSx}>
+                                <InputLabel id="invoice-group-label" shrink>
+                                    Group (optional)
                                 </InputLabel>
                                 <Select
-                                    value={invoicePool}
+                                    labelId="invoice-group-label"
+                                    label="Group (optional)"
+                                    notched
+                                    value={invoiceGroupId}
+                                    displayEmpty
                                     onChange={(e) =>
-                                        setInvoicePool(
-                                            e.target.value as 'big' | 'small',
+                                        setInvoiceGroupId(
+                                            String(e.target.value) === ''
+                                                ? ''
+                                                : Number(e.target.value),
                                         )
                                     }
-                                    sx={{
-                                        color: POPUP_FG,
-                                        '&::before': {
-                                            borderBottomColor: POPUP_FG,
-                                        },
-                                        '&::after': {
-                                            borderBottomColor: POPUP_FG,
-                                        },
-                                    }}
                                 >
-                                    <MenuItem value="big">Big Pool</MenuItem>
-                                    <MenuItem value="small">
-                                        Small Pool
+                                    <MenuItem value="">
+                                        No specific group (total)
                                     </MenuItem>
+                                    {groups.map((group) => (
+                                        <MenuItem
+                                            key={group.id}
+                                            value={group.id}
+                                        >
+                                            {group.name}
+                                        </MenuItem>
+                                    ))}
                                 </Select>
                             </FormControl>
 
-                            <Input
-                                placeholder="Amount (MKD)"
+                            <TextField
+                                label="Amount (MKD)"
                                 type="number"
+                                required
                                 value={invoiceAmount}
                                 onChange={(e) =>
                                     setInvoiceAmount(e.target.value)
                                 }
                                 fullWidth
-                                inputProps={{
-                                    'aria-label': 'invoice amount',
-                                }}
-                                sx={inputSx}
+                                inputProps={{ min: 0 }}
+                                sx={fieldSx}
                             />
 
                             <div className="flex gap-3">
@@ -437,11 +405,7 @@ export default function InvoicesIndex({ invoices }: Props) {
                                     variant="outlined"
                                     fullWidth
                                     size="medium"
-                                    onClick={() => {
-                                        setInvoiceMonth(null);
-                                        setInvoicePool('big');
-                                        setInvoiceAmount('');
-                                    }}
+                                    onClick={resetForm}
                                 >
                                     Cancel
                                 </Button>
@@ -598,34 +562,6 @@ export default function InvoicesIndex({ invoices }: Props) {
                                         <Typography variant="body2">
                                             {dayjs(month).format('MMMM YYYY')}
                                         </Typography>
-                                        <IconButton
-                                            size="small"
-                                            onClick={() => {
-                                                setEditPoolSelection('big');
-                                                const bigInvoice =
-                                                    invoiceList.find(
-                                                        (i) =>
-                                                            i.month === month &&
-                                                            i.pool === 'big',
-                                                    );
-
-                                                if (bigInvoice) {
-                                                    setEditingInvoice(
-                                                        bigInvoice,
-                                                    );
-                                                    setEditAmount(
-                                                        String(
-                                                            bigInvoice.amount,
-                                                        ),
-                                                    );
-                                                }
-                                            }}
-                                        >
-                                            <EditIcon
-                                                fontSize="small"
-                                                sx={{ color: '#2196F3' }}
-                                            />
-                                        </IconButton>
                                     </div>
                                     <div
                                         style={{
@@ -635,24 +571,47 @@ export default function InvoicesIndex({ invoices }: Props) {
                                             alignItems: 'center',
                                         }}
                                     >
-                                        <Chip
-                                            label={`Big: ${formatCurrency(monthData.big_pool)} MKD`}
-                                            size="small"
-                                            sx={{
-                                                ...chipSx,
-                                                bgcolor:
-                                                    'rgba(33, 150, 243, 0.3)',
-                                            }}
-                                        />
-                                        <Chip
-                                            label={`Small: ${formatCurrency(monthData.small_pool)} MKD`}
-                                            size="small"
-                                            sx={{
-                                                ...chipSx,
-                                                bgcolor:
-                                                    'rgba(76, 175, 80, 0.3)',
-                                            }}
-                                        />
+                                        {monthData.invoices.map(
+                                            (invoice, index) => (
+                                                <Chip
+                                                    key={invoice.id}
+                                                    label={`${invoiceLabel(invoice)}: ${formatCurrency(invoice.amount)} MKD`}
+                                                    size="small"
+                                                    onClick={() => {
+                                                        setEditingInvoice(
+                                                            invoice,
+                                                        );
+                                                        setEditAmount(
+                                                            String(
+                                                                invoice.amount,
+                                                            ),
+                                                        );
+                                                    }}
+                                                    onDelete={() => {
+                                                        setEditingInvoice(
+                                                            invoice,
+                                                        );
+                                                        setEditAmount(
+                                                            String(
+                                                                invoice.amount,
+                                                            ),
+                                                        );
+                                                    }}
+                                                    deleteIcon={
+                                                        <EditIcon
+                                                            aria-label={`Edit ${invoiceLabel(invoice)} invoice`}
+                                                        />
+                                                    }
+                                                    sx={{
+                                                        ...chipSx,
+                                                        bgcolor:
+                                                            index % 2 === 0
+                                                                ? 'rgba(33, 150, 243, 0.3)'
+                                                                : 'rgba(76, 175, 80, 0.3)',
+                                                    }}
+                                                />
+                                            ),
+                                        )}
                                         <Chip
                                             label={`Total: ${formatCurrency(monthData.total)} MKD`}
                                             color="success"
@@ -674,7 +633,6 @@ export default function InvoicesIndex({ invoices }: Props) {
                     onClose={() => {
                         setEditingInvoice(null);
                         setEditAmount('');
-                        setEditPoolSelection('big');
                     }}
                     disableRestoreFocus
                     fullWidth
@@ -692,7 +650,6 @@ export default function InvoicesIndex({ invoices }: Props) {
                                 onClick={() => {
                                     setEditingInvoice(null);
                                     setEditAmount('');
-                                    setEditPoolSelection('big');
                                 }}
                             />
                         </div>
@@ -716,64 +673,20 @@ export default function InvoicesIndex({ invoices }: Props) {
                                         'MMMM YYYY',
                                     )}
                                 </Typography>
-                                <FormControl
-                                    variant="standard"
-                                    sx={{ minWidth: 120 }}
-                                >
-                                    <InputLabel sx={{ color: popupFg(0.7) }}>
-                                        Select Pool
-                                    </InputLabel>
-                                    <Select
-                                        value={editPoolSelection}
-                                        onChange={(e) => {
-                                            const newPool = e.target.value as
-                                                | 'big'
-                                                | 'small';
-                                            setEditPoolSelection(newPool);
-                                            const invoice = invoiceList.find(
-                                                (i) =>
-                                                    i.month ===
-                                                        editingInvoice.month &&
-                                                    i.pool === newPool,
-                                            );
-
-                                            if (invoice) {
-                                                setEditingInvoice(invoice);
-                                                setEditAmount(
-                                                    String(invoice.amount),
-                                                );
-                                            }
-                                        }}
-                                        sx={{
-                                            color: POPUP_FG,
-                                            '&::before': {
-                                                borderBottomColor: POPUP_FG,
-                                            },
-                                            '&::after': {
-                                                borderBottomColor: POPUP_FG,
-                                            },
-                                        }}
-                                    >
-                                        <MenuItem value="big">
-                                            Big Pool
-                                        </MenuItem>
-                                        <MenuItem value="small">
-                                            Small Pool
-                                        </MenuItem>
-                                    </Select>
-                                </FormControl>
+                                <Typography variant="body2" fontWeight="bold">
+                                    {invoiceLabel(editingInvoice)}
+                                </Typography>
                             </div>
 
-                            <Input
-                                placeholder="Amount (MKD)"
+                            <TextField
+                                label="Amount (MKD)"
                                 type="number"
+                                required
                                 value={editAmount}
                                 onChange={(e) => setEditAmount(e.target.value)}
                                 fullWidth
-                                inputProps={{
-                                    'aria-label': 'invoice amount',
-                                }}
-                                sx={inputSx}
+                                inputProps={{ min: 0 }}
+                                sx={fieldSx}
                             />
 
                             <div className="flex gap-3">
@@ -803,7 +716,6 @@ export default function InvoicesIndex({ invoices }: Props) {
                                     onClick={() => {
                                         setEditingInvoice(null);
                                         setEditAmount('');
-                                        setEditPoolSelection('big');
                                     }}
                                 >
                                     Cancel

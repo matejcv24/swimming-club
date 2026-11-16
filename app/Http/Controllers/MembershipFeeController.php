@@ -8,21 +8,28 @@ use App\Models\User;
 use App\Notifications\MembershipPaymentNotification;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Inertia\Inertia;
 use Illuminate\Validation\Rule;
 
 class MembershipFeeController extends Controller
 {
     public function index()
     {
-        $members = Member::all();
-
-        $allFees = MembershipFee::with('member')
-            ->orderBy('start_date', 'desc')
-            ->get();
+        $members = Member::visibleTo(Auth::user())->get(['id', 'name', 'group_id', 'status']);
 
         return inertia('membership-fees/index', [
             'members' => $members,
-            'allFees' => $allFees,
+            // The payment history (it grows every month) follows right after the page,
+            // so the pop-up opens at once; a placeholder shows until it arrives
+            'allFees' => Inertia::defer(fn () => MembershipFee::query()
+                ->with(['member:id,name', 'group:id,name'])
+                // Coaches see the payments of members in their groups
+                ->when(
+                    Auth::user()->visibleGroupIds() !== null,
+                    fn ($query) => $query->whereHas('member', fn ($member) => $member->visibleTo(Auth::user())),
+                )
+                ->orderBy('start_date', 'desc')
+                ->get(['id', 'member_id', 'member_name', 'group_id', 'amount', 'payment_method', 'start_date', 'end_date'])),
             'userRole' => Auth::user()->role,
         ]);
     }
@@ -30,7 +37,16 @@ class MembershipFeeController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'member_id' => ['required', Rule::exists('members', 'id')->where('status', 'active')],
+            'member_id' => [
+                'required',
+                Rule::exists('members', 'id')->where('status', 'active'),
+                // Coaches record payments only for members of their groups
+                function ($attribute, $value, $fail) {
+                    if (! Auth::user()->canSeeGroup(Member::find($value)?->group_id)) {
+                        $fail('This member is not in one of your groups.');
+                    }
+                },
+            ],
             'amount' => ['required', 'numeric', 'min:0'],
             'payment_method' => ['required', 'in:cash,card'],
             'start_date' => ['required', 'date'],
@@ -42,7 +58,7 @@ class MembershipFeeController extends Controller
         MembershipFee::create([
             ...$validated,
             'member_name' => $member->name,
-            'pool' => $member->pool,
+            'group_id' => $member->group_id,
         ]);
 
         if (Auth::user()?->role === 'coach' && $member) {
@@ -75,6 +91,8 @@ class MembershipFeeController extends Controller
 
     public function getByMember(Member $member)
     {
+        abort_unless(Auth::user()->canSeeGroup($member->group_id), 403);
+
         $fees = MembershipFee::where('member_id', $member->id)
             ->orderBy('start_date', 'desc')
             ->get();

@@ -17,15 +17,15 @@ class MonthlyReportTest extends TestCase
 {
     use RefreshDatabase;
 
-    private function fee(string $name, string $pool, float $amount, string $method, string $start): MembershipFee
+    private function fee(string $name, string $group, float $amount, string $method, string $start): MembershipFee
     {
         $parent = ClubParent::create(['name' => 'Parent of '.$name, 'phone' => '070000000']);
-        $member = Member::create(['name' => $name, 'pool' => $pool, 'status' => 'active', 'parent_id' => $parent->id]);
+        $member = Member::create(['name' => $name, 'group_id' => $this->group($group), 'status' => 'active', 'parent_id' => $parent->id]);
 
         return MembershipFee::create([
             'member_id' => $member->id,
             'member_name' => $member->name,
-            'pool' => $pool,
+            'group_id' => $this->group($group),
             'amount' => $amount,
             'payment_method' => $method,
             'start_date' => $start,
@@ -36,18 +36,18 @@ class MonthlyReportTest extends TestCase
     private function seedOctoberAndNeighbours(): void
     {
         // October 2026
-        $this->fee('Petar', 'big', 2000, 'cash', '2026-10-01');
-        $this->fee('Ana', 'big', 2000, 'card', '2026-10-31');
-        $this->fee('Marija', 'small', 1500, 'cash', '2026-10-15');
-        Invoice::create(['month' => '2026-10-01', 'pool' => 'small', 'amount' => 800]);
-        Invoice::create(['month' => '2026-10-01', 'pool' => 'big', 'amount' => 1200]);
+        $this->fee('Petar', 'Big pool', 2000, 'cash', '2026-10-01');
+        $this->fee('Ana', 'Big pool', 2000, 'card', '2026-10-31');
+        $this->fee('Marija', 'Small pool', 1500, 'cash', '2026-10-15');
+        Invoice::create(['month' => '2026-10-01', 'group_id' => $this->group('Small pool'), 'amount' => 800]);
+        Invoice::create(['month' => '2026-10-01', 'group_id' => $this->group('Big pool'), 'amount' => 1200]);
         $coach = User::factory()->create(['role' => 'coach', 'name' => 'Marko Stojanov']);
         Salary::create(['user_id' => $coach->id, 'amount' => 2500, 'month' => '2026-10-01']);
 
         // September and November must not be included
-        $this->fee('Too early', 'big', 9999, 'cash', '2026-09-30');
-        $this->fee('Too late', 'small', 9999, 'cash', '2026-11-01');
-        Invoice::create(['month' => '2026-09-01', 'pool' => 'big', 'amount' => 9999]);
+        $this->fee('Too early', 'Big pool', 9999, 'cash', '2026-09-30');
+        $this->fee('Too late', 'Small pool', 9999, 'cash', '2026-11-01');
+        Invoice::create(['month' => '2026-09-01', 'group_id' => $this->group('Big pool'), 'amount' => 9999]);
         Salary::create(['user_id' => $coach->id, 'amount' => 9999, 'month' => '2026-11-01']);
     }
 
@@ -65,17 +65,17 @@ class MonthlyReportTest extends TestCase
         $this->assertEquals(['cash' => 3500, 'card' => 2000], $report['feesByMethod']);
     }
 
-    public function test_fees_are_split_by_pool_and_sorted_by_member()
+    public function test_fees_are_split_by_group_and_sorted_by_member()
     {
         $this->seedOctoberAndNeighbours();
 
         $report = MonthlyReport::for(2026, 10);
 
-        $this->assertSame(['big', 'small'], $report['feesByPool']->pluck('pool')->all());
-        $this->assertSame(['Ana', 'Petar'], $report['feesByPool'][0]['rows']->pluck('member')->all());
-        $this->assertEquals(4000, $report['feesByPool'][0]['total']);
-        $this->assertSame(['Marija'], $report['feesByPool'][1]['rows']->pluck('member')->all());
-        $this->assertSame(['big', 'small'], $report['invoices']->pluck('pool')->all());
+        $this->assertSame(['Big pool', 'Small pool'], $report['feesByGroup']->pluck('group')->all());
+        $this->assertSame(['Ana', 'Petar'], $report['feesByGroup'][0]['rows']->pluck('member')->all());
+        $this->assertEquals(4000, $report['feesByGroup'][0]['total']);
+        $this->assertSame(['Marija'], $report['feesByGroup'][1]['rows']->pluck('member')->all());
+        $this->assertSame(['Big pool', 'Small pool'], $report['invoices']->pluck('group')->all());
         $this->assertSame(['Marko Stojanov'], $report['salaries']->pluck('coach')->all());
     }
 
@@ -116,7 +116,7 @@ class MonthlyReportTest extends TestCase
 
     public function test_dashboard_offers_reports_from_the_first_year_with_data()
     {
-        $this->fee('Old member', 'big', 2000, 'cash', '2024-05-10');
+        $this->fee('Old member', 'Big pool', 2000, 'cash', '2024-05-10');
         $admin = User::factory()->create(['role' => 'admin']);
 
         $this->actingAs($admin)

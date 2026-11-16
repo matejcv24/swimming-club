@@ -33,6 +33,7 @@ class StaffTest extends TestCase
             'name' => 'New Coach',
             'email' => 'coach@example.com',
             'password' => 'secret-pass',
+            'all_groups' => true,
         ])->assertSessionHasNoErrors();
 
         $coach = User::where('email', 'coach@example.com')->firstOrFail();
@@ -79,6 +80,7 @@ class StaffTest extends TestCase
             'name' => 'Renamed Coach',
             'email' => 'renamed@example.com',
             'password' => '',
+            'all_groups' => true,
         ])->assertSessionHasNoErrors();
 
         $coach->refresh();
@@ -106,6 +108,7 @@ class StaffTest extends TestCase
             'name' => $coach->name,
             'email' => $coach->email,
             'password' => 'new-password',
+            'all_groups' => true,
         ])->assertSessionHasNoErrors();
 
         $coach->refresh();

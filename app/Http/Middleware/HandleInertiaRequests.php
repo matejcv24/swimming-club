@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Models\Group;
 use App\Support\DashboardSummary;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
@@ -30,6 +31,7 @@ class HandleInertiaRequests extends Middleware
         'invoices.page',
         'profit.index',
         'notifications.index',
+        'groups.index',
     ];
 
     /**
@@ -56,11 +58,35 @@ class HandleInertiaRequests extends Middleware
             'auth' => [
                 'user' => $request->user(),
             ],
+            // The club's groups (in their order) and their subgroups, with how many
+            // members each has
+            'groups' => fn () => $request->user()
+                ? Group::ordered()
+                    // Coaches only see the groups they are assigned to
+                    ->when(
+                        $request->user()->visibleGroupIds() !== null,
+                        fn ($query) => $query->whereIn('id', $request->user()->visibleGroupIds()),
+                    )
+                    ->withCount('members')
+                    ->with(['subgroups' => fn ($query) => $query->withCount('subgroupMembers as members_count')])
+                    ->get(['id', 'name'])
+                    ->map(fn (Group $group) => [
+                        'id' => $group->id,
+                        'name' => $group->name,
+                        'members_count' => $group->members_count,
+                        'subgroups' => $group->subgroups->map(fn (Group $subgroup) => [
+                            'id' => $subgroup->id,
+                            'name' => $subgroup->name,
+                            'members_count' => $subgroup->members_count,
+                        ])->values(),
+                    ])
+                : [],
             // Dashboard card numbers for the pages that open as a pop-up over the dashboard
             'dashboardSummary' => fn () => $request->user() && $request->routeIs(self::POPUP_PAGES)
                 ? DashboardSummary::for($request->user())
                 : null,
-            'notifications' => $request->user()
+            // Lazy, so partial reloads (e.g. a list refreshing itself) skip these queries
+            'notifications' => fn () => $request->user()
                 ? [
                     'unread_count' => $request->user()->unreadNotifications()->count(),
                     'unread' => $request->user()->unreadNotifications()->latest()->take(5)->get()->map(fn ($notification) => [

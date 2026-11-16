@@ -182,3 +182,16 @@
         @apply bg-background text-foreground;
     }
 }
+
+/* Pop-up subtitles too long for the screen slide to show the rest (see SlidingText):
+   still at each end for a moment, then they slide across */
+@keyframes sliding-text {
+    0%,
+    20% {
+        transform: translateX(0);
+    }
+    80%,
+    100% {
+        transform: translateX(var(--slide-distance));
+    }
+}

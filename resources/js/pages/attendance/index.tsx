@@ -1,4 +1,4 @@
-import { Head, router } from '@inertiajs/react';
+import { Head } from '@inertiajs/react';
 import AssignmentTurnedInIcon from '@mui/icons-material/AssignmentTurnedIn';
 import Avatar from '@mui/material/Avatar';
 import Chip from '@mui/material/Chip';
@@ -6,20 +6,23 @@ import Dialog from '@mui/material/Dialog';
 import DialogContent from '@mui/material/DialogContent';
 import DialogTitle from '@mui/material/DialogTitle';
 import Divider from '@mui/material/Divider';
+import FormControl from '@mui/material/FormControl';
+import InputLabel from '@mui/material/InputLabel';
 import List from '@mui/material/List';
 import ListItem from '@mui/material/ListItem';
 import ListItemAvatar from '@mui/material/ListItemAvatar';
 import ListItemButton from '@mui/material/ListItemButton';
 import ListItemText from '@mui/material/ListItemText';
-import Tab from '@mui/material/Tab';
-import Tabs from '@mui/material/Tabs';
+import MenuItem from '@mui/material/MenuItem';
+import Select from '@mui/material/Select';
 import Typography from '@mui/material/Typography';
 import dayjs from 'dayjs';
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { DashboardBackground } from '@/components/dashboard-background';
 import {
     MuiThemeProvider,
     POPUP_BG,
+    POPUP_FG,
     popupFg,
 } from '@/components/mui-theme-provider';
 import {
@@ -27,26 +30,26 @@ import {
     PillSearchField,
     PopupHeader,
 } from '@/components/popup-ui';
+import { CardsSkeleton } from '@/components/skeletons';
+import { usePagePopup } from '@/hooks/use-page-popup';
+import { groupNameOf, useGroups } from '@/lib/groups';
 
 interface Member {
     id: number;
     name: string;
-    pool: 'big' | 'small';
+    group_id: number | null;
     current_month_attendances_count: number;
 }
 
+/** A training day a member came to. */
 interface AttendanceRow {
     id: number;
-    member_id: number;
-    member_name: string;
-    pool: 'big' | 'small';
     date: string;
 }
 
 interface Props {
     userRole: 'admin' | 'coach';
     members: Member[];
-    attendanceRows: AttendanceRow[];
 }
 
 const chipSx = {
@@ -55,8 +58,21 @@ const chipSx = {
     justifyContent: 'center',
 };
 
-export default function AttendanceIndex({ members, attendanceRows }: Props) {
-    const [activeTab, setActiveTab] = useState(0);
+export default function AttendanceIndex({ members }: Props) {
+    // Fades in and out over the dashboard
+    const popup = usePagePopup();
+    const groups = useGroups();
+    // 'all' or one group's id. The groups are only the ones this user may see, so
+    // "All" means every group for admins and all of a coach's own groups. A coach
+    // with a single group just sees that group (no "All").
+    const showAll = groups.length !== 1;
+    const [groupFilter, setGroupFilter] = useState<'all' | number>('all');
+    const activeFilter: 'all' | number =
+        groupFilter !== 'all' && groups.some((g) => g.id === groupFilter)
+            ? groupFilter
+            : showAll
+              ? 'all'
+              : groups[0].id;
     const [selectedMember, setSelectedMember] = useState<Member | null>(null);
     const [showMemberHistoryModal, setShowMemberHistoryModal] = useState(false);
     const [showYearDetailModal, setShowYearDetailModal] = useState(false);
@@ -67,23 +83,54 @@ export default function AttendanceIndex({ members, attendanceRows }: Props) {
     const [selectedMonth, setSelectedMonth] = useState<string | null>(null);
     const [attendanceSearch, setAttendanceSearch] = useState('');
 
-    const currentPool = activeTab === 0 ? 'big' : 'small';
+    const counts = members.reduce<Record<number, number>>((all, member) => {
+        if (member.group_id !== null) {
+            all[member.group_id] = (all[member.group_id] ?? 0) + 1;
+        }
+
+        return all;
+    }, {});
 
     const filteredMembers = members.filter(
         (member) =>
-            member.pool === currentPool &&
+            (activeFilter === 'all' || member.group_id === activeFilter) &&
             member.name.toLowerCase().includes(attendanceSearch.toLowerCase()),
     );
 
-    const memberAttendanceRows = useMemo(() => {
-        if (!selectedMember) {
-            return [];
-        }
+    // The opened member's training days (null while they load)
+    const [history, setHistory] = useState<AttendanceRow[] | null>(null);
+    const historyFor = useRef<number | null>(null);
 
-        return attendanceRows
-            .filter((row) => row.member_id === selectedMember.id)
-            .sort((a, b) => dayjs(b.date).valueOf() - dayjs(a.date).valueOf());
-    }, [attendanceRows, selectedMember]);
+    const openHistory = async (member: Member) => {
+        setSelectedMember(member);
+        setHistory(null);
+        setShowMemberHistoryModal(true);
+        historyFor.current = member.id;
+
+        try {
+            const response = await fetch(`/attendance/by-member/${member.id}`, {
+                headers: { Accept: 'application/json' },
+            });
+            const data = await response.json();
+
+            // Ignore an answer for a member who is no longer open
+            if (historyFor.current === member.id) {
+                setHistory(data.attendances ?? []);
+            }
+        } catch {
+            if (historyFor.current === member.id) {
+                setHistory([]);
+            }
+        }
+    };
+
+    const memberAttendanceRows = useMemo(
+        () =>
+            [...(history ?? [])].sort(
+                (a, b) => dayjs(b.date).valueOf() - dayjs(a.date).valueOf(),
+            ),
+        [history],
+    );
 
     const selectedMonthAttendances = selectedMonth
         ? memberAttendanceRows
@@ -169,8 +216,7 @@ export default function AttendanceIndex({ members, attendanceRows }: Props) {
             <Head title="Attendance" />
 
             <Dialog
-                open={true}
-                onClose={() => router.visit('/dashboard')}
+                {...popup.dialogProps}
                 fullWidth
                 maxWidth="sm"
                 PaperProps={{
@@ -186,22 +232,62 @@ export default function AttendanceIndex({ members, attendanceRows }: Props) {
                     <PopupHeader
                         icon={<AssignmentTurnedInIcon fontSize="small" />}
                         title="Attendance"
-                        subtitle={`${activeTab === 0 ? 'Big pool' : 'Small pool'} · ${filteredMembers.length} ${filteredMembers.length === 1 ? 'member' : 'members'}`}
-                        onClose={() => router.visit('/dashboard')}
+                        subtitle={`${activeFilter === 'all' ? 'All groups' : groupNameOf(groups, activeFilter)} · ${filteredMembers.length} ${filteredMembers.length === 1 ? 'member' : 'members'}`}
+                        onClose={popup.close}
                     />
                     <PillSearchField
                         value={attendanceSearch}
                         onChange={setAttendanceSearch}
                         placeholder="Search member..."
                     />
-                    <Tabs
-                        value={activeTab}
-                        onChange={(_, val) => setActiveTab(val)}
-                        variant="fullWidth"
-                    >
-                        <Tab label="Big pool" />
-                        <Tab label="Small pool" />
-                    </Tabs>
+                    {groups.length > 0 && (
+                        <div className="px-[18px] pt-4 pb-3">
+                            <FormControl fullWidth size="small">
+                                <InputLabel
+                                    id="attendance-group-label"
+                                    sx={{ color: popupFg(0.5) }}
+                                >
+                                    Group
+                                </InputLabel>
+                                <Select
+                                    labelId="attendance-group-label"
+                                    label="Group"
+                                    value={activeFilter}
+                                    onChange={(e) =>
+                                        setGroupFilter(
+                                            e.target.value === 'all'
+                                                ? 'all'
+                                                : Number(e.target.value),
+                                        )
+                                    }
+                                    sx={{
+                                        color: POPUP_FG,
+                                        '& .MuiOutlinedInput-notchedOutline': {
+                                            borderColor: popupFg(0.3),
+                                        },
+                                        '& .MuiSvgIcon-root': {
+                                            color: POPUP_FG,
+                                        },
+                                    }}
+                                >
+                                    {showAll && (
+                                        <MenuItem value="all">
+                                            All ({members.length})
+                                        </MenuItem>
+                                    )}
+                                    {groups.map((group) => (
+                                        <MenuItem
+                                            key={group.id}
+                                            value={group.id}
+                                        >
+                                            {group.name} (
+                                            {counts[group.id] ?? 0})
+                                        </MenuItem>
+                                    ))}
+                                </Select>
+                            </FormControl>
+                        </div>
+                    )}
                 </DialogTitle>
 
                 <DialogContent sx={{ p: 0, overflowY: 'auto', flex: 1 }}>
@@ -210,10 +296,7 @@ export default function AttendanceIndex({ members, attendanceRows }: Props) {
                             <ListItemButton
                                 key={member.id}
                                 divider
-                                onClick={() => {
-                                    setSelectedMember(member);
-                                    setShowMemberHistoryModal(true);
-                                }}
+                                onClick={() => void openHistory(member)}
                             >
                                 <ListItemAvatar>
                                     <Avatar>{getInitials(member.name)}</Avatar>
@@ -232,6 +315,8 @@ export default function AttendanceIndex({ members, attendanceRows }: Props) {
                                             variant="body2"
                                             color="text.secondary"
                                         >
+                                            {activeFilter === 'all' &&
+                                                `${groupNameOf(groups, member.group_id)} · `}
                                             Attendances:{' '}
                                             {
                                                 member.current_month_attendances_count
@@ -274,100 +359,27 @@ export default function AttendanceIndex({ members, attendanceRows }: Props) {
                 </DialogTitle>
 
                 <DialogContent sx={{ p: 0 }}>
-                    <div className="flex flex-col gap-6 p-4">
-                        <div className="flex flex-col gap-4">
-                            <Typography
-                                variant="caption"
-                                color="text.secondary"
-                                sx={{
-                                    textTransform: 'uppercase',
-                                    letterSpacing: 1,
-                                }}
-                            >
-                                Attendances By Month
-                            </Typography>
-
-                            {currentMonthData ? (
-                                <List disablePadding>
-                                    <ListItem
-                                        divider
-                                        sx={{
-                                            px: 0,
-                                            cursor: 'pointer',
-                                            display: 'flex',
-                                            flexDirection: 'column',
-                                            gap: 2,
-                                            alignItems: 'center',
-                                            py: 1.5,
-                                            '&:hover': {
-                                                bgcolor: popupFg(0.05),
-                                            },
-                                        }}
-                                        onClick={() =>
-                                            setShowCurrentYearMonthsModal(true)
-                                        }
-                                    >
-                                        <div
-                                            style={{
-                                                display: 'flex',
-                                                justifyContent: 'center',
-                                                alignItems: 'center',
-                                                gap: '16px',
-                                            }}
-                                        >
-                                            <Typography variant="body2">
-                                                {dayjs(currentMonthKey).format(
-                                                    'MMMM YYYY',
-                                                )}
-                                            </Typography>
-                                            {currentYearMonths.length > 1 && (
-                                                <Typography
-                                                    variant="caption"
-                                                    color="primary"
-                                                >
-                                                    {currentYearMonths.length}{' '}
-                                                    months
-                                                </Typography>
-                                            )}
-                                        </div>
-
-                                        <Chip
-                                            label={`Attendances: ${currentMonthData.total}`}
-                                            color="success"
-                                            size="small"
-                                            sx={chipSx}
-                                        />
-                                    </ListItem>
-                                </List>
-                            ) : (
-                                <Typography
-                                    variant="body2"
-                                    color="text.secondary"
-                                >
-                                    No attendances recorded this month.
-                                </Typography>
-                            )}
+                    {history === null ? (
+                        <div className="p-4">
+                            <CardsSkeleton />
                         </div>
+                    ) : (
+                        <div className="flex flex-col gap-6 p-4">
+                            <div className="flex flex-col gap-4">
+                                <Typography
+                                    variant="caption"
+                                    color="text.secondary"
+                                    sx={{
+                                        textTransform: 'uppercase',
+                                        letterSpacing: 1,
+                                    }}
+                                >
+                                    Attendances By Month
+                                </Typography>
 
-                        <Divider />
-
-                        <div className="flex flex-col gap-4">
-                            <Typography
-                                variant="caption"
-                                color="text.secondary"
-                                sx={{
-                                    textTransform: 'uppercase',
-                                    letterSpacing: 1,
-                                }}
-                            >
-                                Attendances By Year
-                            </Typography>
-
-                            {sortedYears.length > 0 ? (
-                                <List disablePadding>
-                                    {sortedYears.map((year) => (
+                                {currentMonthData ? (
+                                    <List disablePadding>
                                         <ListItem
-                                            key={year}
                                             divider
                                             sx={{
                                                 px: 0,
@@ -381,10 +393,11 @@ export default function AttendanceIndex({ members, attendanceRows }: Props) {
                                                     bgcolor: popupFg(0.05),
                                                 },
                                             }}
-                                            onClick={() => {
-                                                setSelectedYear(year);
-                                                setShowYearDetailModal(true);
-                                            }}
+                                            onClick={() =>
+                                                setShowCurrentYearMonthsModal(
+                                                    true,
+                                                )
+                                            }
                                         >
                                             <div
                                                 style={{
@@ -395,39 +408,125 @@ export default function AttendanceIndex({ members, attendanceRows }: Props) {
                                                 }}
                                             >
                                                 <Typography variant="body2">
-                                                    {year}
+                                                    {dayjs(
+                                                        currentMonthKey,
+                                                    ).format('MMMM YYYY')}
                                                 </Typography>
-                                                <Typography
-                                                    variant="caption"
-                                                    color="primary"
-                                                >
-                                                    {
-                                                        yearGroups[year]
-                                                            .monthCount
-                                                    }{' '}
-                                                    months
-                                                </Typography>
+                                                {currentYearMonths.length >
+                                                    1 && (
+                                                    <Typography
+                                                        variant="caption"
+                                                        color="primary"
+                                                    >
+                                                        {
+                                                            currentYearMonths.length
+                                                        }{' '}
+                                                        months
+                                                    </Typography>
+                                                )}
                                             </div>
 
                                             <Chip
-                                                label={`Attendances: ${yearGroups[year].total}`}
+                                                label={`Attendances: ${currentMonthData.total}`}
                                                 color="success"
                                                 size="small"
                                                 sx={chipSx}
                                             />
                                         </ListItem>
-                                    ))}
-                                </List>
-                            ) : (
+                                    </List>
+                                ) : (
+                                    <Typography
+                                        variant="body2"
+                                        color="text.secondary"
+                                    >
+                                        No attendances recorded this month.
+                                    </Typography>
+                                )}
+                            </div>
+
+                            <Divider />
+
+                            <div className="flex flex-col gap-4">
                                 <Typography
-                                    variant="body2"
+                                    variant="caption"
                                     color="text.secondary"
+                                    sx={{
+                                        textTransform: 'uppercase',
+                                        letterSpacing: 1,
+                                    }}
                                 >
-                                    No attendance history yet.
+                                    Attendances By Year
                                 </Typography>
-                            )}
+
+                                {sortedYears.length > 0 ? (
+                                    <List disablePadding>
+                                        {sortedYears.map((year) => (
+                                            <ListItem
+                                                key={year}
+                                                divider
+                                                sx={{
+                                                    px: 0,
+                                                    cursor: 'pointer',
+                                                    display: 'flex',
+                                                    flexDirection: 'column',
+                                                    gap: 2,
+                                                    alignItems: 'center',
+                                                    py: 1.5,
+                                                    '&:hover': {
+                                                        bgcolor: popupFg(0.05),
+                                                    },
+                                                }}
+                                                onClick={() => {
+                                                    setSelectedYear(year);
+                                                    setShowYearDetailModal(
+                                                        true,
+                                                    );
+                                                }}
+                                            >
+                                                <div
+                                                    style={{
+                                                        display: 'flex',
+                                                        justifyContent:
+                                                            'center',
+                                                        alignItems: 'center',
+                                                        gap: '16px',
+                                                    }}
+                                                >
+                                                    <Typography variant="body2">
+                                                        {year}
+                                                    </Typography>
+                                                    <Typography
+                                                        variant="caption"
+                                                        color="primary"
+                                                    >
+                                                        {
+                                                            yearGroups[year]
+                                                                .monthCount
+                                                        }{' '}
+                                                        months
+                                                    </Typography>
+                                                </div>
+
+                                                <Chip
+                                                    label={`Attendances: ${yearGroups[year].total}`}
+                                                    color="success"
+                                                    size="small"
+                                                    sx={chipSx}
+                                                />
+                                            </ListItem>
+                                        ))}
+                                    </List>
+                                ) : (
+                                    <Typography
+                                        variant="body2"
+                                        color="text.secondary"
+                                    >
+                                        No attendance history yet.
+                                    </Typography>
+                                )}
+                            </div>
                         </div>
-                    </div>
+                    )}
                 </DialogContent>
             </Dialog>
 

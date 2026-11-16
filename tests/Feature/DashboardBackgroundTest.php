@@ -18,7 +18,7 @@ class DashboardBackgroundTest extends TestCase
     public function test_popup_pages_get_the_dashboard_numbers_to_draw_behind_the_popup()
     {
         $admin = User::factory()->create(['role' => 'admin']);
-        Invoice::create(['month' => now()->startOfYear()->toDateString(), 'pool' => 'big', 'amount' => 1200]);
+        Invoice::create(['month' => now()->startOfYear()->toDateString(), 'group_id' => $this->group('Big pool'), 'amount' => 1200]);
 
         foreach (['/members', '/trainings', '/membership-fees', '/attendance', '/unpaid-fees', '/staff', '/invoices', '/profit', '/notifications'] as $url) {
             $this->actingAs($admin)
@@ -57,8 +57,8 @@ class DashboardBackgroundTest extends TestCase
     {
         $admin = User::factory()->create(['role' => 'admin']);
         $parent = ClubParent::create(['name' => 'Parent', 'phone' => '070000000']);
-        $member = fn (string $name, string $status = 'active') => Member::create(['name' => $name, 'pool' => 'big', 'status' => $status, 'parent_id' => $parent->id]);
-        $fee = fn (Member $m, string $start, string $end) => MembershipFee::create(['member_id' => $m->id, 'member_name' => $m->name, 'pool' => 'big', 'amount' => 1000, 'payment_method' => 'cash', 'start_date' => $start, 'end_date' => $end]);
+        $member = fn (string $name, string $status = 'active') => Member::create(['name' => $name, 'group_id' => $this->group('Big pool'), 'status' => $status, 'parent_id' => $parent->id]);
+        $fee = fn (Member $m, string $start, string $end) => MembershipFee::create(['member_id' => $m->id, 'member_name' => $m->name, 'group_id' => $this->group('Big pool'), 'amount' => 1000, 'payment_method' => 'cash', 'start_date' => $start, 'end_date' => $end]);
 
         // Paid: an old fee that ran out, but a newer one still running
         $paid = $member('Paid');
@@ -84,7 +84,7 @@ class DashboardBackgroundTest extends TestCase
     public function test_dashboard_still_gets_its_numbers()
     {
         $admin = User::factory()->create(['role' => 'admin']);
-        Invoice::create(['month' => now()->startOfYear()->toDateString(), 'pool' => 'big', 'amount' => 500]);
+        Invoice::create(['month' => now()->startOfYear()->toDateString(), 'group_id' => $this->group('Big pool'), 'amount' => 500]);
 
         $this->actingAs($admin)
             ->get('/dashboard')

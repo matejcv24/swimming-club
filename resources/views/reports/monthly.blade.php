@@ -4,7 +4,8 @@
 
         return str_ends_with($formatted, '.00') ? substr($formatted, 0, -3) : $formatted;
     };
-    $poolName = fn (?string $pool) => $pool ? ucfirst($pool).' pool' : 'No pool';
+    // A club-made group's name; records without one (e.g. a general invoice)
+    $groupName = fn (?string $group) => $group ?: 'No specific group';
     $monthName = $month->format('F Y');
 @endphp
 <!DOCTYPE html>
@@ -287,16 +288,16 @@
             <strong>{{ $feeCount }}</strong> membership {{ $feeCount === 1 ? 'payment' : 'payments' }}
             &middot; Cash <strong>{{ $money($feesByMethod['cash']) }} MKD</strong>
             &middot; Card <strong>{{ $money($feesByMethod['card']) }} MKD</strong>
-            @foreach ($feesByPool as $group)
-                &middot; {{ $poolName($group['pool']) }} <strong>{{ $money($group['total']) }} MKD</strong>
+            @foreach ($feesByGroup as $group)
+                &middot; {{ $groupName($group['group']) }} <strong>{{ $money($group['total']) }} MKD</strong>
             @endforeach
         </div>
 
         {{-- 1. Membership fees --}}
         <h2>1. Membership fees</h2>
 
-        @forelse ($feesByPool as $group)
-            <h3>{{ $poolName($group['pool']) }} &middot; {{ $group['rows']->count() }} {{ $group['rows']->count() === 1 ? 'payment' : 'payments' }}</h3>
+        @forelse ($feesByGroup as $group)
+            <h3>{{ $groupName($group['group']) }} &middot; {{ $group['rows']->count() }} {{ $group['rows']->count() === 1 ? 'payment' : 'payments' }}</h3>
             <table class="data">
                 <thead>
                     <tr>
@@ -322,7 +323,7 @@
                 </tbody>
                 <tfoot>
                     <tr>
-                        <td colspan="5" class="num">{{ $poolName($group['pool']) }} subtotal</td>
+                        <td colspan="5" class="num">{{ $groupName($group['group']) }} subtotal</td>
                         <td class="num">{{ $money($group['total']) }} MKD</td>
                     </tr>
                 </tfoot>
@@ -331,7 +332,7 @@
             <div class="empty">No membership fees recorded for {{ $monthName }}.</div>
         @endforelse
 
-        @if ($feesByPool->isNotEmpty())
+        @if ($feesByGroup->isNotEmpty())
             <table class="grand-total" style="width: 100%;">
                 <tr>
                     <td>Total membership fees</td>
@@ -357,7 +358,7 @@
                 <tbody>
                     @foreach ($invoices as $invoice)
                         <tr>
-                            <td>{{ $poolName($invoice['pool']) }}</td>
+                            <td>{{ $groupName($invoice['group']) }}</td>
                             <td class="num">{{ $money($invoice['amount']) }} MKD</td>
                         </tr>
                     @endforeach

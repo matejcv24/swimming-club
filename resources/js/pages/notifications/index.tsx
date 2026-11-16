@@ -10,6 +10,7 @@ import { DashboardBackground } from '@/components/dashboard-background';
 import { MuiThemeProvider, POPUP_BG } from '@/components/mui-theme-provider';
 import { NotificationIcon } from '@/components/notification-icon';
 import { IconBadge, PopupHeader } from '@/components/popup-ui';
+import { usePagePopup } from '@/hooks/use-page-popup';
 import type { AppNotification } from '@/types';
 
 type Props = {
@@ -32,6 +33,8 @@ export default function NotificationsIndex({
     unreadNotifications,
     allNotifications,
 }: Props) {
+    // Fades in and out over the dashboard
+    const popup = usePagePopup();
     const [tab, setTab] = useState(0);
     const shown = tab === 0 ? allNotifications : unreadNotifications;
 
@@ -46,8 +49,7 @@ export default function NotificationsIndex({
             <Head title="Notifications" />
 
             <Dialog
-                open={true}
-                onClose={() => router.visit('/dashboard')}
+                {...popup.dialogProps}
                 fullWidth
                 maxWidth="sm"
                 PaperProps={{
@@ -64,7 +66,7 @@ export default function NotificationsIndex({
                         icon={<NotificationsIcon fontSize="small" />}
                         title="Notifications"
                         subtitle={`${unreadNotifications.length} unread · ${allNotifications.length} in total`}
-                        onClose={() => router.visit('/dashboard')}
+                        onClose={popup.close}
                     />
                     <Tabs
                         value={tab}

@@ -10,12 +10,13 @@ use Illuminate\Http\Request;
 use Illuminate\Notifications\DatabaseNotification;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 
 class MemberController extends Controller
 {
     public function index()
     {
-        $members = Member::with('parent')->get();
+        $members = Member::visibleTo(Auth::user())->with('parent')->get();
 
         return inertia('members/index', [
             'members' => $members,
@@ -32,7 +33,21 @@ class MemberController extends Controller
     {
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
-            'pool' => ['required', 'in:big,small'],
+            'group_id' => [
+                'required',
+                Rule::exists('groups', 'id')->whereNull('deleted_at')->whereNull('parent_id'),
+                // Coaches add and move members only within their groups
+                function ($attribute, $value, $fail) {
+                    if (! Auth::user()->canSeeGroup($value)) {
+                        $fail('Choose one of your groups.');
+                    }
+                },
+            ],
+            // Optional, and only a subgroup of the chosen group
+            'subgroup_id' => [
+                'nullable',
+                Rule::exists('groups', 'id')->whereNull('deleted_at')->where('parent_id', (int) $request->input('group_id')),
+            ],
             'parent_name' => ['required', 'string', 'max:255'],
             'parent_phone' => ['required', 'string', 'max:20'],
         ]);
@@ -44,7 +59,8 @@ class MemberController extends Controller
 
         $member = Member::create([
             'name' => $validated['name'],
-            'pool' => $validated['pool'],
+            'group_id' => $validated['group_id'],
+            'subgroup_id' => $validated['subgroup_id'] ?? null,
             'status' => 'active',
             'parent_id' => $parent->id,
         ]);
@@ -75,9 +91,25 @@ class MemberController extends Controller
 
     public function update(Request $request, Member $member)
     {
+        abort_unless(Auth::user()->canSeeGroup($member->group_id), 403);
+
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
-            'pool' => ['required', 'in:big,small'],
+            'group_id' => [
+                'required',
+                Rule::exists('groups', 'id')->whereNull('deleted_at')->whereNull('parent_id'),
+                // Coaches add and move members only within their groups
+                function ($attribute, $value, $fail) {
+                    if (! Auth::user()->canSeeGroup($value)) {
+                        $fail('Choose one of your groups.');
+                    }
+                },
+            ],
+            // Optional, and only a subgroup of the chosen group
+            'subgroup_id' => [
+                'nullable',
+                Rule::exists('groups', 'id')->whereNull('deleted_at')->where('parent_id', (int) $request->input('group_id')),
+            ],
             'status' => ['required', 'in:active,inactive'],
             'parent_name' => ['required', 'string', 'max:255'],
             'parent_phone' => ['required', 'string', 'max:20'],
@@ -89,8 +121,12 @@ class MemberController extends Controller
             $changes[] = 'name';
         }
 
-        if ($member->pool !== $validated['pool']) {
-            $changes[] = 'pool';
+        if ((int) $member->group_id !== (int) $validated['group_id']) {
+            $changes[] = 'group';
+        }
+
+        if ((int) $member->subgroup_id !== (int) ($validated['subgroup_id'] ?? 0)) {
+            $changes[] = 'subgroup';
         }
 
         if ($member->status !== $validated['status']) {
@@ -107,7 +143,8 @@ class MemberController extends Controller
 
         $member->update([
             'name' => $validated['name'],
-            'pool' => $validated['pool'],
+            'group_id' => $validated['group_id'],
+            'subgroup_id' => $validated['subgroup_id'] ?? null,
             'status' => $validated['status'],
         ]);
 

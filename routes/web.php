@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\ClubParentController;
+use App\Http\Controllers\GroupController;
 use App\Http\Controllers\InvoiceController;
 use App\Http\Controllers\MemberController;
 use App\Http\Controllers\MembershipFeeController;
@@ -27,6 +28,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::resource('members', MemberController::class)->except(['destroy']);
         Route::post('/parents', [ClubParentController::class, 'store'])->name('parents.store');
         Route::get('/attendance', [AttendanceController::class, 'index'])->name('attendance.index');
+        Route::get('/attendance/by-member/{member}', [AttendanceController::class, 'byMember'])->name('attendance.byMember');
 
         Route::get('/trainings/by-date', [TrainingController::class, 'getByDate'])->name('trainings.byDate');
         Route::resource('trainings', TrainingController::class);
@@ -40,6 +42,13 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::middleware(['role:admin'])->group(function () {
         Route::get('/staff', [StaffController::class, 'index'])->name('staff.index');
+
+        // The club's groups: only admins add, rename or delete them
+        Route::get('/groups', [GroupController::class, 'index'])->name('groups.index');
+        Route::post('/groups', [GroupController::class, 'store'])->name('groups.store');
+        Route::put('/groups/{group}', [GroupController::class, 'update'])->name('groups.update');
+        Route::delete('/groups/{group}', [GroupController::class, 'destroy'])->name('groups.destroy');
+
         Route::post('/staff', [StaffController::class, 'store'])->name('staff.store');
         Route::put('/staff/{coach}', [StaffController::class, 'update'])->name('staff.update');
 

@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Training extends Model
 {
-    protected $fillable = ['coach_id', 'date', 'pool', 'notes'];
+    protected $fillable = ['coach_id', 'date', 'pool', 'group_id', 'subgroup_id', 'notes'];
 
     public function coach(): BelongsTo
     {
@@ -18,5 +18,17 @@ class Training extends Model
     public function attendances(): HasMany
     {
         return $this->hasMany(Attendance::class);
+    }
+
+    /** Its group, even if the group has since been deleted (hidden). */
+    public function group(): BelongsTo
+    {
+        return $this->belongsTo(Group::class)->withTrashed();
+    }
+
+    /** The subgroup it was for (none: the whole group), even if since deleted. */
+    public function subgroup(): BelongsTo
+    {
+        return $this->belongsTo(Group::class, 'subgroup_id')->withTrashed();
     }
 }

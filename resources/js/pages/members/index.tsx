@@ -1,5 +1,4 @@
-import { Head, router } from '@inertiajs/react';
-import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import { Head, Link, router } from '@inertiajs/react';
 import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
 import GroupsIcon from '@mui/icons-material/Groups';
@@ -15,7 +14,6 @@ import FormControlLabel from '@mui/material/FormControlLabel';
 import IconButton from '@mui/material/IconButton';
 import Input from '@mui/material/Input';
 import InputLabel from '@mui/material/InputLabel';
-import Link from '@mui/material/Link';
 import List from '@mui/material/List';
 import ListItemAvatar from '@mui/material/ListItemAvatar';
 import ListItemButton from '@mui/material/ListItemButton';
@@ -28,6 +26,7 @@ import Tabs from '@mui/material/Tabs';
 import Typography from '@mui/material/Typography';
 import { useEffect, useState } from 'react';
 import { DashboardBackground } from '@/components/dashboard-background';
+import { MemberDetailsDialog } from '@/components/member-details-dialog';
 import {
     MuiThemeProvider,
     POPUP_BG,
@@ -38,15 +37,19 @@ import {
     avatarSx,
     CloseButton,
     PillSearchField,
-    PoolChip,
+    GroupChip,
     PopupHeader,
     StatusDot,
 } from '@/components/popup-ui';
+import { usePagePopup } from '@/hooks/use-page-popup';
+import type { ClubGroup } from '@/lib/groups';
+import { groupWithSubgroupName, subgroupsOf, useGroups } from '@/lib/groups';
 
 interface Member {
     id: number;
     name: string;
-    pool: string;
+    group_id: number | null;
+    subgroup_id: number | null;
     status: 'active' | 'inactive';
     parent: {
         id: number;
@@ -68,6 +71,11 @@ const inputSx = {
 };
 
 export default function MembersIndex({ members, userRole }: Props) {
+    // Fades in and out over the dashboard
+    const popup = usePagePopup();
+    const groups = useGroups();
+    // New members go to the club's first group unless another is picked
+    const firstGroupId: number | '' = groups[0]?.id ?? '';
     const [showAddModal, setShowAddModal] = useState(false);
     const [deleteMember, setDeleteMember] = useState<Member | null>(null);
     const [deleting, setDeleting] = useState(false);
@@ -77,7 +85,9 @@ export default function MembersIndex({ members, userRole }: Props) {
     const [memberStatusTab, setMemberStatusTab] = useState(0);
     const [form, setForm] = useState({
         name: '',
-        pool: 'big',
+        group_id: firstGroupId as number | '',
+        // '' = no subgroup
+        subgroup_id: '' as number | '',
         status: 'active' as 'active' | 'inactive',
         parent_name: '',
         parent_phone: '',
@@ -85,7 +95,9 @@ export default function MembersIndex({ members, userRole }: Props) {
 
     const [editForm, setEditForm] = useState({
         name: '',
-        pool: 'big',
+        group_id: firstGroupId as number | '',
+        // '' = no subgroup
+        subgroup_id: '' as number | '',
         status: 'active' as 'active' | 'inactive',
         parent_name: '',
         parent_phone: '',
@@ -124,7 +136,8 @@ export default function MembersIndex({ members, userRole }: Props) {
     const hasEditChanges =
         !!editMember &&
         (editForm.name !== editMember.name ||
-            editForm.pool !== editMember.pool ||
+            editForm.group_id !== (editMember.group_id ?? '') ||
+            editForm.subgroup_id !== (editMember.subgroup_id ?? '') ||
             editForm.status !== editMember.status ||
             editForm.parent_name !== (editMember.parent?.name ?? '') ||
             editForm.parent_phone !== (editMember.parent?.phone ?? ''));
@@ -144,7 +157,8 @@ export default function MembersIndex({ members, userRole }: Props) {
                 setShowAddModal(false);
                 setForm({
                     name: '',
-                    pool: 'big',
+                    group_id: firstGroupId as number | '',
+                    subgroup_id: '',
                     status: 'active',
                     parent_name: '',
                     parent_phone: '',
@@ -177,7 +191,8 @@ export default function MembersIndex({ members, userRole }: Props) {
         setEditMember(member);
         setEditForm({
             name: member.name,
-            pool: member.pool,
+            group_id: member.group_id ?? '',
+            subgroup_id: member.subgroup_id ?? '',
             status: member.status ?? 'active',
             parent_name: member.parent?.name ?? '',
             parent_phone: member.parent?.phone ?? '',
@@ -207,8 +222,7 @@ export default function MembersIndex({ members, userRole }: Props) {
 
             {/* Members List Modal */}
             <Dialog
-                open={true}
-                onClose={() => router.visit('/dashboard')}
+                {...popup.dialogProps}
                 fullWidth
                 maxWidth="sm"
                 PaperProps={{
@@ -236,7 +250,7 @@ export default function MembersIndex({ members, userRole }: Props) {
                                 Add
                             </Button>
                         }
-                        onClose={() => router.visit('/dashboard')}
+                        onClose={popup.close}
                     />
                     <PillSearchField
                         value={search}
@@ -294,7 +308,13 @@ export default function MembersIndex({ members, userRole }: Props) {
                                         }
                                         secondary={
                                             <span className="mt-1 flex items-center gap-2">
-                                                <PoolChip pool={member.pool} />
+                                                <GroupChip
+                                                    name={groupWithSubgroupName(
+                                                        groups,
+                                                        member.group_id,
+                                                        member.subgroup_id,
+                                                    )}
+                                                />
                                                 <StatusDot
                                                     active={
                                                         member.status ===
@@ -401,111 +421,10 @@ export default function MembersIndex({ members, userRole }: Props) {
             )}
 
             {/* Member Detail Modal */}
-            <Dialog
-                open={!!selectedMember}
+            <MemberDetailsDialog
+                member={selectedMember}
                 onClose={() => setSelectedMember(null)}
-                disableRestoreFocus
-                fullWidth
-                maxWidth="sm"
-                PaperProps={{ sx: { bgcolor: POPUP_BG } }}
-            >
-                <DialogTitle sx={{ p: 0 }}>
-                    <div className="flex items-center justify-between px-4 py-3">
-                        <IconButton onClick={() => setSelectedMember(null)}>
-                            <ArrowBackIcon />
-                        </IconButton>
-                        <Typography variant="h6" fontWeight="bold">
-                            Member Details
-                        </Typography>
-                        <CloseButton onClick={() => setSelectedMember(null)} />
-                    </div>
-                    <Divider />
-                </DialogTitle>
-
-                <DialogContent>
-                    {selectedMember && (
-                        <div className="space-y-4 py-4">
-                            <div>
-                                <Typography
-                                    variant="caption"
-                                    color="text.secondary"
-                                >
-                                    Swimmer
-                                </Typography>
-                                <Typography variant="body1" fontWeight="bold">
-                                    {selectedMember.name}
-                                </Typography>
-                            </div>
-                            <div>
-                                <Typography
-                                    variant="caption"
-                                    color="text.secondary"
-                                >
-                                    Status
-                                </Typography>
-                                <Typography
-                                    variant="body1"
-                                    color={
-                                        selectedMember.status === 'active'
-                                            ? 'success.main'
-                                            : 'error.main'
-                                    }
-                                >
-                                    {selectedMember.status === 'active'
-                                        ? 'Active'
-                                        : 'Inactive'}
-                                </Typography>
-                            </div>
-
-                            <div>
-                                <Typography
-                                    variant="caption"
-                                    color="text.secondary"
-                                >
-                                    Group
-                                </Typography>
-                                <Typography variant="body1">
-                                    {selectedMember.pool === 'big'
-                                        ? 'Big Pool'
-                                        : 'Small Pool'}
-                                </Typography>
-                            </div>
-                            <Divider />
-                            <div>
-                                <Typography
-                                    variant="caption"
-                                    color="text.secondary"
-                                >
-                                    Parent
-                                </Typography>
-                                <Typography variant="body1" fontWeight="bold">
-                                    {selectedMember.parent?.name ?? '—'}
-                                </Typography>
-                            </div>
-                            <div>
-                                <Typography
-                                    variant="caption"
-                                    color="text.secondary"
-                                >
-                                    Parent Phone
-                                </Typography>
-                                <Typography variant="body1">
-                                    {selectedMember.parent?.phone ? (
-                                        <Link
-                                            href={`tel:${selectedMember.parent.phone.replace(/[^\d+]/g, '')}`}
-                                            underline="none"
-                                        >
-                                            {selectedMember.parent.phone}
-                                        </Link>
-                                    ) : (
-                                        '—'
-                                    )}
-                                </Typography>
-                            </div>
-                        </div>
-                    )}
-                </DialogContent>
-            </Dialog>
+            />
 
             {/* Edit Member Modal */}
             <Dialog
@@ -563,7 +482,7 @@ export default function MembersIndex({ members, userRole }: Props) {
                                 letterSpacing: 1,
                             }}
                         >
-                            Swimmer Info
+                            Member Info
                         </Typography>
 
                         <Input
@@ -590,12 +509,14 @@ export default function MembersIndex({ members, userRole }: Props) {
                             </InputLabel>
                             <Select
                                 labelId="edit-pool-label"
-                                value={editForm.pool}
+                                value={editForm.group_id}
                                 label="Group"
                                 onChange={(e) =>
                                     setEditForm({
                                         ...editForm,
-                                        pool: e.target.value,
+                                        group_id: Number(e.target.value),
+                                        // Subgroups belong to one group
+                                        subgroup_id: '',
                                     })
                                 }
                                 sx={{
@@ -606,10 +527,26 @@ export default function MembersIndex({ members, userRole }: Props) {
                                     '& .MuiSvgIcon-root': { color: POPUP_FG },
                                 }}
                             >
-                                <MenuItem value="big">Big Pool</MenuItem>
-                                <MenuItem value="small">Small Pool</MenuItem>
+                                {groups.map((group) => (
+                                    <MenuItem key={group.id} value={group.id}>
+                                        {group.name}
+                                    </MenuItem>
+                                ))}
                             </Select>
                         </FormControl>
+
+                        <SubgroupSelect
+                            id="edit-subgroup-label"
+                            groups={groups}
+                            groupId={editForm.group_id}
+                            value={editForm.subgroup_id}
+                            onChange={(subgroupId) =>
+                                setEditForm({
+                                    ...editForm,
+                                    subgroup_id: subgroupId,
+                                })
+                            }
+                        />
 
                         <Divider />
 
@@ -728,20 +665,37 @@ export default function MembersIndex({ members, userRole }: Props) {
                                     letterSpacing: 1,
                                 }}
                             >
-                                Swimmer Info
+                                Member Info
                             </Typography>
 
                             <Input
-                                placeholder="Enter swimmer's full name"
+                                placeholder="Enter member's full name"
                                 value={form.name}
                                 onChange={(e) =>
                                     setForm({ ...form, name: e.target.value })
                                 }
                                 required
                                 fullWidth
-                                inputProps={{ 'aria-label': 'swimmer name' }}
+                                inputProps={{ 'aria-label': 'member name' }}
                                 sx={inputSx}
                             />
+
+                            {/* Members need a group: point to where groups are made */}
+                            {groups.length === 0 && (
+                                <p className="rounded-xl bg-red-500/10 px-3 py-2 text-sm text-red-500">
+                                    No groups yet.{' '}
+                                    {userRole === 'admin' ? (
+                                        <Link
+                                            href="/groups"
+                                            className="font-semibold underline"
+                                        >
+                                            Create them in Groups
+                                        </Link>
+                                    ) : (
+                                        'Ask an admin to add one.'
+                                    )}
+                                </p>
+                            )}
 
                             <FormControl fullWidth>
                                 <InputLabel
@@ -752,12 +706,14 @@ export default function MembersIndex({ members, userRole }: Props) {
                                 </InputLabel>
                                 <Select
                                     labelId="pool-label"
-                                    value={form.pool}
+                                    value={form.group_id}
                                     label="Group"
                                     onChange={(e) =>
                                         setForm({
                                             ...form,
-                                            pool: e.target.value,
+                                            group_id: Number(e.target.value),
+                                            // Subgroups belong to one group
+                                            subgroup_id: '',
                                         })
                                     }
                                     sx={{
@@ -770,12 +726,29 @@ export default function MembersIndex({ members, userRole }: Props) {
                                         },
                                     }}
                                 >
-                                    <MenuItem value="big">Big Pool</MenuItem>
-                                    <MenuItem value="small">
-                                        Small Pool
-                                    </MenuItem>
+                                    {groups.map((group) => (
+                                        <MenuItem
+                                            key={group.id}
+                                            value={group.id}
+                                        >
+                                            {group.name}
+                                        </MenuItem>
+                                    ))}
                                 </Select>
                             </FormControl>
+
+                            <SubgroupSelect
+                                id="subgroup-label"
+                                groups={groups}
+                                groupId={form.group_id}
+                                value={form.subgroup_id}
+                                onChange={(subgroupId) =>
+                                    setForm({
+                                        ...form,
+                                        subgroup_id: subgroupId,
+                                    })
+                                }
+                            />
 
                             <Divider />
 
@@ -843,5 +816,62 @@ export default function MembersIndex({ members, userRole }: Props) {
                 </Dialog>
             )}
         </MuiThemeProvider>
+    );
+}
+
+/** Optional subgroup of the chosen group; hidden when the group has none. */
+function SubgroupSelect({
+    id,
+    groups,
+    groupId,
+    value,
+    onChange,
+}: {
+    id: string;
+    groups: ClubGroup[];
+    groupId: number | '';
+    value: number | '';
+    onChange: (subgroupId: number | '') => void;
+}) {
+    const subgroups = subgroupsOf(groups, groupId === '' ? null : groupId);
+
+    if (subgroups.length === 0) {
+        return null;
+    }
+
+    return (
+        <FormControl fullWidth>
+            <InputLabel id={id} shrink sx={{ color: popupFg(0.5) }}>
+                Subgroup (optional)
+            </InputLabel>
+            <Select
+                labelId={id}
+                value={value}
+                label="Subgroup (optional)"
+                displayEmpty
+                notched
+                onChange={(e) =>
+                    onChange(
+                        String(e.target.value) === ''
+                            ? ''
+                            : Number(e.target.value),
+                    )
+                }
+                sx={{
+                    color: POPUP_FG,
+                    '& .MuiOutlinedInput-notchedOutline': {
+                        borderColor: popupFg(0.3),
+                    },
+                    '& .MuiSvgIcon-root': { color: POPUP_FG },
+                }}
+            >
+                <MenuItem value="">No subgroup</MenuItem>
+                {subgroups.map((subgroup) => (
+                    <MenuItem key={subgroup.id} value={subgroup.id}>
+                        {subgroup.name}
+                    </MenuItem>
+                ))}
+            </Select>
+        </FormControl>
     );
 }
