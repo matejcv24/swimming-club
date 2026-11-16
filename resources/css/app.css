@@ -195,3 +195,14 @@
         transform: translateX(var(--slide-distance));
     }
 }
+
+/* Phones zoom the page in when a text field with text smaller than 16px is tapped
+   (e.g. the 14px search bars). On touch screens fields use 16px, so tapping one
+   no longer zooms; pinch-to-zoom still works. */
+@media (pointer: coarse) {
+    input,
+    textarea,
+    select {
+        font-size: 16px !important;
+    }
+}
