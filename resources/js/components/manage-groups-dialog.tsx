@@ -70,11 +70,18 @@ export function ManageGroupsDialog({
     transition?: Pick<DialogProps, 'transitionDuration' | 'TransitionProps'>;
     onClose: () => void;
     groups: ClubGroup[];
-    /** Everyone in the club, for the "N members" lists. */
+    /** The club's active members, for the "N members" lists. */
     members: MemberDetails[];
 }) {
     // The group or subgroup whose members are being listed
     const [membersOf, setMembersOf] = useState<MembersOf | null>(null);
+    // How many active members a group or subgroup has (the lists show only those)
+    const activeIn = (kind: MembersOf['kind'], id: number) =>
+        members.filter((member) =>
+            kind === 'group'
+                ? member.group_id === id
+                : member.subgroup_id === id,
+        ).length;
     const [newName, setNewName] = useState('');
     const [names, setNames] = useState<Record<number, string>>({});
     // The group a new subgroup is being added to, and its name so far
@@ -351,7 +358,7 @@ export function ManageGroupsDialog({
                                     </div>
                                     <p className="mt-1.5 px-1 text-xs text-[var(--popup-muted)]">
                                         <MembersLink
-                                            count={group.members_count}
+                                            count={activeIn('group', group.id)}
                                             onClick={() =>
                                                 setMembersOf({
                                                     kind: 'group',
@@ -396,9 +403,10 @@ export function ManageGroupsDialog({
                                                     </div>
                                                     <p className="mt-1 px-1 text-xs text-[var(--popup-muted)]">
                                                         <MembersLink
-                                                            count={
-                                                                subgroup.members_count
-                                                            }
+                                                            count={activeIn(
+                                                                'subgroup',
+                                                                subgroup.id,
+                                                            )}
                                                             onClick={() =>
                                                                 setMembersOf({
                                                                     kind: 'subgroup',

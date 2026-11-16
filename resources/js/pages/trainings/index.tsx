@@ -515,7 +515,7 @@ export default function TrainingsIndex({
                 <DialogTitle sx={{ p: 0 }}>
                     <PopupHeader
                         icon={<EventAvailableIcon fontSize="small" />}
-                        title={selectedDate?.format('dddd, D MMMM YYYY') ?? ''}
+                        title={selectedDate?.format('DD.MM.YYYY') ?? ''}
                         subtitle={
                             overview
                                 ? `${showAll ? groupLabel : `${groupLabel} · all groups`} · ${overviewCount} ${overviewCount === 1 ? 'member' : 'members'} attended`
@@ -716,20 +716,26 @@ export default function TrainingsIndex({
                     <div className="flex flex-shrink-0 gap-3 p-4">
                         <Button
                             variant="outlined"
-                            size="large"
                             onClick={cancelEdit}
+                            sx={{ px: 3 }}
                         >
                             Cancel
                         </Button>
                         <Button
                             variant="contained"
                             fullWidth
-                            size="large"
                             onClick={handleSave}
                             // A day that had attendance may be saved with nobody ticked (clears it)
                             disabled={checkedIds.length === 0 && !hasRecords}
+                            sx={{ py: 0.5, lineHeight: 1.2 }}
                         >
-                            Save attendance ({checkedIds.length} present)
+                            {/* Two short lines: the action, and how many are ticked */}
+                            <span className="flex flex-col items-center">
+                                <span>Save Attendance</span>
+                                <span className="text-xs font-semibold opacity-85">
+                                    ({checkedIds.length} present)
+                                </span>
+                            </span>
                         </Button>
                     </div>
                 ) : (

@@ -19,11 +19,13 @@ class GroupController extends Controller
 {
     /**
      * The Groups pop-up over the dashboard (the groups come with every page), with
-     * the club's members for each group's "N members" list.
+     * the club's active members for each group's "N members" list.
      */
     public function index()
     {
+        // Active members only: the lists show who is in a group now
         $members = Member::with('parent')
+            ->where('status', 'active')
             ->orderBy('name')
             ->get()
             ->map(fn (Member $member) => [

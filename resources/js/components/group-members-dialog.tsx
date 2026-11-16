@@ -14,7 +14,7 @@ import { useState } from 'react';
 import { MemberDetailsDialog } from '@/components/member-details-dialog';
 import type { MemberDetails } from '@/components/member-details-dialog';
 import { POPUP_BG } from '@/components/mui-theme-provider';
-import { avatarSx, PopupHeader, StatusDot } from '@/components/popup-ui';
+import { avatarSx, PopupHeader } from '@/components/popup-ui';
 import { subgroupsOf, useGroups } from '@/lib/groups';
 
 /** Which members to list: everyone in a main group, or in one of its subgroups. */
@@ -59,7 +59,7 @@ export function MembersLink({
     );
 }
 
-/** The members of a group or subgroup; tapping one opens their details. */
+/** The active members of a group or subgroup; tapping one opens their details. */
 export function GroupMembersDialog({
     of,
     members,
@@ -143,22 +143,12 @@ export function GroupMembersDialog({
                                         </Typography>
                                     }
                                     secondary={
-                                        <span className="flex flex-wrap items-center gap-x-2">
-                                            {subgroupName(member) && (
-                                                <span className="text-xs text-[var(--popup-muted)]">
-                                                    {subgroupName(member)}
-                                                </span>
-                                            )}
-                                            <StatusDot
-                                                active={
-                                                    member.status === 'active'
-                                                }
-                                            />
-                                        </span>
+                                        subgroupName(member) && (
+                                            <span className="text-xs text-[var(--popup-muted)]">
+                                                {subgroupName(member)}
+                                            </span>
+                                        )
                                     }
-                                    secondaryTypographyProps={{
-                                        component: 'div',
-                                    }}
                                 />
                                 <ChevronRightIcon
                                     sx={{ color: 'var(--popup-muted)' }}
