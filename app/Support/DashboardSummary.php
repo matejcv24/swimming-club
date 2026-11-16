@@ -20,17 +20,26 @@ class DashboardSummary
         $currentYear = now()->year;
         $today = Carbon::today();
 
-        $membershipTotal = (float) MembershipFee::whereYear('start_date', $currentYear)->sum('amount');
-        $salaryTotal = (float) Salary::whereYear('month', $currentYear)->sum('amount');
-        $invoiceTotal = (float) Invoice::whereYear('month', $currentYear)->sum('amount');
+        // "Between 1 Jan and 31 Dec" rather than "year of the date is ...": the same
+        // result, but the database finds the rows through its index instead of
+        // reading every row
+        $year = [
+            Carbon::create($currentYear)->startOfYear()->toDateString(),
+            Carbon::create($currentYear)->endOfYear()->toDateTimeString(),
+        ];
+
+        $membershipTotal = (float) MembershipFee::whereBetween('start_date', $year)->sum('amount');
+        $salaryTotal = (float) Salary::whereBetween('month', $year)->sum('amount');
+        $invoiceTotal = (float) Invoice::whereBetween('month', $year)->sum('amount');
 
         $coachSalaryTotal = $user->role === 'coach'
-            ? (float) Salary::where('user_id', $user->id)->whereYear('month', $currentYear)->sum('amount')
+            ? (float) Salary::where('user_id', $user->id)->whereBetween('month', $year)->sum('amount')
             : 0.0;
 
         // One query: each active member with only the end date of their latest fee
         // (instead of loading every fee they ever paid), used for both counts.
-        $activeMembers = Member::where('status', 'active')
+        $activeMembers = Member::visibleTo($user)
+            ->where('status', 'active')
             ->withMax('membershipFees', 'end_date')
             ->get(['id']);
 

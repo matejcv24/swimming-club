@@ -23,7 +23,7 @@ class MemberDeleteTest extends TestCase
 
         $member = Member::create([
             'name' => $name,
-            'pool' => 'small',
+            'group_id' => $this->group('Small pool'),
             'status' => 'active',
             'parent_id' => $parent->id,
         ]);
@@ -31,7 +31,7 @@ class MemberDeleteTest extends TestCase
         MembershipFee::create([
             'member_id' => $member->id,
             'member_name' => $member->name,
-            'pool' => $member->pool,
+            'group_id' => $member->group_id,
             'amount' => 1500,
             'payment_method' => 'cash',
             'start_date' => '2026-10-01',
@@ -39,7 +39,7 @@ class MemberDeleteTest extends TestCase
         ]);
 
         $training = Training::firstOrCreate(
-            ['date' => '2026-10-20', 'pool' => 'small'],
+            ['date' => '2026-10-20', 'group_id' => $this->group('Small pool')],
             ['coach_id' => User::factory()->create(['role' => 'coach'])->id],
         );
         Attendance::create(['training_id' => $training->id, 'member_id' => $member->id, 'present' => true]);

@@ -1,4 +1,4 @@
-import { Head, router } from '@inertiajs/react';
+import { Head } from '@inertiajs/react';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import Chip from '@mui/material/Chip';
 import Dialog from '@mui/material/Dialog';
@@ -17,6 +17,7 @@ import {
     popupFg,
 } from '@/components/mui-theme-provider';
 import { CloseButton, PopupHeader } from '@/components/popup-ui';
+import { usePagePopup } from '@/hooks/use-page-popup';
 
 interface ProfitRow {
     month: string;
@@ -44,6 +45,8 @@ const formatCurrency = (value: number): string => {
 };
 
 export default function ProfitIndex({ profits }: Props) {
+    // Fades in and out over the dashboard
+    const popup = usePagePopup();
     const [showHistoryModal, setShowHistoryModal] = useState(false);
     const [showYearDetailModal, setShowYearDetailModal] = useState(false);
     const [selectedYear, setSelectedYear] = useState<string | null>(null);
@@ -102,8 +105,7 @@ export default function ProfitIndex({ profits }: Props) {
             <Head title="Profit" />
 
             <Dialog
-                open={true}
-                onClose={() => router.visit('/dashboard')}
+                {...popup.dialogProps}
                 fullWidth
                 maxWidth="sm"
                 PaperProps={{
@@ -120,7 +122,7 @@ export default function ProfitIndex({ profits }: Props) {
                         icon={<TrendingUpIcon fontSize="small" />}
                         title="Profit"
                         subtitle="Fees minus invoices and salaries"
-                        onClose={() => router.visit('/dashboard')}
+                        onClose={popup.close}
                     />
                 </DialogTitle>
 

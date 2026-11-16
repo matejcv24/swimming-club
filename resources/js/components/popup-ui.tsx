@@ -3,6 +3,9 @@ import SearchIcon from '@mui/icons-material/Search';
 import IconButton from '@mui/material/IconButton';
 import type { IconButtonProps } from '@mui/material/IconButton';
 import InputBase from '@mui/material/InputBase';
+import Tab from '@mui/material/Tab';
+import Tabs from '@mui/material/Tabs';
+import { useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { clearOnClick } from '@/lib/search-field';
 
@@ -58,6 +61,70 @@ export function CloseButton({ sx, ...props }: IconButtonProps) {
     );
 }
 
+/**
+ * One line of text that, when it is too long for its space (e.g. on phones), slowly
+ * slides left to show the rest, pauses, and slides back, like a news ticker. Text
+ * that fits stays still. Without motion (reduced-motion setting) it is cut with "…".
+ */
+export function SlidingText({
+    children,
+    className = '',
+}: {
+    children: ReactNode;
+    className?: string;
+}) {
+    const boxRef = useRef<HTMLDivElement>(null);
+    const textRef = useRef<HTMLSpanElement>(null);
+    // How far the text must move to show its end (0: it fits)
+    const [distance, setDistance] = useState(0);
+
+    useEffect(() => {
+        const box = boxRef.current;
+        const text = textRef.current;
+
+        if (!box || !text) {
+            return;
+        }
+
+        const measure = () =>
+            setDistance(
+                Math.max(0, Math.ceil(text.scrollWidth - box.clientWidth)),
+            );
+
+        measure();
+        const observer = new ResizeObserver(measure);
+        observer.observe(box);
+        observer.observe(text);
+
+        return () => observer.disconnect();
+    }, [children]);
+
+    const sliding = distance > 0;
+
+    return (
+        <div
+            ref={boxRef}
+            className={`overflow-hidden whitespace-nowrap motion-reduce:truncate ${className}`}
+        >
+            <span
+                ref={textRef}
+                className={`inline-block ${sliding ? 'animate-[sliding-text_var(--slide-time)_ease-in-out_infinite_alternate] motion-reduce:animate-none' : ''}`}
+                style={
+                    sliding
+                        ? ({
+                              '--slide-distance': `-${distance}px`,
+                              // About 40px a second, plus the pauses at each end
+                              '--slide-time': `${Math.max(4, distance / 40 + 3)}s`,
+                          } as React.CSSProperties)
+                        : undefined
+                }
+            >
+                {children}
+            </span>
+        </div>
+    );
+}
+
 /** Header of a main pop-up: icon badge, title, short summary, actions and close. */
 export function PopupHeader({
     icon,
@@ -80,9 +147,9 @@ export function PopupHeader({
                     {title}
                 </div>
                 {subtitle && (
-                    <div className="mt-0.5 truncate text-[12.5px] font-normal text-[var(--popup-muted)]">
+                    <SlidingText className="mt-0.5 text-[12.5px] font-normal text-[var(--popup-muted)]">
                         {subtitle}
-                    </div>
+                    </SlidingText>
                 )}
             </div>
             <div className="ml-auto flex flex-none items-center gap-2">
@@ -135,11 +202,56 @@ export function PillSearchField({
 }
 
 /** Small pill showing a member's pool. */
-export function PoolChip({ pool }: { pool: string }) {
+export function GroupChip({ name }: { name: string }) {
     return (
         <span className="rounded-full bg-[var(--chip-bg)] px-2 py-0.5 text-[11.5px] font-bold text-[var(--chip-fg)]">
-            {pool === 'big' ? 'Big pool' : 'Small pool'}
+            {name}
         </span>
+    );
+}
+
+/**
+ * The club's groups as the pill switch. Up to three share the width; more scroll
+ * sideways. `counts` optionally adds a number per group, e.g. "Mon-Wed (3)".
+ */
+export function GroupTabs({
+    groups,
+    value,
+    onChange,
+    counts,
+}: {
+    groups: { id: number; name: string }[];
+    value: number | null;
+    onChange: (groupId: number) => void;
+    counts?: Record<number, number>;
+}) {
+    if (groups.length === 0) {
+        return null;
+    }
+
+    const selected = groups.some((group) => group.id === value)
+        ? value
+        : groups[0].id;
+
+    return (
+        <Tabs
+            value={selected}
+            onChange={(_, id: number) => onChange(id)}
+            variant={groups.length <= 3 ? 'fullWidth' : 'scrollable'}
+            scrollButtons={false}
+        >
+            {groups.map((group) => (
+                <Tab
+                    key={group.id}
+                    value={group.id}
+                    label={
+                        counts
+                            ? `${group.name} (${counts[group.id] ?? 0})`
+                            : group.name
+                    }
+                />
+            ))}
+        </Tabs>
     );
 }
 

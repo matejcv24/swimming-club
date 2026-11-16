@@ -38,14 +38,18 @@ import {
     popupFg,
 } from '@/components/mui-theme-provider';
 import { CloseButton, PopupHeader } from '@/components/popup-ui';
+import { CardsSkeleton } from '@/components/skeletons';
+import { usePagePopup } from '@/hooks/use-page-popup';
+import { groupNameOf, useGroups } from '@/lib/groups';
 import { clearOnClick } from '@/lib/search-field';
 
-type PoolFilter = 'all' | 'big' | 'small';
+/** 'all' or one group's id */
+type GroupFilter = 'all' | number;
 
 interface Member {
     id: number;
     name: string;
-    pool: string;
+    group_id: number | null;
     status: 'active' | 'inactive';
 }
 
@@ -53,7 +57,9 @@ interface Fee {
     id: number;
     member_id: number;
     member_name?: string | null;
-    pool: 'big' | 'small';
+    group_id: number | null;
+    // The group as it was, so payments of a deleted group keep its name
+    group?: { id: number; name: string } | null;
     amount: number;
     payment_method: 'cash' | 'card';
     start_date: string;
@@ -61,7 +67,6 @@ interface Fee {
     member?: {
         id: number;
         name: string;
-        pool: string;
     };
 }
 
@@ -79,7 +84,8 @@ interface MonthGroup {
 
 interface Props {
     members: Member[];
-    allFees: Fee[];
+    /** Arrives right after the page (undefined until then). */
+    allFees?: Fee[];
     userRole: 'admin' | 'coach';
 }
 
@@ -136,6 +142,9 @@ export default function MembershipFeesIndex({
     allFees,
     userRole,
 }: Props) {
+    // Fades in and out over the dashboard
+    const popup = usePagePopup();
+    const groups = useGroups();
     const activeMembers = members.filter((m) => m.status === 'active');
     const [selectedMember, setSelectedMember] = useState<Member | null>(null);
     const [fees, setFees] = useState<Fee[]>([]);
@@ -165,12 +174,12 @@ export default function MembershipFeesIndex({
     const [showMonthDetailModal, setShowMonthDetailModal] = useState(false);
     const [selectedYear, setSelectedYear] = useState<string | null>(null);
     const [selectedMonth, setSelectedMonth] = useState<string | null>(null);
-    const [monthPoolFilter, setMonthPoolFilter] = useState<PoolFilter>('all');
+    const [monthPoolFilter, setMonthPoolFilter] = useState<GroupFilter>('all');
 
     const groupedFeesByMonth = useMemo(() => {
         const grouped: Record<string, MonthGroup> = {};
 
-        allFees.forEach((fee) => {
+        (allFees ?? []).forEach((fee) => {
             const monthKey = dayjs(fee.start_date)
                 .startOf('month')
                 .format('YYYY-MM-DD');
@@ -241,7 +250,7 @@ export default function MembershipFeesIndex({
         }
 
         return selectedMonthData.fees.filter(
-            (fee) => fee.pool === monthPoolFilter,
+            (fee) => fee.group_id === monthPoolFilter,
         );
     }, [monthPoolFilter, selectedMonthData]);
 
@@ -383,8 +392,7 @@ export default function MembershipFeesIndex({
             <Head title="Membership Fees" />
 
             <Dialog
-                open={true}
-                onClose={() => router.visit('/dashboard')}
+                {...popup.dialogProps}
                 fullWidth
                 maxWidth="sm"
                 PaperProps={{
@@ -400,7 +408,7 @@ export default function MembershipFeesIndex({
                         icon={<CreditCardIcon fontSize="small" />}
                         title="Membership Fees"
                         subtitle="Record and review payments"
-                        onClose={() => router.visit('/dashboard')}
+                        onClose={popup.close}
                     />
                 </DialogTitle>
 
@@ -440,13 +448,7 @@ export default function MembershipFeesIndex({
                                     </Typography>
 
                                     {loadingFees ? (
-                                        <Typography
-                                            variant="body2"
-                                            color="text.secondary"
-                                            sx={{ mt: 1 }}
-                                        >
-                                            Loading...
-                                        </Typography>
+                                        <CardsSkeleton cards={1} />
                                     ) : fees.length === 0 ? (
                                         <Typography
                                             variant="body2"
@@ -622,7 +624,9 @@ export default function MembershipFeesIndex({
                                     Membership Fees By Year
                                 </Typography>
 
-                                {sortedYears.length > 0 ? (
+                                {allFees === undefined ? (
+                                    <CardsSkeleton />
+                                ) : sortedYears.length > 0 ? (
                                     <List disablePadding>
                                         {sortedYears.map((year) => (
                                             <ListItem
@@ -1038,13 +1042,18 @@ export default function MembershipFeesIndex({
                                 label="Group"
                                 onChange={(e) =>
                                     setMonthPoolFilter(
-                                        e.target.value as PoolFilter,
+                                        e.target.value === 'all'
+                                            ? 'all'
+                                            : Number(e.target.value),
                                     )
                                 }
                             >
                                 <MenuItem value="all">All</MenuItem>
-                                <MenuItem value="small">Small Pool</MenuItem>
-                                <MenuItem value="big">Big Pool</MenuItem>
+                                {groups.map((group) => (
+                                    <MenuItem key={group.id} value={group.id}>
+                                        {group.name}
+                                    </MenuItem>
+                                ))}
                             </Select>
                         </FormControl>
                         <TextField
@@ -1126,7 +1135,7 @@ export default function MembershipFeesIndex({
                                                 py: 4,
                                             }}
                                         >
-                                            No payments recorded for this pool.
+                                            No payments recorded for this group.
                                         </TableCell>
                                     </TableRow>
                                 )}
@@ -1137,13 +1146,12 @@ export default function MembershipFeesIndex({
                                                 fee.member_name ??
                                                 '—'}
                                         </TableCell>
-                                        <TableCell
-                                            sx={{
-                                                color: POPUP_FG,
-                                                textTransform: 'capitalize',
-                                            }}
-                                        >
-                                            {fee.pool} pool
+                                        <TableCell sx={{ color: POPUP_FG }}>
+                                            {groupNameOf(
+                                                groups,
+                                                fee.group_id,
+                                                fee.group?.name,
+                                            )}
                                         </TableCell>
                                         <TableCell sx={{ color: POPUP_FG }}>
                                             {dayjs(fee.start_date).format(

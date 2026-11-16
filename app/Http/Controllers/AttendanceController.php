@@ -16,7 +16,9 @@ class AttendanceController extends Controller
         $currentMonthStart = Carbon::now()->startOfMonth();
         $currentMonthEnd = Carbon::now()->endOfMonth();
 
-        $members = Member::where('status', 'active')
+        $members = Member::visibleTo(Auth::user())
+            ->where('status', 'active')
+            ->select(['id', 'name', 'group_id'])
             ->withCount([
                 'attendances as current_month_attendances_count' => function ($query) use ($currentMonthStart, $currentMonthEnd) {
                     $query->whereHas('training', function ($trainingQuery) use ($currentMonthStart, $currentMonthEnd) {
@@ -27,28 +29,27 @@ class AttendanceController extends Controller
             ->orderBy('name')
             ->get();
 
-        $attendanceRows = Attendance::with(['member', 'training'])
-            ->where('present', true)
-            ->whereHas('member', function ($query) {
-                $query->where('status', 'active');
-            })
-            ->get()
-            ->map(function ($attendance) {
-                return [
-                    'id' => $attendance->id,
-                    'member_id' => $attendance->member_id,
-                    'member_name' => $attendance->member?->name,
-                    'pool' => $attendance->member?->pool,
-                    'date' => $attendance->training?->date,
-                ];
-            })
-            ->filter(fn ($row) => $row['member_id'] && $row['date'])
-            ->values();
-
+        // A member's history is loaded when they are opened (byMember), instead of
+        // sending every attendance the club ever recorded with the page
         return Inertia::render('attendance/index', [
             'userRole' => $userRole,
             'members' => $members,
-            'attendanceRows' => $attendanceRows,
         ]);
+    }
+
+    /** The training days a member came to, newest first. */
+    public function byMember(Member $member)
+    {
+        abort_unless(Auth::user()->canSeeGroup($member->group_id), 403);
+
+        $rows = Attendance::query()
+            ->join('trainings', 'trainings.id', '=', 'attendances.training_id')
+            ->where('attendances.member_id', $member->id)
+            ->where('attendances.present', true)
+            ->orderByDesc('trainings.date')
+            ->get(['attendances.id', 'trainings.date'])
+            ->map(fn ($row) => ['id' => $row->id, 'date' => $row->date]);
+
+        return response()->json(['attendances' => $rows]);
     }
 }

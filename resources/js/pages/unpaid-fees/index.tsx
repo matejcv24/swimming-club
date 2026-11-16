@@ -1,44 +1,74 @@
-import { Head, router } from '@inertiajs/react';
+import { Head } from '@inertiajs/react';
 import WarningIcon from '@mui/icons-material/Warning';
 import Avatar from '@mui/material/Avatar';
 import Dialog from '@mui/material/Dialog';
 import DialogContent from '@mui/material/DialogContent';
 import DialogTitle from '@mui/material/DialogTitle';
+import FormControl from '@mui/material/FormControl';
+import InputLabel from '@mui/material/InputLabel';
 import Link from '@mui/material/Link';
 import List from '@mui/material/List';
 import ListItem from '@mui/material/ListItem';
 import ListItemAvatar from '@mui/material/ListItemAvatar';
 import ListItemText from '@mui/material/ListItemText';
-import Tab from '@mui/material/Tab';
-import Tabs from '@mui/material/Tabs';
+import MenuItem from '@mui/material/MenuItem';
+import Select from '@mui/material/Select';
 import Typography from '@mui/material/Typography';
 import dayjs from 'dayjs';
 import { useState } from 'react';
 import { DashboardBackground } from '@/components/dashboard-background';
-import { MuiThemeProvider, POPUP_BG } from '@/components/mui-theme-provider';
+import {
+    MuiThemeProvider,
+    POPUP_BG,
+    POPUP_FG,
+    popupFg,
+} from '@/components/mui-theme-provider';
 import { PopupHeader } from '@/components/popup-ui';
+import { usePagePopup } from '@/hooks/use-page-popup';
+import { useGroups } from '@/lib/groups';
 
 interface UnpaidMember {
     id: number;
     name: string;
-    pool: string;
+    group_id: number | null;
     parentName: string | null;
     phone: string | null;
     latest_end_date: string | null;
 }
 
 interface Props {
-    bigPoolMembers: UnpaidMember[];
-    smallPoolMembers: UnpaidMember[];
+    unpaidMembers: UnpaidMember[];
 }
 
-export default function UnpaidFeesIndex({
-    bigPoolMembers,
-    smallPoolMembers,
-}: Props) {
-    const [tab, setTab] = useState(1);
+export default function UnpaidFeesIndex({ unpaidMembers }: Props) {
+    // Fades in and out over the dashboard
+    const popup = usePagePopup();
+    const groups = useGroups();
+    // 'all' or one group's id
+    const [groupFilter, setGroupFilter] = useState<'all' | number>('all');
+    const activeFilter =
+        groupFilter !== 'all' && groups.some((g) => g.id === groupFilter)
+            ? groupFilter
+            : 'all';
 
-    const members = tab === 0 ? bigPoolMembers : smallPoolMembers;
+    // How many unpaid members each group has, shown in the drop-down
+    const counts = unpaidMembers.reduce<Record<number, number>>(
+        (all, member) => {
+            if (member.group_id !== null) {
+                all[member.group_id] = (all[member.group_id] ?? 0) + 1;
+            }
+
+            return all;
+        },
+        {},
+    );
+
+    const members =
+        activeFilter === 'all'
+            ? unpaidMembers
+            : unpaidMembers.filter(
+                  (member) => member.group_id === activeFilter,
+              );
 
     const getInitials = (name: string) =>
         name
@@ -54,8 +84,7 @@ export default function UnpaidFeesIndex({
             <Head title="Unpaid Fees" />
 
             <Dialog
-                open={true}
-                onClose={() => router.visit('/dashboard')}
+                {...popup.dialogProps}
                 fullWidth
                 maxWidth="sm"
                 PaperProps={{
@@ -71,21 +100,47 @@ export default function UnpaidFeesIndex({
                     <PopupHeader
                         icon={<WarningIcon fontSize="small" />}
                         title="Unpaid Fees"
-                        subtitle={`${bigPoolMembers.length + smallPoolMembers.length} members to follow up`}
-                        onClose={() => router.visit('/dashboard')}
+                        subtitle={`${unpaidMembers.length} members to follow up`}
+                        onClose={popup.close}
                     />
-                    <Tabs
-                        value={tab}
-                        onChange={(_, newValue) => setTab(newValue)}
-                        variant="fullWidth"
-                        textColor="inherit"
-                        indicatorColor="primary"
-                    >
-                        <Tab label={`Big pool (${bigPoolMembers.length})`} />
-                        <Tab
-                            label={`Small pool (${smallPoolMembers.length})`}
-                        />
-                    </Tabs>
+                    <div className="px-[18px] pb-3">
+                        <FormControl fullWidth size="small">
+                            <InputLabel
+                                id="unpaid-group-label"
+                                sx={{ color: popupFg(0.5) }}
+                            >
+                                Group
+                            </InputLabel>
+                            <Select
+                                labelId="unpaid-group-label"
+                                label="Group"
+                                value={activeFilter}
+                                onChange={(e) =>
+                                    setGroupFilter(
+                                        e.target.value === 'all'
+                                            ? 'all'
+                                            : Number(e.target.value),
+                                    )
+                                }
+                                sx={{
+                                    color: POPUP_FG,
+                                    '& .MuiOutlinedInput-notchedOutline': {
+                                        borderColor: popupFg(0.3),
+                                    },
+                                    '& .MuiSvgIcon-root': { color: POPUP_FG },
+                                }}
+                            >
+                                <MenuItem value="all">
+                                    All ({unpaidMembers.length})
+                                </MenuItem>
+                                {groups.map((group) => (
+                                    <MenuItem key={group.id} value={group.id}>
+                                        {group.name} ({counts[group.id] ?? 0})
+                                    </MenuItem>
+                                ))}
+                            </Select>
+                        </FormControl>
+                    </div>
                 </DialogTitle>
 
                 <DialogContent sx={{ p: 0, overflowY: 'auto', flex: 1 }}>
@@ -95,7 +150,9 @@ export default function UnpaidFeesIndex({
                             color="text.secondary"
                             sx={{ textAlign: 'center', mt: 6 }}
                         >
-                            No overdue members in this pool.
+                            {activeFilter === 'all'
+                                ? 'No overdue members.'
+                                : 'No overdue members in this group.'}
                         </Typography>
                     ) : (
                         <List disablePadding>

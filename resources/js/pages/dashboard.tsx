@@ -18,6 +18,9 @@ import {
     popupFg,
 } from '@/components/mui-theme-provider';
 import { CloseButton } from '@/components/popup-ui';
+import { PopupSkeleton } from '@/components/skeletons';
+import { useDashboardScroll } from '@/hooks/use-dashboard-scroll';
+import { usePendingPopup } from '@/hooks/use-pending-popup';
 
 interface Salary {
     id: number;
@@ -58,6 +61,9 @@ export default function Dashboard({
     coachSalaries = [],
     reportFirstYear = null,
 }: Props) {
+    const pendingPopup = usePendingPopup();
+    // Back where the user was after closing a pop-up
+    useDashboardScroll();
     const [showReportModal, setShowReportModal] = useState(false);
     const [showSalaryModal, setShowSalaryModal] = useState(
         userRole === 'coach' &&
@@ -131,6 +137,12 @@ export default function Dashboard({
 
     return (
         <MuiThemeProvider>
+            {/* Slow connection: the tapped card's pop-up frame, until its page arrives */}
+            <PopupSkeleton
+                open={pendingPopup !== null}
+                title={pendingPopup ?? ''}
+            />
+
             {userRole === 'admin' && (
                 <MonthlyReportDialog
                     open={showReportModal}

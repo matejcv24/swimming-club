@@ -1,5 +1,6 @@
 import { Head, router } from '@inertiajs/react';
 import EditIcon from '@mui/icons-material/Edit';
+import PaymentsIcon from '@mui/icons-material/Payments';
 import PersonIcon from '@mui/icons-material/Person';
 import PersonAddAlt1Icon from '@mui/icons-material/PersonAddAlt1';
 import Avatar from '@mui/material/Avatar';
@@ -14,7 +15,6 @@ import Input from '@mui/material/Input';
 import List from '@mui/material/List';
 import ListItem from '@mui/material/ListItem';
 import ListItemAvatar from '@mui/material/ListItemAvatar';
-import ListItemButton from '@mui/material/ListItemButton';
 import ListItemText from '@mui/material/ListItemText';
 import Typography from '@mui/material/Typography';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
@@ -23,6 +23,11 @@ import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import dayjs from 'dayjs';
 import type { Dayjs } from 'dayjs';
 import { useState } from 'react';
+import {
+    CoachGroupsField,
+    coachGroupsLabel,
+} from '@/components/coach-groups-field';
+import type { CoachGroups } from '@/components/coach-groups-field';
 import { DashboardBackground } from '@/components/dashboard-background';
 import {
     MuiThemeProvider,
@@ -31,12 +36,18 @@ import {
     popupFg,
 } from '@/components/mui-theme-provider';
 import { avatarSx, CloseButton, PopupHeader } from '@/components/popup-ui';
+import { CardsSkeleton } from '@/components/skeletons';
+import { usePagePopup } from '@/hooks/use-page-popup';
+import { useGroups } from '@/lib/groups';
 
-interface Staff {
+interface Staff extends CoachGroups {
     id: number;
     name: string;
     email: string;
 }
+
+// New coaches start with no group chosen: the admin must pick
+const NO_GROUPS: CoachGroups = { all_groups: false, group_ids: [] };
 
 interface Salary {
     id: number;
@@ -79,15 +90,25 @@ const formatCurrency = (value: number): string => {
 };
 
 export default function StaffIndex({ staff }: Props) {
+    // Fades in and out over the dashboard
+    const popup = usePagePopup();
+    const groups = useGroups();
     const [showAddModal, setShowAddModal] = useState(false);
-    const [form, setForm] = useState({ name: '', email: '', password: '' });
+    const [form, setForm] = useState({
+        name: '',
+        email: '',
+        password: '',
+        ...NO_GROUPS,
+    });
     const [formErrors, setFormErrors] = useState<Record<string, string>>({});
 
-    const [showEditModal, setShowEditModal] = useState(false);
+    // The coach being edited (null: the Edit Coach pop-up is closed)
+    const [editingCoach, setEditingCoach] = useState<Staff | null>(null);
     const [editForm, setEditForm] = useState({
         name: '',
         email: '',
         password: '',
+        ...NO_GROUPS,
     });
     const [editErrors, setEditErrors] = useState<Record<string, string>>({});
 
@@ -176,44 +197,44 @@ export default function StaffIndex({ staff }: Props) {
         router.post('/staff', form, {
             onSuccess: () => {
                 setShowAddModal(false);
-                setForm({ name: '', email: '', password: '' });
+                setForm({ name: '', email: '', password: '', ...NO_GROUPS });
                 setFormErrors({});
             },
             onError: (errors) => setFormErrors(errors),
         });
     };
 
-    const handleEditOpen = () => {
-        if (!selectedCoach) {
-            return;
-        }
-
+    const handleEditOpen = (coach: Staff) => {
         setEditForm({
-            name: selectedCoach.name,
-            email: selectedCoach.email,
+            name: coach.name,
+            email: coach.email,
             password: '',
+            all_groups: coach.all_groups,
+            group_ids: coach.group_ids,
         });
         setEditErrors({});
-        setShowEditModal(true);
+        setEditingCoach(coach);
     };
+
+    const closeEdit = () => setEditingCoach(null);
 
     const handleEditSubmit = (e: React.FormEvent) => {
         e.preventDefault();
 
-        if (!selectedCoach) {
+        if (!editingCoach) {
             return;
         }
 
-        router.put(`/staff/${selectedCoach.id}`, editForm, {
+        router.put(`/staff/${editingCoach.id}`, editForm, {
             preserveScroll: true,
             onSuccess: () => {
-                setSelectedCoach({
-                    ...selectedCoach,
-                    name: editForm.name,
-                    email: editForm.email,
+                setEditingCoach(null);
+                setEditForm({
+                    name: '',
+                    email: '',
+                    password: '',
+                    ...NO_GROUPS,
                 });
-                setShowEditModal(false);
-                setEditForm({ name: '', email: '', password: '' });
                 setEditErrors({});
             },
             onError: (errors) => setEditErrors(errors),
@@ -267,8 +288,7 @@ export default function StaffIndex({ staff }: Props) {
             <Head title="Staff" />
 
             <Dialog
-                open={true}
-                onClose={() => router.visit('/dashboard')}
+                {...popup.dialogProps}
                 fullWidth
                 maxWidth="sm"
                 PaperProps={{
@@ -295,7 +315,7 @@ export default function StaffIndex({ staff }: Props) {
                                 Add
                             </Button>
                         }
-                        onClose={() => router.visit('/dashboard')}
+                        onClose={popup.close}
                     />
                 </DialogTitle>
 
@@ -311,10 +331,10 @@ export default function StaffIndex({ staff }: Props) {
                     ) : (
                         <List disablePadding>
                             {staff.map((member, index) => (
-                                <ListItemButton
+                                <ListItem
                                     key={member.id}
                                     divider
-                                    onClick={() => handleCoachClick(member)}
+                                    sx={{ gap: 1, pr: 2 }}
                                 >
                                     <ListItemAvatar>
                                         <Avatar sx={avatarSx(index)}>
@@ -332,14 +352,45 @@ export default function StaffIndex({ staff }: Props) {
                                         }
                                         secondary={
                                             <Typography
-                                                variant="body2"
-                                                color="text.secondary"
+                                                variant="caption"
+                                                color="primary"
+                                                component="span"
+                                                noWrap
+                                                sx={{ display: 'block' }}
                                             >
-                                                {member.email}
+                                                {coachGroupsLabel(
+                                                    member,
+                                                    groups,
+                                                )}
                                             </Typography>
                                         }
+                                        sx={{ minWidth: 0 }}
                                     />
-                                </ListItemButton>
+                                    {/* Add Salary, and the Edit pencil as in the Members list */}
+                                    <div className="flex flex-none items-center gap-1">
+                                        <Button
+                                            variant="contained"
+                                            size="small"
+                                            startIcon={<PaymentsIcon />}
+                                            onClick={() =>
+                                                handleCoachClick(member)
+                                            }
+                                            sx={{ whiteSpace: 'nowrap' }}
+                                        >
+                                            Add Salary
+                                        </Button>
+                                        <IconButton
+                                            size="small"
+                                            color="primary"
+                                            aria-label={`Edit ${member.name}`}
+                                            onClick={() =>
+                                                handleEditOpen(member)
+                                            }
+                                        >
+                                            <EditIcon fontSize="small" />
+                                        </IconButton>
+                                    </div>
+                                </ListItem>
                             ))}
                         </List>
                     )}
@@ -366,14 +417,6 @@ export default function StaffIndex({ staff }: Props) {
                                 >
                                     {selectedCoach.name}
                                 </Typography>
-                                <IconButton
-                                    size="small"
-                                    color="primary"
-                                    onClick={handleEditOpen}
-                                    aria-label="edit coach"
-                                >
-                                    <EditIcon fontSize="small" />
-                                </IconButton>
                             </div>
                             <CloseButton
                                 onClick={() => setSelectedCoach(null)}
@@ -454,12 +497,7 @@ export default function StaffIndex({ staff }: Props) {
                             </Typography>
 
                             {loadingSalaries ? (
-                                <Typography
-                                    variant="body2"
-                                    color="text.secondary"
-                                >
-                                    Loading...
-                                </Typography>
+                                <CardsSkeleton cards={1} />
                             ) : currentYearLastSalary ? (
                                 <List disablePadding>
                                     <ListItem
@@ -539,12 +577,7 @@ export default function StaffIndex({ staff }: Props) {
                             </Typography>
 
                             {loadingSalaries ? (
-                                <Typography
-                                    variant="body2"
-                                    color="text.secondary"
-                                >
-                                    Loading...
-                                </Typography>
+                                <CardsSkeleton />
                             ) : sortedSalaryYears.length > 0 ? (
                                 <List disablePadding>
                                     {sortedSalaryYears.map((year) => (
@@ -814,6 +847,15 @@ export default function StaffIndex({ staff }: Props) {
                             error={!!formErrors.password}
                             sx={inputSx}
                         />
+                        <CoachGroupsField
+                            id="add-coach-groups"
+                            groups={groups}
+                            value={form}
+                            onChange={(value) => setForm({ ...form, ...value })}
+                            error={
+                                formErrors.group_ids ?? formErrors.all_groups
+                            }
+                        />
                         {Object.values(formErrors).map((message) => (
                             <Typography
                                 key={message}
@@ -830,6 +872,10 @@ export default function StaffIndex({ staff }: Props) {
                                 variant="contained"
                                 fullWidth
                                 size="medium"
+                                disabled={
+                                    !form.all_groups &&
+                                    form.group_ids.length === 0
+                                }
                             >
                                 Create Coach
                             </Button>
@@ -848,8 +894,8 @@ export default function StaffIndex({ staff }: Props) {
             </Dialog>
 
             <Dialog
-                open={showEditModal}
-                onClose={() => setShowEditModal(false)}
+                open={!!editingCoach}
+                onClose={closeEdit}
                 fullWidth
                 maxWidth="sm"
                 PaperProps={{
@@ -862,7 +908,7 @@ export default function StaffIndex({ staff }: Props) {
                         <Typography variant="h6" fontWeight="bold">
                             Edit Coach
                         </Typography>
-                        <CloseButton onClick={() => setShowEditModal(false)} />
+                        <CloseButton onClick={closeEdit} />
                     </div>
                     <Divider />
                 </DialogTitle>
@@ -930,6 +976,17 @@ export default function StaffIndex({ staff }: Props) {
                             Leave empty to keep the current password. A new
                             password logs the coach out on all devices.
                         </Typography>
+                        <CoachGroupsField
+                            id="edit-coach-groups"
+                            groups={groups}
+                            value={editForm}
+                            onChange={(value) =>
+                                setEditForm({ ...editForm, ...value })
+                            }
+                            error={
+                                editErrors.group_ids ?? editErrors.all_groups
+                            }
+                        />
                         {Object.values(editErrors).map((message) => (
                             <Typography
                                 key={message}
@@ -946,6 +1003,10 @@ export default function StaffIndex({ staff }: Props) {
                                 variant="contained"
                                 fullWidth
                                 size="medium"
+                                disabled={
+                                    !editForm.all_groups &&
+                                    editForm.group_ids.length === 0
+                                }
                             >
                                 Save
                             </Button>
@@ -954,7 +1015,7 @@ export default function StaffIndex({ staff }: Props) {
                                 variant="outlined"
                                 fullWidth
                                 size="medium"
-                                onClick={() => setShowEditModal(false)}
+                                onClick={closeEdit}
                             >
                                 Cancel
                             </Button>

@@ -16,8 +16,6 @@ use Illuminate\Support\Collection;
  */
 class MonthlyReport
 {
-    private const POOL_ORDER = ['big' => 0, 'small' => 1];
-
     public static function for(int $year, int $month): array
     {
         $start = CarbonImmutable::create($year, $month, 1)->startOfDay();
@@ -26,36 +24,40 @@ class MonthlyReport
             ->where($column, '>=', $start->toDateString())
             ->where($column, '<', $next->toDateString());
 
-        $fees = MembershipFee::with('member:id,name')
+        // Groups in the club's order; rows without a group come last
+        $order = fn ($group) => $group ? [$group->position, $group->id] : [PHP_INT_MAX, PHP_INT_MAX];
+
+        $fees = MembershipFee::with(['member:id,name', 'group'])
             ->tap(fn ($q) => $inMonth($q, 'start_date'))
             ->get()
             ->map(fn (MembershipFee $fee) => [
                 'member' => $fee->member?->name ?? $fee->member_name,
-                'pool' => $fee->pool,
+                'group' => $fee->group?->name,
+                'group_order' => $order($fee->group),
                 'start_date' => $fee->start_date,
                 'end_date' => $fee->end_date,
                 'payment_method' => $fee->payment_method,
                 'amount' => (float) $fee->amount,
             ]);
 
-        $feesByPool = $fees
-            ->groupBy('pool')
-            ->sortBy(fn ($rows, $pool) => self::POOL_ORDER[$pool] ?? 99)
-            ->map(fn (Collection $rows, $pool) => [
-                'pool' => $pool,
+        $feesByGroup = $fees
+            ->groupBy(fn ($row) => $row['group'] ?? '')
+            ->sortBy(fn (Collection $rows) => $rows->first()['group_order'])
+            ->map(fn (Collection $rows) => [
+                'group' => $rows->first()['group'],
                 'rows' => $rows->sortBy('member', SORT_NATURAL | SORT_FLAG_CASE)->values(),
                 'total' => $rows->sum('amount'),
             ])
             ->values();
 
-        $invoices = Invoice::query()
+        $invoices = Invoice::with('group')
             ->tap(fn ($q) => $inMonth($q, 'month'))
             ->get()
+            ->sortBy(fn (Invoice $invoice) => $order($invoice->group))
             ->map(fn (Invoice $invoice) => [
-                'pool' => $invoice->pool,
+                'group' => $invoice->group?->name,
                 'amount' => (float) $invoice->amount,
             ])
-            ->sortBy(fn ($row) => self::POOL_ORDER[$row['pool']] ?? 99)
             ->values();
 
         $salaries = Salary::with('user:id,name')
@@ -77,7 +79,7 @@ class MonthlyReport
 
         return [
             'month' => $start,
-            'feesByPool' => $feesByPool,
+            'feesByGroup' => $feesByGroup,
             'feeCount' => $fees->count(),
             'feesByMethod' => [
                 'cash' => $fees->where('payment_method', 'cash')->sum('amount'),

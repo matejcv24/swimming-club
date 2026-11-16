@@ -18,7 +18,7 @@ class MembershipFeeTest extends TestCase
         $parent = ClubParent::create(['name' => 'Parent', 'phone' => '070000000']);
         $member = Member::create([
             'name' => 'Swimmer',
-            'pool' => 'small',
+            'group_id' => $this->group('Small pool'),
             'status' => 'active',
             'parent_id' => $parent->id,
         ]);
@@ -26,7 +26,7 @@ class MembershipFeeTest extends TestCase
         return MembershipFee::create([
             'member_id' => $member->id,
             'member_name' => $member->name,
-            'pool' => $member->pool,
+            'group_id' => $member->group_id,
             'amount' => 1500,
             'payment_method' => 'cash',
             'start_date' => '2026-10-01',
@@ -60,7 +60,7 @@ class MembershipFeeTest extends TestCase
         $this->assertSame('2026-09-15', $fee->start_date->toDateString());
         $this->assertSame('2026-10-15', $fee->end_date->toDateString());
         $this->assertSame('Swimmer', $fee->member_name);
-        $this->assertSame('small', $fee->pool);
+        $this->assertSame($this->group('Small pool'), $fee->group_id);
     }
 
     public function test_coach_cannot_edit_membership_fee()

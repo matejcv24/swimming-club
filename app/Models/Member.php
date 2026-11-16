@@ -8,7 +8,15 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Member extends Model
 {
-    protected $fillable = ['name', 'date_of_birth', 'pool', 'status', 'parent_id'];
+    /** Only members of the groups the user may see (coaches see their own groups). */
+    public function scopeVisibleTo($query, User $user)
+    {
+        $ids = $user->visibleGroupIds();
+
+        return $ids === null ? $query : $query->whereIn('group_id', $ids);
+    }
+
+    protected $fillable = ['name', 'date_of_birth', 'pool', 'group_id', 'subgroup_id', 'status', 'parent_id'];
 
     public function parent(): BelongsTo
     {
@@ -23,5 +31,17 @@ class Member extends Model
     public function membershipFees(): HasMany
     {
         return $this->hasMany(MembershipFee::class);
+    }
+
+    /** Its group, even if the group has since been deleted (hidden). */
+    public function group(): BelongsTo
+    {
+        return $this->belongsTo(Group::class)->withTrashed();
+    }
+
+    /** Optional subgroup of the member's group (e.g. "18:00"). */
+    public function subgroup(): BelongsTo
+    {
+        return $this->belongsTo(Group::class, 'subgroup_id')->withTrashed();
     }
 }

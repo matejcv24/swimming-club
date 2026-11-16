@@ -42,7 +42,7 @@ class NotificationsTest extends TestCase
 
         return Member::create([
             'name' => 'Swimmer',
-            'pool' => 'small',
+            'group_id' => $this->group('Small pool'),
             'status' => 'active',
             'parent_id' => $parent->id,
             ...$attributes,
@@ -55,7 +55,7 @@ class NotificationsTest extends TestCase
 
         $this->actingAs($this->coach)->post('/trainings', [
             'date' => '2026-10-20',
-            'pool' => 'small',
+            'group_id' => $this->group('Small pool'),
             'member_ids' => [$member->id],
         ])->assertSessionHasNoErrors();
 
@@ -82,7 +82,7 @@ class NotificationsTest extends TestCase
     {
         $this->actingAs($this->coach)->post('/members', [
             'name' => 'New Swimmer',
-            'pool' => 'big',
+            'group_id' => $this->group('Big pool'),
             'parent_name' => 'Parent',
             'parent_phone' => '070000000',
         ])->assertSessionHasNoErrors();
@@ -96,7 +96,7 @@ class NotificationsTest extends TestCase
 
         $this->actingAs($this->coach)->put("/members/{$member->id}", [
             'name' => 'Renamed Swimmer',
-            'pool' => 'small',
+            'group_id' => $this->group('Small pool'),
             'status' => 'active',
             'parent_name' => 'Parent',
             'parent_phone' => '070000000',
@@ -115,7 +115,7 @@ class NotificationsTest extends TestCase
 
         $this->actingAs($this->coach)->put("/members/{$member->id}", [
             'name' => 'Swimmer',
-            'pool' => 'small',
+            'group_id' => $this->group('Small pool'),
             'status' => 'active',
             'parent_name' => 'Parent',
             'parent_phone' => '070000000',
@@ -130,7 +130,7 @@ class NotificationsTest extends TestCase
 
         $this->actingAs($this->admin)->post('/trainings', [
             'date' => '2026-10-20',
-            'pool' => 'small',
+            'group_id' => $this->group('Small pool'),
             'member_ids' => [$member->id],
         ]);
 
@@ -170,7 +170,7 @@ class NotificationsTest extends TestCase
         foreach (['2026-10-20', '2026-10-21', '2026-10-22'] as $date) {
             $this->actingAs($this->coach)->post('/trainings', [
                 'date' => $date,
-                'pool' => 'small',
+                'group_id' => $this->group('Small pool'),
                 'member_ids' => [$member->id],
             ]);
         }
@@ -215,7 +215,7 @@ class NotificationsTest extends TestCase
 
         $this->actingAs($this->coach)->post('/trainings', [
             'date' => '2026-10-20',
-            'pool' => 'small',
+            'group_id' => $this->group('Small pool'),
             'member_ids' => [$member->id],
         ]);
 

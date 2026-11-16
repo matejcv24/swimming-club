@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Member;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Auth;
 
 class UnpaidFeeController extends Controller
 {
@@ -11,48 +12,38 @@ class UnpaidFeeController extends Controller
     {
         $today = Carbon::today();
 
-$members = Member::where('status', 'active')
-    ->with([
-        'parent',
-        'membershipFees' => function ($query) {
-            $query->orderBy('end_date', 'desc');
-        },
-    ])
-    ->get();
+        // Each active member with only the end date of their latest fee
+        $members = Member::visibleTo(Auth::user())
+            ->where('status', 'active')
+            ->with('parent:id,name,phone')
+            ->withMax('membershipFees', 'end_date')
+            ->get(['id', 'name', 'group_id', 'parent_id']);
 
         $unpaidMembers = $members
             ->map(function ($member) use ($today) {
-                $latestFee = $member->membershipFees->first();
+                $latestEnd = $member->membership_fees_max_end_date;
 
-                $isUnpaid = !$latestFee || Carbon::parse($latestFee->end_date)->lt($today);
+                $isUnpaid = ! $latestEnd || Carbon::parse($latestEnd)->lt($today);
 
-                if (!$isUnpaid) {
+                if (! $isUnpaid) {
                     return null;
                 }
 
                 return [
                     'id' => $member->id,
                     'name' => $member->name,
-                    'pool' => $member->pool,
+                    'group_id' => $member->group_id,
                     'parentName' => $member->parent?->name,
                     'phone' => $member->parent?->phone,
-                    'latest_end_date' => $latestFee?->end_date,
+                    'latest_end_date' => $latestEnd ? Carbon::parse($latestEnd)->toDateString() : null,
                 ];
             })
             ->filter()
             ->values();
 
-        $bigPoolMembers = $unpaidMembers
-            ->filter(fn ($member) => $member['pool'] === 'big')
-            ->values();
-
-        $smallPoolMembers = $unpaidMembers
-            ->filter(fn ($member) => $member['pool'] === 'small')
-            ->values();
-
+        // One list; the page splits it into the club's groups
         return inertia('unpaid-fees/index', [
-            'bigPoolMembers' => $bigPoolMembers,
-            'smallPoolMembers' => $smallPoolMembers,
+            'unpaidMembers' => $unpaidMembers,
         ]);
     }
 }

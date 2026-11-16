@@ -37,7 +37,7 @@ class AdminController extends Controller
 
     public function invoices()
     {
-        $invoices = Invoice::orderBy('month', 'desc')->get();
+        $invoices = Invoice::with('group')->orderBy('month', 'desc')->get();
 
         return inertia('invoices/index', [
             'invoices' => $invoices,
