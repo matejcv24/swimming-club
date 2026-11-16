@@ -60,5 +60,15 @@
         <h1>You're offline</h1>
         <p>SC Hydra needs an internet connection. Check your signal and try again.</p>
         <button type="button" onclick="location.reload()">Try again</button>
+        <script>
+            // Macedonian unless English was chosen with the MK / EN switch
+            if (!/(?:^|; )locale=en(?:;|$)/.test(document.cookie)) {
+                document.documentElement.lang = 'mk';
+                document.title = 'SC Hydra - Без интернет';
+                document.querySelector('h1').textContent = 'Нема интернет';
+                document.querySelector('p').textContent = 'SC Hydra бара интернет врска. Проверете го сигналот и обидете се повторно.';
+                document.querySelector('button').textContent = 'Обиди се повторно';
+            }
+        </script>
     </body>
 </html>

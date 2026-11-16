@@ -6,10 +6,11 @@ use App\Models\Member;
 use App\Models\MembershipFee;
 use App\Models\User;
 use App\Notifications\MembershipPaymentNotification;
+use App\Support\NotificationText;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Inertia\Inertia;
 use Illuminate\Validation\Rule;
+use Inertia\Inertia;
 
 class MembershipFeeController extends Controller
 {
@@ -43,7 +44,7 @@ class MembershipFeeController extends Controller
                 // Coaches record payments only for members of their groups
                 function ($attribute, $value, $fail) {
                     if (! Auth::user()->canSeeGroup(Member::find($value)?->group_id)) {
-                        $fail('This member is not in one of your groups.');
+                        $fail(__('This member is not in one of your groups.'));
                     }
                 },
             ],
@@ -66,8 +67,12 @@ class MembershipFeeController extends Controller
 
             foreach ($admins as $admin) {
                 $admin->notify(new MembershipPaymentNotification(
-                    Auth::user()->name . ' recorded new payment for ' . $member->name,
-                    '/membership-fees?member=' . $member->id . '&history=1'
+                    Auth::user()->name.' recorded new payment for '.$member->name,
+                    '/membership-fees?member='.$member->id.'&history=1',
+                    NotificationText::make(':user recorded new payment for :member', [
+                        'user' => Auth::user()->name,
+                        'member' => $member->name,
+                    ]),
                 ));
             }
         }

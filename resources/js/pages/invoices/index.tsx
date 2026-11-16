@@ -31,6 +31,7 @@ import {
 import { CloseButton, PopupHeader } from '@/components/popup-ui';
 import { usePagePopup } from '@/hooks/use-page-popup';
 import { groupNameOf, useGroups } from '@/lib/groups';
+import { locale, pickerLocaleText, t, tc } from '@/lib/i18n';
 
 interface Invoice {
     id: number;
@@ -98,7 +99,6 @@ export default function InvoicesIndex({ invoices }: Props) {
     const page = usePage();
     const csrfToken = (page.props as any).csrf_token;
 
-    console.log('Page props:', page.props);
     console.log('CSRF Token from props:', csrfToken);
 
     const groups = useGroups();
@@ -117,7 +117,7 @@ export default function InvoicesIndex({ invoices }: Props) {
 
     const invoiceLabel = (invoice: Invoice) =>
         invoice.group_id === null
-            ? 'No specific group'
+            ? t('No specific group')
             : groupNameOf(groups, invoice.group_id, invoice.group?.name);
 
     // Invoices per month: one line per group (or without one) and their total
@@ -302,7 +302,7 @@ export default function InvoicesIndex({ invoices }: Props) {
     return (
         <MuiThemeProvider>
             <DashboardBackground />
-            <Head title="Invoices" />
+            <Head title={t('Invoices')} />
 
             <Dialog
                 {...popup.dialogProps}
@@ -320,8 +320,8 @@ export default function InvoicesIndex({ invoices }: Props) {
                 <DialogTitle sx={{ p: 0 }}>
                     <PopupHeader
                         icon={<ReceiptLongIcon fontSize="small" />}
-                        title="Invoices"
-                        subtitle="Invoices by month, per group or in total"
+                        title={t('Invoices')}
+                        subtitle={t('Invoices by month, per group or in total')}
                         onClose={popup.close}
                     />
                 </DialogTitle>
@@ -338,12 +338,16 @@ export default function InvoicesIndex({ invoices }: Props) {
                                     letterSpacing: 1,
                                 }}
                             >
-                                Record Invoice
+                                {t('Record Invoice')}
                             </Typography>
 
-                            <LocalizationProvider dateAdapter={AdapterDayjs}>
+                            <LocalizationProvider
+                                dateAdapter={AdapterDayjs}
+                                adapterLocale={locale}
+                                localeText={pickerLocaleText}
+                            >
                                 <DatePicker
-                                    label="Month"
+                                    label={t('Month')}
                                     value={invoiceMonth}
                                     onChange={(val) => setInvoiceMonth(val)}
                                     views={['month', 'year']}
@@ -353,11 +357,11 @@ export default function InvoicesIndex({ invoices }: Props) {
 
                             <FormControl fullWidth sx={fieldSx}>
                                 <InputLabel id="invoice-group-label" shrink>
-                                    Group (optional)
+                                    {t('Group (optional)')}
                                 </InputLabel>
                                 <Select
                                     labelId="invoice-group-label"
-                                    label="Group (optional)"
+                                    label={t('Group (optional)')}
                                     notched
                                     value={invoiceGroupId}
                                     displayEmpty
@@ -370,7 +374,7 @@ export default function InvoicesIndex({ invoices }: Props) {
                                     }
                                 >
                                     <MenuItem value="">
-                                        No specific group (total)
+                                        {t('No specific group (total)')}
                                     </MenuItem>
                                     {groups.map((group) => (
                                         <MenuItem
@@ -384,7 +388,7 @@ export default function InvoicesIndex({ invoices }: Props) {
                             </FormControl>
 
                             <TextField
-                                label="Amount (MKD)"
+                                label={t('Amount (MKD)')}
                                 type="number"
                                 required
                                 value={invoiceAmount}
@@ -408,7 +412,9 @@ export default function InvoicesIndex({ invoices }: Props) {
                                         isSaving
                                     }
                                 >
-                                    {isSaving ? 'Saving...' : 'Save Invoice'}
+                                    {isSaving
+                                        ? t('Saving...')
+                                        : t('Save Invoice')}
                                 </Button>
                                 <Button
                                     variant="outlined"
@@ -416,7 +422,7 @@ export default function InvoicesIndex({ invoices }: Props) {
                                     size="medium"
                                     onClick={resetForm}
                                 >
-                                    Cancel
+                                    {t('Cancel')}
                                 </Button>
                             </div>
                         </div>
@@ -432,7 +438,7 @@ export default function InvoicesIndex({ invoices }: Props) {
                                     letterSpacing: 1,
                                 }}
                             >
-                                Invoice History By Year
+                                {t('Invoice History By Year')}
                             </Typography>
 
                             {sortedYears.length > 0 ? (
@@ -474,11 +480,11 @@ export default function InvoicesIndex({ invoices }: Props) {
                                                     variant="caption"
                                                     color="primary"
                                                 >
-                                                    {
+                                                    {tc(
+                                                        ':count month|:count months',
                                                         yearGroups[year]
-                                                            .monthCount
-                                                    }{' '}
-                                                    months
+                                                            .monthCount,
+                                                    )}
                                                 </Typography>
                                             </div>
                                             <div
@@ -490,7 +496,15 @@ export default function InvoicesIndex({ invoices }: Props) {
                                                 }}
                                             >
                                                 <Chip
-                                                    label={`Total: ${formatCurrency(yearGroups[year].total)} MKD`}
+                                                    label={t(
+                                                        'Total: :amount MKD',
+                                                        {
+                                                            amount: formatCurrency(
+                                                                yearGroups[year]
+                                                                    .total,
+                                                            ),
+                                                        },
+                                                    )}
                                                     color="success"
                                                     size="small"
                                                     sx={chipSx}
@@ -504,7 +518,7 @@ export default function InvoicesIndex({ invoices }: Props) {
                                     variant="body2"
                                     color="text.secondary"
                                 >
-                                    No invoices recorded yet.
+                                    {t('No invoices recorded yet.')}
                                 </Typography>
                             )}
                         </div>
@@ -529,7 +543,9 @@ export default function InvoicesIndex({ invoices }: Props) {
                 <DialogTitle sx={{ p: 0 }}>
                     <div className="flex items-center justify-between px-4 py-3">
                         <Typography variant="h6" fontWeight="bold">
-                            Invoice History By Month - {selectedYear}
+                            {t('Invoice History By Month - :year', {
+                                year: selectedYear ?? '',
+                            })}
                         </Typography>
                         <CloseButton
                             onClick={() => {
@@ -608,7 +624,14 @@ export default function InvoicesIndex({ invoices }: Props) {
                                                     }}
                                                     deleteIcon={
                                                         <EditIcon
-                                                            aria-label={`Edit ${invoiceLabel(invoice)} invoice`}
+                                                            aria-label={t(
+                                                                'Edit :name invoice',
+                                                                {
+                                                                    name: invoiceLabel(
+                                                                        invoice,
+                                                                    ),
+                                                                },
+                                                            )}
                                                         />
                                                     }
                                                     sx={{
@@ -622,7 +645,11 @@ export default function InvoicesIndex({ invoices }: Props) {
                                             ),
                                         )}
                                         <Chip
-                                            label={`Total: ${formatCurrency(monthData.total)} MKD`}
+                                            label={t('Total: :amount MKD', {
+                                                amount: formatCurrency(
+                                                    monthData.total,
+                                                ),
+                                            })}
                                             color="success"
                                             size="small"
                                             sx={chipSx}
@@ -653,7 +680,7 @@ export default function InvoicesIndex({ invoices }: Props) {
                     <DialogTitle sx={{ p: 0 }}>
                         <div className="flex items-center justify-between px-4 py-3">
                             <Typography variant="h6" fontWeight="bold">
-                                Edit Invoice
+                                {t('Edit Invoice')}
                             </Typography>
                             <CloseButton
                                 onClick={() => {
@@ -688,7 +715,7 @@ export default function InvoicesIndex({ invoices }: Props) {
                             </div>
 
                             <TextField
-                                label="Amount (MKD)"
+                                label={t('Amount (MKD)')}
                                 type="number"
                                 required
                                 value={editAmount}
@@ -706,7 +733,7 @@ export default function InvoicesIndex({ invoices }: Props) {
                                     onClick={handleUpdateInvoice}
                                     disabled={!editAmount}
                                 >
-                                    Update
+                                    {t('Update')}
                                 </Button>
                                 {/* Asks first (Delete Invoice pop-up below) */}
                                 <Button
@@ -716,7 +743,7 @@ export default function InvoicesIndex({ invoices }: Props) {
                                     color="error"
                                     onClick={() => setConfirmDelete(true)}
                                 >
-                                    Delete
+                                    {t('Delete')}
                                 </Button>
                                 <Button
                                     variant="outlined"
@@ -726,7 +753,7 @@ export default function InvoicesIndex({ invoices }: Props) {
                                         setEditAmount('');
                                     }}
                                 >
-                                    Cancel
+                                    {t('Cancel')}
                                 </Button>
                             </div>
                         </div>
@@ -748,7 +775,7 @@ export default function InvoicesIndex({ invoices }: Props) {
                 <DialogTitle sx={{ p: 0 }}>
                     <div className="flex items-center justify-between px-4 py-3">
                         <Typography variant="h6" fontWeight="bold">
-                            Delete Invoice
+                            {t('Delete Invoice')}
                         </Typography>
                         <CloseButton
                             onClick={() =>
@@ -763,9 +790,11 @@ export default function InvoicesIndex({ invoices }: Props) {
                     {editingInvoice && (
                         <div className="flex flex-col gap-4 py-4">
                             <Typography variant="body1">
-                                Are you sure you want to delete the invoice{' '}
+                                {t(
+                                    'Are you sure you want to delete the invoice',
+                                )}{' '}
                                 <strong>{invoiceLabel(editingInvoice)}</strong>{' '}
-                                for{' '}
+                                {t('for')}{' '}
                                 <strong>
                                     {dayjs(editingInvoice.month).format(
                                         'MMMM YYYY',
@@ -774,7 +803,7 @@ export default function InvoicesIndex({ invoices }: Props) {
                                 ?
                             </Typography>
                             <Typography variant="body2" color="text.secondary">
-                                This cannot be undone.
+                                {t('This cannot be undone.')}
                             </Typography>
                             <div className="flex gap-3">
                                 <Button
@@ -787,7 +816,7 @@ export default function InvoicesIndex({ invoices }: Props) {
                                     }
                                     disabled={deletingInvoice}
                                 >
-                                    Yes
+                                    {t('Yes')}
                                 </Button>
                                 <Button
                                     variant="outlined"
@@ -796,7 +825,7 @@ export default function InvoicesIndex({ invoices }: Props) {
                                     onClick={() => setConfirmDelete(false)}
                                     disabled={deletingInvoice}
                                 >
-                                    No
+                                    {t('No')}
                                 </Button>
                             </div>
                         </div>

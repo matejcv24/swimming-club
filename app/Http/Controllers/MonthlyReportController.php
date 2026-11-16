@@ -34,7 +34,7 @@ class MonthlyReportController extends Controller
         $canvas = $dompdf->getCanvas();
         $canvas->page_script(function (int $page, int $pages, $canvas, $fontMetrics) {
             $font = $fontMetrics->getFont('DejaVu Sans');
-            $text = "Page {$page} of {$pages}";
+            $text = __('Page :page of :pages', ['page' => $page, 'pages' => $pages]);
             $width = $fontMetrics->getTextWidth($text, $font, 6);
             $canvas->text($canvas->get_width() - 30 - $width, $canvas->get_height() - 20.5, $text, $font, 6, [0.42, 0.45, 0.5]);
         });

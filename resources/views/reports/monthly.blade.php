@@ -5,11 +5,12 @@
         return str_ends_with($formatted, '.00') ? substr($formatted, 0, -3) : $formatted;
     };
     // A club-made group's name; records without one (e.g. a general invoice)
-    $groupName = fn (?string $group) => $group ?: 'No specific group';
-    $monthName = $month->format('F Y');
+    $groupName = fn (?string $group) => $group ?: __('No specific group');
+    // The month in the report's language, e.g. "November 2026" / "Ноември 2026"
+    $monthName = \Illuminate\Support\Str::ucfirst($month->copy()->locale(app()->getLocale())->translatedFormat('F Y'));
 @endphp
 <!DOCTYPE html>
-<html lang="en">
+<html lang="{{ app()->getLocale() }}">
 <head>
     <meta charset="utf-8">
     <title>SC Hydra - Monthly report - {{ $monthName }}</title>
@@ -241,7 +242,7 @@
 </head>
 <body>
     <div class="footer">
-        SC Hydra &middot; Monthly report {{ $monthName }} &middot; Generated {{ $generatedAt->format('d.m.Y H:i') }} by {{ $generatedBy }}
+        SC Hydra &middot; {{ __('Monthly report') }} {{ $monthName }} &middot; {{ __('Generated :date by :name', ['date' => $generatedAt->format('d.m.Y H:i'), 'name' => $generatedBy]) }}
     </div>
 
     <div class="header">
@@ -250,7 +251,7 @@
                 <td style="width: 90px; vertical-align: middle;"><img src="{{ $logo }}" alt=""></td>
                 <td style="vertical-align: middle;">
                     <div class="club">HYDRA SWIMMING CLUB</div>
-                    <div class="title">Monthly report</div>
+                    <div class="title">{{ __('Monthly report') }}</div>
                 </td>
                 <td class="meta" style="vertical-align: middle;">
                     <div class="period">{{ $monthName }}</div>
@@ -262,51 +263,51 @@
 
     <div class="content">
         {{-- Summary --}}
-        <h2 class="first">Summary</h2>
+        <h2 class="first">{{ __('Summary') }}</h2>
         <table class="tiles">
             <tr>
                 <td class="tile">
-                    <div class="label">Membership fees</div>
+                    <div class="label">{{ __('Membership fees') }}</div>
                     <div class="value">{{ $money($totals['fees']) }} <span class="unit">MKD</span></div>
                 </td>
                 <td class="tile">
-                    <div class="label">Invoices</div>
+                    <div class="label">{{ __('Invoices') }}</div>
                     <div class="value">{{ $totals['invoices'] > 0 ? '-' : '' }}{{ $money($totals['invoices']) }} <span class="unit">MKD</span></div>
                 </td>
                 <td class="tile">
-                    <div class="label">Salaries</div>
+                    <div class="label">{{ __('Salaries') }}</div>
                     <div class="value">{{ $totals['salaries'] > 0 ? '-' : '' }}{{ $money($totals['salaries']) }} <span class="unit">MKD</span></div>
                 </td>
                 <td class="tile">
-                    <div class="label">Profit</div>
+                    <div class="label">{{ __('Profit') }}</div>
                     <div class="value {{ $totals['profit'] < 0 ? 'negative' : 'positive' }}">{{ $money($totals['profit']) }} <span class="unit">MKD</span></div>
                 </td>
             </tr>
         </table>
 
         <div class="breakdown">
-            <strong>{{ $feeCount }}</strong> membership {{ $feeCount === 1 ? 'payment' : 'payments' }}
-            &middot; Cash <strong>{{ $money($feesByMethod['cash']) }} MKD</strong>
-            &middot; Card <strong>{{ $money($feesByMethod['card']) }} MKD</strong>
+            {!! trans_choice('<strong>:count</strong> membership payment|<strong>:count</strong> membership payments', $feeCount) !!}
+            &middot; {{ __('Cash') }} <strong>{{ $money($feesByMethod['cash']) }} MKD</strong>
+            &middot; {{ __('Card') }} <strong>{{ $money($feesByMethod['card']) }} MKD</strong>
             @foreach ($feesByGroup as $group)
                 &middot; {{ $groupName($group['group']) }} <strong>{{ $money($group['total']) }} MKD</strong>
             @endforeach
         </div>
 
         {{-- 1. Membership fees --}}
-        <h2>1. Membership fees</h2>
+        <h2>1. {{ __('Membership fees') }}</h2>
 
         @forelse ($feesByGroup as $group)
-            <h3>{{ $groupName($group['group']) }} &middot; {{ $group['rows']->count() }} {{ $group['rows']->count() === 1 ? 'payment' : 'payments' }}</h3>
+            <h3>{{ $groupName($group['group']) }} &middot; {{ trans_choice(':count payment|:count payments', $group['rows']->count()) }}</h3>
             <table class="data">
                 <thead>
                     <tr>
                         <th style="width: 6%;">#</th>
-                        <th>Member</th>
-                        <th style="width: 15%;">Start date</th>
-                        <th style="width: 15%;">End date</th>
-                        <th style="width: 11%;">Method</th>
-                        <th class="num" style="width: 17%;">Amount</th>
+                        <th>{{ __('Member') }}</th>
+                        <th style="width: 15%;">{{ __('Start Date') }}</th>
+                        <th style="width: 15%;">{{ __('End Date') }}</th>
+                        <th style="width: 11%;">{{ __('Method') }}</th>
+                        <th class="num" style="width: 17%;">{{ __('Amount') }}</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -316,26 +317,26 @@
                             <td>{{ $fee['member'] }}</td>
                             <td>{{ $fee['start_date']?->format('d.m.Y') }}</td>
                             <td>{{ $fee['end_date']?->format('d.m.Y') }}</td>
-                            <td class="capitalize">{{ $fee['payment_method'] }}</td>
+                            <td>{{ $fee['payment_method'] === 'card' ? __('Card') : __('Cash') }}</td>
                             <td class="num">{{ $money($fee['amount']) }} MKD</td>
                         </tr>
                     @endforeach
                 </tbody>
                 <tfoot>
                     <tr>
-                        <td colspan="5" class="num">{{ $groupName($group['group']) }} subtotal</td>
+                        <td colspan="5" class="num">{{ __(':group subtotal', ['group' => $groupName($group['group'])]) }}</td>
                         <td class="num">{{ $money($group['total']) }} MKD</td>
                     </tr>
                 </tfoot>
             </table>
         @empty
-            <div class="empty">No membership fees recorded for {{ $monthName }}.</div>
+            <div class="empty">{{ __('No membership fees recorded for :month.', ['month' => $monthName]) }}</div>
         @endforelse
 
         @if ($feesByGroup->isNotEmpty())
             <table class="grand-total" style="width: 100%;">
                 <tr>
-                    <td>Total membership fees</td>
+                    <td>{{ __('Total membership fees') }}</td>
                     <td class="num">{{ $money($totals['fees']) }} MKD</td>
                 </tr>
             </table>
@@ -343,16 +344,16 @@
 
         {{-- 2. Invoices --}}
         <div class="keep-together">
-        <h2>2. Invoices</h2>
+        <h2>2. {{ __('Invoices') }}</h2>
 
         @if ($invoices->isEmpty())
-            <div class="empty">No invoices recorded for {{ $monthName }}.</div>
+            <div class="empty">{{ __('No invoices recorded for :month.', ['month' => $monthName]) }}</div>
         @else
             <table class="data">
                 <thead>
                     <tr>
-                        <th>Group</th>
-                        <th class="num" style="width: 25%;">Amount</th>
+                        <th>{{ __('Group') }}</th>
+                        <th class="num" style="width: 25%;">{{ __('Amount') }}</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -365,7 +366,7 @@
                 </tbody>
                 <tfoot>
                     <tr>
-                        <td class="num">Total invoices</td>
+                        <td class="num">{{ __('Total invoices') }}</td>
                         <td class="num">{{ $money($totals['invoices']) }} MKD</td>
                     </tr>
                 </tfoot>
@@ -376,16 +377,16 @@
 
         {{-- 3. Salaries --}}
         <div class="keep-together">
-        <h2>3. Salaries</h2>
+        <h2>3. {{ __('Salaries') }}</h2>
 
         @if ($salaries->isEmpty())
-            <div class="empty">No salaries recorded for {{ $monthName }}.</div>
+            <div class="empty">{{ __('No salaries recorded for :month.', ['month' => $monthName]) }}</div>
         @else
             <table class="data">
                 <thead>
                     <tr>
-                        <th>Coach</th>
-                        <th class="num" style="width: 25%;">Amount</th>
+                        <th>{{ __('Coach') }}</th>
+                        <th class="num" style="width: 25%;">{{ __('Amount') }}</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -398,7 +399,7 @@
                 </tbody>
                 <tfoot>
                     <tr>
-                        <td class="num">Total salaries</td>
+                        <td class="num">{{ __('Total salaries') }}</td>
                         <td class="num">{{ $money($totals['salaries']) }} MKD</td>
                     </tr>
                 </tfoot>

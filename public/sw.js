@@ -8,7 +8,7 @@
 //     these files new names, so a stored file is never out of date,
 //  3. shows a friendly page when the phone is offline.
 
-const OFFLINE_CACHE = 'sc-hydra-offline-v2';
+const OFFLINE_CACHE = 'sc-hydra-offline-v3';
 const ASSET_CACHE = 'sc-hydra-assets-v1';
 const OFFLINE_URL = '/offline.html';
 const MAX_ASSETS = 150; // older releases' files are dropped beyond this

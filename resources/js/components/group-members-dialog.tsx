@@ -16,6 +16,7 @@ import type { MemberDetails } from '@/components/member-details-dialog';
 import { POPUP_BG } from '@/components/mui-theme-provider';
 import { avatarSx, PopupHeader } from '@/components/popup-ui';
 import { subgroupsOf, useGroups } from '@/lib/groups';
+import { t, tc } from '@/lib/i18n';
 
 /** Which members to list: everyone in a main group, or in one of its subgroups. */
 export type MembersOf =
@@ -41,10 +42,10 @@ export function MembersLink({
     count: number;
     onClick: () => void;
 }) {
-    const label = `${count} ${count === 1 ? 'member' : 'members'}`;
+    const label = tc(':count member|:count members', count);
 
     if (count === 0) {
-        return <span>No members yet</span>;
+        return <span>{t('No members yet')}</span>;
     }
 
     return (
@@ -111,12 +112,15 @@ export function GroupMembersDialog({
                     <PopupHeader
                         icon={<GroupsIcon fontSize="small" />}
                         title={of?.title ?? ''}
-                        subtitle={`${listed.length} ${listed.length === 1 ? 'member' : 'members'}`}
+                        subtitle={tc(
+                            ':count member|:count members',
+                            listed.length,
+                        )}
                         onClose={onClose}
                     />
                     <p className="flex items-center gap-1.5 px-[18px] pb-2 text-[12.5px] font-normal text-[var(--popup-muted)]">
                         <TouchAppIcon sx={{ fontSize: 16 }} />
-                        Tap a member to see their details
+                        {t('Tap a member to see their details')}
                     </p>
                 </DialogTitle>
                 <DialogContent sx={{ p: 0, overflowY: 'auto', flex: 1 }}>

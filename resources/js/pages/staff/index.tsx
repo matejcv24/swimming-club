@@ -39,6 +39,7 @@ import { avatarSx, CloseButton, PopupHeader } from '@/components/popup-ui';
 import { CardsSkeleton } from '@/components/skeletons';
 import { usePagePopup } from '@/hooks/use-page-popup';
 import { useGroups } from '@/lib/groups';
+import { locale, pickerLocaleText, t, tc } from '@/lib/i18n';
 
 interface Staff extends CoachGroups {
     id: number;
@@ -285,7 +286,7 @@ export default function StaffIndex({ staff }: Props) {
     return (
         <MuiThemeProvider>
             <DashboardBackground />
-            <Head title="Staff" />
+            <Head title={t('Staff')} />
 
             <Dialog
                 {...popup.dialogProps}
@@ -303,8 +304,11 @@ export default function StaffIndex({ staff }: Props) {
                 <DialogTitle sx={{ p: 0 }}>
                     <PopupHeader
                         icon={<PersonIcon fontSize="small" />}
-                        title="Staff"
-                        subtitle={`${staff.length} ${staff.length === 1 ? 'coach' : 'coaches'}`}
+                        title={t('Staff')}
+                        subtitle={tc(
+                            ':count coach|:count coaches',
+                            staff.length,
+                        )}
                         actions={
                             <Button
                                 variant="contained"
@@ -312,7 +316,7 @@ export default function StaffIndex({ staff }: Props) {
                                 startIcon={<PersonAddAlt1Icon />}
                                 onClick={() => setShowAddModal(true)}
                             >
-                                Add
+                                {t('Add')}
                             </Button>
                         }
                         onClose={popup.close}
@@ -326,7 +330,7 @@ export default function StaffIndex({ staff }: Props) {
                             color="text.secondary"
                             sx={{ textAlign: 'center', mt: 6 }}
                         >
-                            No staff found.
+                            {t('No staff found.')}
                         </Typography>
                     ) : (
                         <List disablePadding>
@@ -371,8 +375,11 @@ export default function StaffIndex({ staff }: Props) {
                                         <Button
                                             variant="contained"
                                             size="small"
-                                            aria-label={`Add salary for ${member.name}`}
-                                            title="Add salary"
+                                            aria-label={t(
+                                                'Add salary for :name',
+                                                { name: member.name },
+                                            )}
+                                            title={t('Add salary')}
                                             onClick={() =>
                                                 handleCoachClick(member)
                                             }
@@ -383,7 +390,9 @@ export default function StaffIndex({ staff }: Props) {
                                         <IconButton
                                             size="small"
                                             color="primary"
-                                            aria-label={`Edit ${member.name}`}
+                                            aria-label={t('Edit :name', {
+                                                name: member.name,
+                                            })}
                                             onClick={() =>
                                                 handleEditOpen(member)
                                             }
@@ -436,24 +445,30 @@ export default function StaffIndex({ staff }: Props) {
                                     letterSpacing: 1,
                                 }}
                             >
-                                Record Salary
+                                {t('Record Salary')}
                             </Typography>
 
                             <Input
-                                placeholder="Amount (MKD)"
+                                placeholder={t('Amount (MKD)')}
                                 type="number"
                                 value={salaryAmount}
                                 onChange={(e) =>
                                     setSalaryAmount(e.target.value)
                                 }
                                 fullWidth
-                                inputProps={{ 'aria-label': 'salary amount' }}
+                                inputProps={{
+                                    'aria-label': t('Salary amount'),
+                                }}
                                 sx={inputSx}
                             />
 
-                            <LocalizationProvider dateAdapter={AdapterDayjs}>
+                            <LocalizationProvider
+                                dateAdapter={AdapterDayjs}
+                                adapterLocale={locale}
+                                localeText={pickerLocaleText}
+                            >
                                 <DatePicker
-                                    label="Month"
+                                    label={t('Month')}
                                     value={salaryMonth}
                                     onChange={(val) => setSalaryMonth(val)}
                                     views={['month', 'year']}
@@ -469,7 +484,7 @@ export default function StaffIndex({ staff }: Props) {
                                     onClick={handleSalarySave}
                                     disabled={!salaryAmount || !salaryMonth}
                                 >
-                                    Save
+                                    {t('Save')}
                                 </Button>
                                 <Button
                                     variant="outlined"
@@ -480,7 +495,7 @@ export default function StaffIndex({ staff }: Props) {
                                         setSalaryMonth(null);
                                     }}
                                 >
-                                    Cancel
+                                    {t('Cancel')}
                                 </Button>
                             </div>
 
@@ -494,7 +509,7 @@ export default function StaffIndex({ staff }: Props) {
                                     letterSpacing: 1,
                                 }}
                             >
-                                Payment History By Month
+                                {t('Payment History By Month')}
                             </Typography>
 
                             {loadingSalaries ? (
@@ -539,10 +554,10 @@ export default function StaffIndex({ staff }: Props) {
                                                     variant="caption"
                                                     color="primary"
                                                 >
-                                                    {
-                                                        currentYearSalaryMonths.length
-                                                    }{' '}
-                                                    months
+                                                    {tc(
+                                                        ':count month|:count months',
+                                                        currentYearSalaryMonths.length,
+                                                    )}
                                                 </Typography>
                                             )}
                                         </div>
@@ -559,8 +574,12 @@ export default function StaffIndex({ staff }: Props) {
                                     variant="body2"
                                     color="text.secondary"
                                 >
-                                    No salary payments recorded for{' '}
-                                    {currentYear}.
+                                    {t(
+                                        'No salary payments recorded for :year.',
+                                        {
+                                            year: currentYear,
+                                        },
+                                    )}
                                 </Typography>
                             )}
 
@@ -574,7 +593,7 @@ export default function StaffIndex({ staff }: Props) {
                                     letterSpacing: 1,
                                 }}
                             >
-                                Payment History By Year
+                                {t('Payment History By Year')}
                             </Typography>
 
                             {loadingSalaries ? (
@@ -620,11 +639,11 @@ export default function StaffIndex({ staff }: Props) {
                                                     variant="caption"
                                                     color="primary"
                                                 >
-                                                    {
+                                                    {tc(
+                                                        ':count month|:count months',
                                                         salaryYearGroups[year]
-                                                            .monthCount
-                                                    }{' '}
-                                                    months
+                                                            .monthCount,
+                                                    )}
                                                 </Typography>
                                             </div>
 
@@ -644,7 +663,7 @@ export default function StaffIndex({ staff }: Props) {
                                     variant="body2"
                                     color="text.secondary"
                                 >
-                                    No past-year payment history yet.
+                                    {t('No past-year payment history yet.')}
                                 </Typography>
                             )}
                         </div>
@@ -664,7 +683,9 @@ export default function StaffIndex({ staff }: Props) {
                 <DialogTitle sx={{ p: 0 }}>
                     <div className="flex items-center justify-between px-4 py-3">
                         <Typography variant="h6" fontWeight="bold">
-                            Payment History By Month — {selectedCoach?.name}
+                            {t('Payment History By Month — :name', {
+                                name: selectedCoach?.name ?? '',
+                            })}
                         </Typography>
                         <CloseButton
                             onClick={() => setShowSalaryHistoryModal(false)}
@@ -729,8 +750,10 @@ export default function StaffIndex({ staff }: Props) {
                 <DialogTitle sx={{ p: 0 }}>
                     <div className="flex items-center justify-between px-4 py-3">
                         <Typography variant="h6" fontWeight="bold">
-                            Payment History - {selectedSalaryYear} —{' '}
-                            {selectedCoach?.name}
+                            {t('Payment History - :year — :name', {
+                                year: selectedSalaryYear ?? '',
+                                name: selectedCoach?.name ?? '',
+                            })}
                         </Typography>
                         <CloseButton
                             onClick={() => {
@@ -795,7 +818,7 @@ export default function StaffIndex({ staff }: Props) {
                     <div className="relative flex items-center justify-between px-4 py-3">
                         <div className="w-10" />
                         <Typography variant="h6" fontWeight="bold">
-                            Add Coach
+                            {t('Add Coach')}
                         </Typography>
                         <CloseButton onClick={() => setShowAddModal(false)} />
                     </div>
@@ -808,32 +831,32 @@ export default function StaffIndex({ staff }: Props) {
                         className="flex flex-col gap-6 py-4"
                     >
                         <Input
-                            placeholder="Full name"
+                            placeholder={t('Full name')}
                             value={form.name}
                             onChange={(e) =>
                                 setForm({ ...form, name: e.target.value })
                             }
                             required
                             fullWidth
-                            inputProps={{ 'aria-label': 'coach name' }}
+                            inputProps={{ 'aria-label': t('Coach name') }}
                             sx={inputSx}
                         />
                         <Input
                             type="email"
-                            placeholder="Email address"
+                            placeholder={t('Email address')}
                             value={form.email}
                             onChange={(e) =>
                                 setForm({ ...form, email: e.target.value })
                             }
                             required
                             fullWidth
-                            inputProps={{ 'aria-label': 'coach email' }}
+                            inputProps={{ 'aria-label': t('Coach email') }}
                             error={!!formErrors.email}
                             sx={inputSx}
                         />
                         <Input
                             type="password"
-                            placeholder="Password (min. 8 characters)"
+                            placeholder={t('Password (min. 8 characters)')}
                             value={form.password}
                             onChange={(e) =>
                                 setForm({ ...form, password: e.target.value })
@@ -842,7 +865,7 @@ export default function StaffIndex({ staff }: Props) {
                             fullWidth
                             autoComplete="new-password"
                             inputProps={{
-                                'aria-label': 'coach password',
+                                'aria-label': t('Coach password'),
                                 minLength: 8,
                             }}
                             error={!!formErrors.password}
@@ -878,7 +901,7 @@ export default function StaffIndex({ staff }: Props) {
                                     form.group_ids.length === 0
                                 }
                             >
-                                Create Coach
+                                {t('Create Coach')}
                             </Button>
                             <Button
                                 type="button"
@@ -887,7 +910,7 @@ export default function StaffIndex({ staff }: Props) {
                                 size="medium"
                                 onClick={() => setShowAddModal(false)}
                             >
-                                Cancel
+                                {t('Cancel')}
                             </Button>
                         </div>
                     </form>
@@ -907,7 +930,7 @@ export default function StaffIndex({ staff }: Props) {
                     <div className="relative flex items-center justify-between px-4 py-3">
                         <div className="w-10" />
                         <Typography variant="h6" fontWeight="bold">
-                            Edit Coach
+                            {t('Edit Coach')}
                         </Typography>
                         <CloseButton onClick={closeEdit} />
                     </div>
@@ -920,7 +943,7 @@ export default function StaffIndex({ staff }: Props) {
                         className="flex flex-col gap-6 py-4"
                     >
                         <Input
-                            placeholder="Full name"
+                            placeholder={t('Full name')}
                             value={editForm.name}
                             onChange={(e) =>
                                 setEditForm({
@@ -930,13 +953,13 @@ export default function StaffIndex({ staff }: Props) {
                             }
                             required
                             fullWidth
-                            inputProps={{ 'aria-label': 'coach name' }}
+                            inputProps={{ 'aria-label': t('Coach name') }}
                             error={!!editErrors.name}
                             sx={inputSx}
                         />
                         <Input
                             type="email"
-                            placeholder="Email address"
+                            placeholder={t('Email address')}
                             value={editForm.email}
                             onChange={(e) =>
                                 setEditForm({
@@ -946,13 +969,13 @@ export default function StaffIndex({ staff }: Props) {
                             }
                             required
                             fullWidth
-                            inputProps={{ 'aria-label': 'coach email' }}
+                            inputProps={{ 'aria-label': t('Coach email') }}
                             error={!!editErrors.email}
                             sx={inputSx}
                         />
                         <Input
                             type="password"
-                            placeholder="New password (optional)"
+                            placeholder={t('New password (optional)')}
                             value={editForm.password}
                             onChange={(e) =>
                                 setEditForm({
@@ -963,7 +986,7 @@ export default function StaffIndex({ staff }: Props) {
                             fullWidth
                             autoComplete="new-password"
                             inputProps={{
-                                'aria-label': 'coach new password',
+                                'aria-label': t('Coach new password'),
                                 minLength: 8,
                             }}
                             error={!!editErrors.password}
@@ -974,8 +997,9 @@ export default function StaffIndex({ staff }: Props) {
                             color="text.secondary"
                             sx={{ mt: -2 }}
                         >
-                            Leave empty to keep the current password. A new
-                            password logs the coach out on all devices.
+                            {t(
+                                'Leave empty to keep the current password. A new password logs the coach out on all devices.',
+                            )}
                         </Typography>
                         <CoachGroupsField
                             id="edit-coach-groups"
@@ -1009,7 +1033,7 @@ export default function StaffIndex({ staff }: Props) {
                                     editForm.group_ids.length === 0
                                 }
                             >
-                                Save
+                                {t('Save')}
                             </Button>
                             <Button
                                 type="button"
@@ -1018,7 +1042,7 @@ export default function StaffIndex({ staff }: Props) {
                                 size="medium"
                                 onClick={closeEdit}
                             >
-                                Cancel
+                                {t('Cancel')}
                             </Button>
                         </div>
                     </form>

@@ -1,5 +1,6 @@
 import { Link, router, usePage } from '@inertiajs/react';
 import { LogOut, Settings } from 'lucide-react';
+import { LanguageSwitch } from '@/components/language-switch';
 import { NotificationsMenu } from '@/components/notifications-menu';
 import { forgetThemeUser, ThemeToggle } from '@/components/theme-toggle';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -11,6 +12,7 @@ import {
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { useInitials } from '@/hooks/use-initials';
+import { t } from '@/lib/i18n';
 import type { User } from '@/types';
 
 export function AppHeaderActions() {
@@ -25,11 +27,17 @@ export function AppHeaderActions() {
     };
 
     if (!auth?.user) {
-        return <ThemeToggle />;
+        return (
+            <div className="ml-auto flex items-center gap-1">
+                <LanguageSwitch />
+                <ThemeToggle />
+            </div>
+        );
     }
 
     return (
         <div className="ml-auto flex max-w-full shrink-0 items-center gap-1">
+            <LanguageSwitch />
             <ThemeToggle />
             <NotificationsMenu />
             <DropdownMenu>
@@ -37,7 +45,7 @@ export function AppHeaderActions() {
                     <button
                         type="button"
                         className="flex size-9 items-center justify-center rounded-md transition hover:bg-sidebar-accent"
-                        aria-label="User menu"
+                        aria-label={t('User menu')}
                     >
                         <Avatar className="size-8">
                             <AvatarImage
@@ -57,7 +65,7 @@ export function AppHeaderActions() {
                             className="flex w-full cursor-pointer items-center"
                         >
                             <Settings className="mr-2 size-4" />
-                            Settings
+                            {t('Settings')}
                         </Link>
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
@@ -70,7 +78,7 @@ export function AppHeaderActions() {
                             onClick={handleLogout}
                         >
                             <LogOut className="mr-2 size-4" />
-                            Log out
+                            {t('Log out')}
                         </Link>
                     </DropdownMenuItem>
                 </DropdownMenuContent>

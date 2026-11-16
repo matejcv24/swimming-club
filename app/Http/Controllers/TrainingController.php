@@ -8,6 +8,8 @@ use App\Models\Member;
 use App\Models\Training;
 use App\Models\User;
 use App\Notifications\TrainingAttendanceNotification;
+use App\Support\NotificationText;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rule;
@@ -33,12 +35,12 @@ class TrainingController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'date'         => ['required', 'date'],
-            'group_id'     => ['required', Rule::exists('groups', 'id')->whereNull('parent_id')],
+            'date' => ['required', 'date'],
+            'group_id' => ['required', Rule::exists('groups', 'id')->whereNull('parent_id')],
             // Optional: a training of one subgroup (e.g. "18:00") instead of the whole group
-            'subgroup_id'  => ['nullable', Rule::exists('groups', 'id')->where('parent_id', (int) $request->input('group_id'))],
+            'subgroup_id' => ['nullable', Rule::exists('groups', 'id')->where('parent_id', (int) $request->input('group_id'))],
             // Present but may be empty: unticking everyone clears the day's attendance
-            'member_ids'   => ['present', 'array'],
+            'member_ids' => ['present', 'array'],
             'member_ids.*' => ['exists:members,id'],
         ]);
 
@@ -85,25 +87,30 @@ class TrainingController extends Controller
         foreach ($validated['member_ids'] as $memberId) {
             Attendance::create([
                 'training_id' => $training->id,
-                'member_id'   => $memberId,
-                'present'     => true,
+                'member_id' => $memberId,
+                'present' => true,
             ]);
         }
 
         if (Auth::user()?->role === 'coach') {
             $admins = User::where('role', 'admin')->get();
-            $formattedDate = \Carbon\Carbon::parse($validated['date'])->format('d.m.Y');
+            $formattedDate = Carbon::parse($validated['date'])->format('d.m.Y');
             $groupName = Group::withTrashed()->find($validated['group_id'])?->name ?? 'group';
 
             if ($subgroupId) {
-                $groupName .= ' · ' . Group::withTrashed()->find($subgroupId)?->name;
+                $groupName .= ' · '.Group::withTrashed()->find($subgroupId)?->name;
             }
 
             foreach ($admins as $admin) {
                 $admin->notify(new TrainingAttendanceNotification(
-                    Auth::user()->name . ' updated training attendance for ' . $formattedDate . ' (' . $groupName . ')',
-                    '/trainings?date=' . $validated['date'] . '&group=' . $validated['group_id']
-                        . ($subgroupId ? '&subgroup=' . $subgroupId : '') . '&attendance=1'
+                    Auth::user()->name.' updated training attendance for '.$formattedDate.' ('.$groupName.')',
+                    '/trainings?date='.$validated['date'].'&group='.$validated['group_id']
+                        .($subgroupId ? '&subgroup='.$subgroupId : '').'&attendance=1',
+                    NotificationText::make(':user updated training attendance for :date (:group)', [
+                        'user' => Auth::user()->name,
+                        'date' => $formattedDate,
+                        'group' => $groupName,
+                    ]),
                 ));
             }
         }
@@ -135,7 +142,7 @@ class TrainingController extends Controller
 
         $training = $this->trainingOn($validated['date'], $validated['group_id'], $validated['subgroup_id'] ?? null);
 
-        if (!$training) {
+        if (! $training) {
             return response()->json(['member_ids' => []]);
         }
 

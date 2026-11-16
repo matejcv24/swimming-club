@@ -44,6 +44,7 @@ import {
 import { usePagePopup } from '@/hooks/use-page-popup';
 import type { ClubGroup } from '@/lib/groups';
 import { groupWithSubgroupName, subgroupsOf, useGroups } from '@/lib/groups';
+import { t } from '@/lib/i18n';
 
 interface Member {
     id: number;
@@ -218,7 +219,7 @@ export default function MembersIndex({ members, userRole }: Props) {
     return (
         <MuiThemeProvider>
             <DashboardBackground />
-            <Head title="Members" />
+            <Head title={t('Members')} />
 
             {/* Members List Modal */}
             <Dialog
@@ -238,8 +239,11 @@ export default function MembersIndex({ members, userRole }: Props) {
                 <DialogTitle sx={{ p: 0 }}>
                     <PopupHeader
                         icon={<GroupsIcon fontSize="small" />}
-                        title="Members"
-                        subtitle={`${activeMembers.length} active · ${inactiveMembers.length} inactive`}
+                        title={t('Members')}
+                        subtitle={t(':active active · :inactive inactive', {
+                            active: activeMembers.length,
+                            inactive: inactiveMembers.length,
+                        })}
                         actions={
                             <Button
                                 variant="contained"
@@ -247,7 +251,7 @@ export default function MembersIndex({ members, userRole }: Props) {
                                 startIcon={<PersonAddAlt1Icon />}
                                 onClick={() => setShowAddModal(true)}
                             >
-                                Add
+                                {t('Add')}
                             </Button>
                         }
                         onClose={popup.close}
@@ -255,7 +259,7 @@ export default function MembersIndex({ members, userRole }: Props) {
                     <PillSearchField
                         value={search}
                         onChange={setSearch}
-                        placeholder="Search members..."
+                        placeholder={t('Search members...')}
                     />
                     <Tabs
                         value={memberStatusTab}
@@ -264,8 +268,16 @@ export default function MembersIndex({ members, userRole }: Props) {
                         textColor="inherit"
                         indicatorColor="primary"
                     >
-                        <Tab label={`Active (${activeMembers.length})`} />
-                        <Tab label={`Inactive (${inactiveMembers.length})`} />
+                        <Tab
+                            label={t('Active (:count)', {
+                                count: activeMembers.length,
+                            })}
+                        />
+                        <Tab
+                            label={t('Inactive (:count)', {
+                                count: inactiveMembers.length,
+                            })}
+                        />
                     </Tabs>
                 </DialogTitle>
 
@@ -277,7 +289,7 @@ export default function MembersIndex({ members, userRole }: Props) {
                             color="text.secondary"
                             sx={{ textAlign: 'center', mt: 6 }}
                         >
-                            No members found.
+                            {t('No members found.')}
                         </Typography>
                     ) : (
                         <List disablePadding>
@@ -342,7 +354,7 @@ export default function MembersIndex({ members, userRole }: Props) {
                                             <IconButton
                                                 size="small"
                                                 color="error"
-                                                aria-label="delete member"
+                                                aria-label={t('Delete member')}
                                                 onClick={(e) => {
                                                     e.stopPropagation();
                                                     setDeleteMember(member);
@@ -374,7 +386,7 @@ export default function MembersIndex({ members, userRole }: Props) {
                     <DialogTitle sx={{ p: 0 }}>
                         <div className="flex items-center justify-between px-4 py-3">
                             <Typography variant="h6" fontWeight="bold">
-                                Delete Member
+                                {t('Delete Member')}
                             </Typography>
                             <CloseButton
                                 onClick={() => setDeleteMember(null)}
@@ -386,13 +398,13 @@ export default function MembersIndex({ members, userRole }: Props) {
                     <DialogContent>
                         <div className="flex flex-col gap-4 py-4">
                             <Typography variant="body1">
-                                Are you sure you want to delete{' '}
+                                {t('Are you sure you want to delete')}{' '}
                                 <strong>{deleteMember?.name}</strong>?
                             </Typography>
                             <Typography variant="body2" color="text.secondary">
-                                All of their membership fees, attendance records
-                                and parent details will be deleted too. This
-                                cannot be undone.
+                                {t(
+                                    'All of their membership fees, attendance records and parent details will be deleted too. This cannot be undone.',
+                                )}
                             </Typography>
                             <div className="flex gap-3">
                                 <Button
@@ -403,7 +415,7 @@ export default function MembersIndex({ members, userRole }: Props) {
                                     onClick={handleDeleteConfirm}
                                     disabled={deleting}
                                 >
-                                    Yes
+                                    {t('Yes')}
                                 </Button>
                                 <Button
                                     variant="outlined"
@@ -412,7 +424,7 @@ export default function MembersIndex({ members, userRole }: Props) {
                                     onClick={() => setDeleteMember(null)}
                                     disabled={deleting}
                                 >
-                                    No
+                                    {t('No')}
                                 </Button>
                             </div>
                         </div>
@@ -454,8 +466,8 @@ export default function MembersIndex({ members, userRole }: Props) {
                             }
                             label={
                                 editForm.status === 'active'
-                                    ? 'Active'
-                                    : 'Inactive'
+                                    ? t('Active')
+                                    : t('Inactive')
                             }
                             sx={{
                                 m: 0,
@@ -482,11 +494,11 @@ export default function MembersIndex({ members, userRole }: Props) {
                                 letterSpacing: 1,
                             }}
                         >
-                            Member Info
+                            {t('Member Info')}
                         </Typography>
 
                         <Input
-                            placeholder="Full name"
+                            placeholder={t('Full name')}
                             value={editForm.name}
                             onChange={(e) =>
                                 setEditForm({
@@ -496,7 +508,7 @@ export default function MembersIndex({ members, userRole }: Props) {
                             }
                             required
                             fullWidth
-                            inputProps={{ 'aria-label': 'member name' }}
+                            inputProps={{ 'aria-label': t('Member name') }}
                             sx={inputSx}
                         />
 
@@ -505,12 +517,12 @@ export default function MembersIndex({ members, userRole }: Props) {
                                 id="edit-pool-label"
                                 sx={{ color: popupFg(0.5) }}
                             >
-                                Group
+                                {t('Group')}
                             </InputLabel>
                             <Select
                                 labelId="edit-pool-label"
                                 value={editForm.group_id}
-                                label="Group"
+                                label={t('Group')}
                                 onChange={(e) =>
                                     setEditForm({
                                         ...editForm,
@@ -558,11 +570,11 @@ export default function MembersIndex({ members, userRole }: Props) {
                                 letterSpacing: 1,
                             }}
                         >
-                            Parent Info
+                            {t('Parent Info')}
                         </Typography>
 
                         <Input
-                            placeholder="Parent full name"
+                            placeholder={t('Parent full name')}
                             value={editForm.parent_name}
                             onChange={(e) =>
                                 setEditForm({
@@ -572,12 +584,12 @@ export default function MembersIndex({ members, userRole }: Props) {
                             }
                             required
                             fullWidth
-                            inputProps={{ 'aria-label': 'parent name' }}
+                            inputProps={{ 'aria-label': t('Parent name') }}
                             sx={inputSx}
                         />
 
                         <Input
-                            placeholder="Parent phone"
+                            placeholder={t('Parent phone')}
                             value={editForm.parent_phone}
                             onChange={(e) =>
                                 setEditForm({
@@ -587,7 +599,7 @@ export default function MembersIndex({ members, userRole }: Props) {
                             }
                             required
                             fullWidth
-                            inputProps={{ 'aria-label': 'parent phone' }}
+                            inputProps={{ 'aria-label': t('Parent phone') }}
                             sx={inputSx}
                         />
 
@@ -599,7 +611,7 @@ export default function MembersIndex({ members, userRole }: Props) {
                                 size="medium"
                                 disabled={!hasEditChanges}
                             >
-                                Save Changes
+                                {t('Save Changes')}
                             </Button>
                             <Button
                                 type="button"
@@ -608,7 +620,7 @@ export default function MembersIndex({ members, userRole }: Props) {
                                 size="medium"
                                 onClick={() => setEditMember(null)}
                             >
-                                Cancel
+                                {t('Cancel')}
                             </Button>
                         </div>
                     </form>
@@ -630,7 +642,7 @@ export default function MembersIndex({ members, userRole }: Props) {
                             {/* LEFT: Switch */}
                             <FormControlLabel
                                 control={<Switch checked disabled />}
-                                label="Active"
+                                label={t('Active')}
                                 sx={{
                                     m: 0,
                                     '& .MuiTypography-root': {
@@ -641,7 +653,7 @@ export default function MembersIndex({ members, userRole }: Props) {
 
                             {/* CENTER: Title */}
                             <Typography variant="h6" fontWeight="bold">
-                                Add Member
+                                {t('Add Member')}
                             </Typography>
 
                             {/* RIGHT: Close */}
@@ -665,34 +677,34 @@ export default function MembersIndex({ members, userRole }: Props) {
                                     letterSpacing: 1,
                                 }}
                             >
-                                Member Info
+                                {t('Member Info')}
                             </Typography>
 
                             <Input
-                                placeholder="Enter member's full name"
+                                placeholder={t("Enter member's full name")}
                                 value={form.name}
                                 onChange={(e) =>
                                     setForm({ ...form, name: e.target.value })
                                 }
                                 required
                                 fullWidth
-                                inputProps={{ 'aria-label': 'member name' }}
+                                inputProps={{ 'aria-label': t('Member name') }}
                                 sx={inputSx}
                             />
 
                             {/* Members need a group: point to where groups are made */}
                             {groups.length === 0 && (
                                 <p className="rounded-xl bg-red-500/10 px-3 py-2 text-sm text-red-500">
-                                    No groups yet.{' '}
+                                    {t('No groups yet.')}{' '}
                                     {userRole === 'admin' ? (
                                         <Link
                                             href="/groups"
                                             className="font-semibold underline"
                                         >
-                                            Create them in Groups
+                                            {t('Create them in Groups')}
                                         </Link>
                                     ) : (
-                                        'Ask an admin to add one.'
+                                        t('Ask an admin to add one.')
                                     )}
                                 </p>
                             )}
@@ -702,12 +714,12 @@ export default function MembersIndex({ members, userRole }: Props) {
                                     id="pool-label"
                                     sx={{ color: popupFg(0.5) }}
                                 >
-                                    Group
+                                    {t('Group')}
                                 </InputLabel>
                                 <Select
                                     labelId="pool-label"
                                     value={form.group_id}
-                                    label="Group"
+                                    label={t('Group')}
                                     onChange={(e) =>
                                         setForm({
                                             ...form,
@@ -760,11 +772,11 @@ export default function MembersIndex({ members, userRole }: Props) {
                                     letterSpacing: 1,
                                 }}
                             >
-                                Parent Info
+                                {t('Parent Info')}
                             </Typography>
 
                             <Input
-                                placeholder="Enter parent's full name"
+                                placeholder={t("Enter parent's full name")}
                                 value={form.parent_name}
                                 onChange={(e) =>
                                     setForm({
@@ -774,11 +786,11 @@ export default function MembersIndex({ members, userRole }: Props) {
                                 }
                                 required
                                 fullWidth
-                                inputProps={{ 'aria-label': 'parent name' }}
+                                inputProps={{ 'aria-label': t('Parent name') }}
                                 sx={inputSx}
                             />
                             <Input
-                                placeholder="Enter parent's phone number"
+                                placeholder={t("Enter parent's phone number")}
                                 value={form.parent_phone}
                                 onChange={(e) =>
                                     setForm({
@@ -788,7 +800,7 @@ export default function MembersIndex({ members, userRole }: Props) {
                                 }
                                 required
                                 fullWidth
-                                inputProps={{ 'aria-label': 'parent phone' }}
+                                inputProps={{ 'aria-label': t('Parent phone') }}
                                 sx={inputSx}
                             />
 
@@ -799,7 +811,7 @@ export default function MembersIndex({ members, userRole }: Props) {
                                     fullWidth
                                     size="medium"
                                 >
-                                    Save Member
+                                    {t('Save Member')}
                                 </Button>
                                 <Button
                                     type="button"
@@ -808,7 +820,7 @@ export default function MembersIndex({ members, userRole }: Props) {
                                     size="medium"
                                     onClick={() => setShowAddModal(false)}
                                 >
-                                    Cancel
+                                    {t('Cancel')}
                                 </Button>
                             </div>
                         </form>
@@ -842,12 +854,12 @@ function SubgroupSelect({
     return (
         <FormControl fullWidth>
             <InputLabel id={id} shrink sx={{ color: popupFg(0.5) }}>
-                Subgroup (optional)
+                {t('Subgroup (optional)')}
             </InputLabel>
             <Select
                 labelId={id}
                 value={value}
-                label="Subgroup (optional)"
+                label={t('Subgroup (optional)')}
                 displayEmpty
                 notched
                 onChange={(e) =>
@@ -865,7 +877,7 @@ function SubgroupSelect({
                     '& .MuiSvgIcon-root': { color: POPUP_FG },
                 }}
             >
-                <MenuItem value="">No subgroup</MenuItem>
+                <MenuItem value="">{t('No subgroup')}</MenuItem>
                 {subgroups.map((subgroup) => (
                     <MenuItem key={subgroup.id} value={subgroup.id}>
                         {subgroup.name}

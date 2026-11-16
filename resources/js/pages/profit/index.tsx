@@ -18,6 +18,7 @@ import {
 } from '@/components/mui-theme-provider';
 import { CloseButton, PopupHeader } from '@/components/popup-ui';
 import { usePagePopup } from '@/hooks/use-page-popup';
+import { t, tc } from '@/lib/i18n';
 
 interface ProfitRow {
     month: string;
@@ -102,7 +103,7 @@ export default function ProfitIndex({ profits }: Props) {
     return (
         <MuiThemeProvider>
             <DashboardBackground />
-            <Head title="Profit" />
+            <Head title={t('Profit')} />
 
             <Dialog
                 {...popup.dialogProps}
@@ -120,8 +121,8 @@ export default function ProfitIndex({ profits }: Props) {
                 <DialogTitle sx={{ p: 0 }}>
                     <PopupHeader
                         icon={<TrendingUpIcon fontSize="small" />}
-                        title="Profit"
-                        subtitle="Fees minus invoices and salaries"
+                        title={t('Profit')}
+                        subtitle={t('Fees minus invoices and salaries')}
                         onClose={popup.close}
                     />
                 </DialogTitle>
@@ -137,7 +138,7 @@ export default function ProfitIndex({ profits }: Props) {
                                     letterSpacing: 1,
                                 }}
                             >
-                                Profit History By Month
+                                {t('Profit History By Month')}
                             </Typography>
 
                             {currentYearLastProfit ? (
@@ -179,8 +180,10 @@ export default function ProfitIndex({ profits }: Props) {
                                                     variant="caption"
                                                     color="primary"
                                                 >
-                                                    {currentYearMonths.length}{' '}
-                                                    months
+                                                    {tc(
+                                                        ':count month|:count months',
+                                                        currentYearMonths.length,
+                                                    )}
                                                 </Typography>
                                             )}
                                         </div>
@@ -194,7 +197,14 @@ export default function ProfitIndex({ profits }: Props) {
                                             }}
                                         >
                                             <Chip
-                                                label={`Memberships: ${formatCurrency(currentYearLastProfit.memberships)} MKD`}
+                                                label={t(
+                                                    'Memberships: :amount MKD',
+                                                    {
+                                                        amount: formatCurrency(
+                                                            currentYearLastProfit.memberships,
+                                                        ),
+                                                    },
+                                                )}
                                                 size="small"
                                                 sx={{
                                                     ...chipSx,
@@ -203,7 +213,14 @@ export default function ProfitIndex({ profits }: Props) {
                                                 }}
                                             />
                                             <Chip
-                                                label={`Salaries: ${formatCurrency(currentYearLastProfit.salaries)} MKD`}
+                                                label={t(
+                                                    'Salaries: :amount MKD',
+                                                    {
+                                                        amount: formatCurrency(
+                                                            currentYearLastProfit.salaries,
+                                                        ),
+                                                    },
+                                                )}
                                                 size="small"
                                                 sx={{
                                                     ...chipSx,
@@ -212,7 +229,14 @@ export default function ProfitIndex({ profits }: Props) {
                                                 }}
                                             />
                                             <Chip
-                                                label={`Invoices: ${formatCurrency(currentYearLastProfit.invoices)} MKD`}
+                                                label={t(
+                                                    'Invoices: :amount MKD',
+                                                    {
+                                                        amount: formatCurrency(
+                                                            currentYearLastProfit.invoices,
+                                                        ),
+                                                    },
+                                                )}
                                                 size="small"
                                                 sx={{
                                                     ...chipSx,
@@ -221,7 +245,14 @@ export default function ProfitIndex({ profits }: Props) {
                                                 }}
                                             />
                                             <Chip
-                                                label={`Profit: ${formatCurrency(currentYearLastProfit.profit)} MKD`}
+                                                label={t(
+                                                    'Profit: :amount MKD',
+                                                    {
+                                                        amount: formatCurrency(
+                                                            currentYearLastProfit.profit,
+                                                        ),
+                                                    },
+                                                )}
                                                 color="success"
                                                 size="small"
                                                 sx={chipSx}
@@ -234,7 +265,9 @@ export default function ProfitIndex({ profits }: Props) {
                                     variant="body2"
                                     color="text.secondary"
                                 >
-                                    No profit recorded for {currentYear}.
+                                    {t('No profit recorded for :year.', {
+                                        year: currentYear,
+                                    })}
                                 </Typography>
                             )}
                         </div>
@@ -250,7 +283,7 @@ export default function ProfitIndex({ profits }: Props) {
                                     letterSpacing: 1,
                                 }}
                             >
-                                Profit History By Year
+                                {t('Profit History By Year')}
                             </Typography>
 
                             {sortedYears.length > 0 ? (
@@ -292,16 +325,24 @@ export default function ProfitIndex({ profits }: Props) {
                                                     variant="caption"
                                                     color="primary"
                                                 >
-                                                    {
+                                                    {tc(
+                                                        ':count month|:count months',
                                                         yearGroups[year]
-                                                            .monthCount
-                                                    }{' '}
-                                                    months
+                                                            .monthCount,
+                                                    )}
                                                 </Typography>
                                             </div>
 
                                             <Chip
-                                                label={`Profit: ${formatCurrency(yearGroups[year].total)} MKD`}
+                                                label={t(
+                                                    'Profit: :amount MKD',
+                                                    {
+                                                        amount: formatCurrency(
+                                                            yearGroups[year]
+                                                                .total,
+                                                        ),
+                                                    },
+                                                )}
                                                 color="success"
                                                 size="small"
                                                 sx={chipSx}
@@ -314,7 +355,7 @@ export default function ProfitIndex({ profits }: Props) {
                                     variant="body2"
                                     color="text.secondary"
                                 >
-                                    No past-year profit history yet.
+                                    {t('No past-year profit history yet.')}
                                 </Typography>
                             )}
                         </div>
@@ -335,7 +376,7 @@ export default function ProfitIndex({ profits }: Props) {
                 <DialogTitle sx={{ p: 0 }}>
                     <div className="flex items-center justify-between px-4 py-3">
                         <Typography variant="h6" fontWeight="bold">
-                            Profit History By Month
+                            {t('Profit History By Month')}
                         </Typography>
                         <CloseButton
                             onClick={() => setShowHistoryModal(false)}
@@ -376,7 +417,14 @@ export default function ProfitIndex({ profits }: Props) {
                                         }}
                                     >
                                         <Chip
-                                            label={`Memberships: ${formatCurrency(monthData.memberships)} MKD`}
+                                            label={t(
+                                                'Memberships: :amount MKD',
+                                                {
+                                                    amount: formatCurrency(
+                                                        monthData.memberships,
+                                                    ),
+                                                },
+                                            )}
                                             size="small"
                                             sx={{
                                                 ...chipSx,
@@ -385,7 +433,11 @@ export default function ProfitIndex({ profits }: Props) {
                                             }}
                                         />
                                         <Chip
-                                            label={`Salaries: ${formatCurrency(monthData.salaries)} MKD`}
+                                            label={t('Salaries: :amount MKD', {
+                                                amount: formatCurrency(
+                                                    monthData.salaries,
+                                                ),
+                                            })}
                                             size="small"
                                             sx={{
                                                 ...chipSx,
@@ -394,7 +446,11 @@ export default function ProfitIndex({ profits }: Props) {
                                             }}
                                         />
                                         <Chip
-                                            label={`Invoices: ${formatCurrency(monthData.invoices)} MKD`}
+                                            label={t('Invoices: :amount MKD', {
+                                                amount: formatCurrency(
+                                                    monthData.invoices,
+                                                ),
+                                            })}
                                             size="small"
                                             sx={{
                                                 ...chipSx,
@@ -403,7 +459,11 @@ export default function ProfitIndex({ profits }: Props) {
                                             }}
                                         />
                                         <Chip
-                                            label={`Profit: ${formatCurrency(monthData.profit)} MKD`}
+                                            label={t('Profit: :amount MKD', {
+                                                amount: formatCurrency(
+                                                    monthData.profit,
+                                                ),
+                                            })}
                                             color="success"
                                             size="small"
                                             sx={chipSx}
@@ -432,7 +492,9 @@ export default function ProfitIndex({ profits }: Props) {
                 <DialogTitle sx={{ p: 0 }}>
                     <div className="flex items-center justify-between px-4 py-3">
                         <Typography variant="h6" fontWeight="bold">
-                            Profit History - {selectedYear}
+                            {t('Profit History - :year', {
+                                year: selectedYear ?? '',
+                            })}
                         </Typography>
                         <CloseButton
                             onClick={() => {
@@ -476,7 +538,14 @@ export default function ProfitIndex({ profits }: Props) {
                                         }}
                                     >
                                         <Chip
-                                            label={`Memberships: ${formatCurrency(monthData.memberships)} MKD`}
+                                            label={t(
+                                                'Memberships: :amount MKD',
+                                                {
+                                                    amount: formatCurrency(
+                                                        monthData.memberships,
+                                                    ),
+                                                },
+                                            )}
                                             size="small"
                                             sx={{
                                                 ...chipSx,
@@ -485,7 +554,11 @@ export default function ProfitIndex({ profits }: Props) {
                                             }}
                                         />
                                         <Chip
-                                            label={`Salaries: ${formatCurrency(monthData.salaries)} MKD`}
+                                            label={t('Salaries: :amount MKD', {
+                                                amount: formatCurrency(
+                                                    monthData.salaries,
+                                                ),
+                                            })}
                                             size="small"
                                             sx={{
                                                 ...chipSx,
@@ -494,7 +567,11 @@ export default function ProfitIndex({ profits }: Props) {
                                             }}
                                         />
                                         <Chip
-                                            label={`Invoices: ${formatCurrency(monthData.invoices)} MKD`}
+                                            label={t('Invoices: :amount MKD', {
+                                                amount: formatCurrency(
+                                                    monthData.invoices,
+                                                ),
+                                            })}
                                             size="small"
                                             sx={{
                                                 ...chipSx,
@@ -503,7 +580,11 @@ export default function ProfitIndex({ profits }: Props) {
                                             }}
                                         />
                                         <Chip
-                                            label={`Profit: ${formatCurrency(monthData.profit)} MKD`}
+                                            label={t('Profit: :amount MKD', {
+                                                amount: formatCurrency(
+                                                    monthData.profit,
+                                                ),
+                                            })}
                                             color="success"
                                             size="small"
                                             sx={chipSx}

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Support\NotificationText;
 use Illuminate\Http\Request;
 use Illuminate\Notifications\DatabaseNotification;
 use Inertia\Inertia;
@@ -15,7 +16,7 @@ class NotificationController extends Controller
         return Inertia::render('notifications/index', [
             'unreadNotifications' => $user->unreadNotifications()->latest()->get()->map(fn ($notification) => [
                 'id' => $notification->id,
-                'message' => $notification->data['message'] ?? '',
+                'message' => NotificationText::of($notification->data),
                 'url' => $this->notificationUrl($notification, $user),
                 'type' => $notification->data['type'] ?? '',
                 'created_at' => $notification->created_at?->toDateTimeString(),
@@ -23,7 +24,7 @@ class NotificationController extends Controller
             ])->values(),
             'allNotifications' => $user->notifications()->latest()->get()->map(fn ($notification) => [
                 'id' => $notification->id,
-                'message' => $notification->data['message'] ?? '',
+                'message' => NotificationText::of($notification->data),
                 'url' => $this->notificationUrl($notification, $user),
                 'type' => $notification->data['type'] ?? '',
                 'created_at' => $notification->created_at?->toDateTimeString(),
@@ -40,7 +41,7 @@ class NotificationController extends Controller
             403
         );
 
-        if (!$notification->read_at) {
+        if (! $notification->read_at) {
             $notification->markAsRead();
         }
 

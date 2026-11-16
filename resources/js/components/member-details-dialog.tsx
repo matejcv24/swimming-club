@@ -9,6 +9,7 @@ import Typography from '@mui/material/Typography';
 import { POPUP_BG } from '@/components/mui-theme-provider';
 import { CloseButton } from '@/components/popup-ui';
 import { groupWithSubgroupName, useGroups } from '@/lib/groups';
+import { t } from '@/lib/i18n';
 
 /** What the Member Details pop-up shows about a member. */
 export interface MemberDetails {
@@ -41,11 +42,11 @@ export function MemberDetailsDialog({
         >
             <DialogTitle sx={{ p: 0 }}>
                 <div className="flex items-center justify-between px-4 py-3">
-                    <IconButton onClick={onClose} aria-label="Back">
+                    <IconButton onClick={onClose} aria-label={t('Back')}>
                         <ArrowBackIcon />
                     </IconButton>
                     <Typography variant="h6" fontWeight="bold">
-                        Member Details
+                        {t('Member Details')}
                     </Typography>
                     <CloseButton onClick={onClose} />
                 </div>
@@ -60,7 +61,7 @@ export function MemberDetailsDialog({
                                 variant="caption"
                                 color="text.secondary"
                             >
-                                Member
+                                {t('Member')}
                             </Typography>
                             <Typography variant="body1" fontWeight="bold">
                                 {member.name}
@@ -71,7 +72,7 @@ export function MemberDetailsDialog({
                                 variant="caption"
                                 color="text.secondary"
                             >
-                                Status
+                                {t('Status')}
                             </Typography>
                             <Typography
                                 variant="body1"
@@ -82,8 +83,8 @@ export function MemberDetailsDialog({
                                 }
                             >
                                 {member.status === 'active'
-                                    ? 'Active'
-                                    : 'Inactive'}
+                                    ? t('Active')
+                                    : t('Inactive')}
                             </Typography>
                         </div>
 
@@ -92,7 +93,7 @@ export function MemberDetailsDialog({
                                 variant="caption"
                                 color="text.secondary"
                             >
-                                Group
+                                {t('Group')}
                             </Typography>
                             <Typography variant="body1">
                                 {groupWithSubgroupName(
@@ -108,7 +109,7 @@ export function MemberDetailsDialog({
                                 variant="caption"
                                 color="text.secondary"
                             >
-                                Parent
+                                {t('Parent')}
                             </Typography>
                             <Typography variant="body1" fontWeight="bold">
                                 {member.parent?.name ?? '—'}
@@ -119,7 +120,7 @@ export function MemberDetailsDialog({
                                 variant="caption"
                                 color="text.secondary"
                             >
-                                Parent Phone
+                                {t('Parent Phone')}
                             </Typography>
                             <Typography variant="body1">
                                 {member.parent?.phone ? (

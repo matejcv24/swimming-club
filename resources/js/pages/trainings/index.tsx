@@ -47,6 +47,7 @@ import { ListSkeleton } from '@/components/skeletons';
 import { usePagePopup } from '@/hooks/use-page-popup';
 import { groupWithSubgroupName, subgroupsOf, useGroups } from '@/lib/groups';
 import type { ClubGroup } from '@/lib/groups';
+import { locale, pickerLocaleText, t, tc } from '@/lib/i18n';
 
 interface Member {
     id: number;
@@ -326,14 +327,14 @@ export default function TrainingsIndex({
         overview?.reduce((sum, section) => sum + section.members.length, 0) ??
         0;
     const groupLabel = showAll
-        ? 'All groups'
+        ? t('All groups')
         : groupWithSubgroupName(groups, activeGroupId, activeSubgroupId);
     const sectionTitle = (section: DaySection) =>
         showAll
             ? [section.group_name ?? '—', section.name]
                   .filter(Boolean)
                   .join(' · ')
-            : (section.name ?? 'All groups');
+            : (section.name ?? t('All groups'));
     const shownMembers = groupMembers.filter(
         (m) =>
             (editMode || checkedIds.includes(m.id)) &&
@@ -343,7 +344,7 @@ export default function TrainingsIndex({
     return (
         <MuiThemeProvider>
             <DashboardBackground />
-            <Head title="Trainings" />
+            <Head title={t('Trainings')} />
 
             {/* Main Attendance Modal */}
             <Dialog
@@ -362,8 +363,10 @@ export default function TrainingsIndex({
                 <DialogTitle sx={{ p: 0 }}>
                     <PopupHeader
                         icon={<CalendarMonthIcon fontSize="small" />}
-                        title="Trainings"
-                        subtitle="Pick a group and a day to see who trained"
+                        title={t('Trainings')}
+                        subtitle={t(
+                            'Pick a group and a day to see who trained',
+                        )}
                         onClose={popup.close}
                     />
                     {groups.length > 0 ? (
@@ -374,11 +377,11 @@ export default function TrainingsIndex({
                                     shrink
                                     sx={{ color: popupFg(0.5) }}
                                 >
-                                    Group
+                                    {t('Group')}
                                 </InputLabel>
                                 <Select
                                     labelId="training-group-label"
-                                    label="Group"
+                                    label={t('Group')}
                                     notched
                                     displayEmpty
                                     value={activeChoice}
@@ -387,9 +390,9 @@ export default function TrainingsIndex({
                                     }
                                     renderValue={(value) =>
                                         value === ''
-                                            ? 'Choose a group'
+                                            ? t('Choose a group')
                                             : value === 'all'
-                                              ? 'All'
+                                              ? t('All')
                                               : groupLabel
                                     }
                                     sx={{
@@ -435,7 +438,7 @@ export default function TrainingsIndex({
                                                 }
                                             >
                                                 {group.subgroups.length > 0
-                                                    ? 'All groups'
+                                                    ? t('All groups')
                                                     : group.name}
                                             </MenuItem>
                                         ),
@@ -459,16 +462,16 @@ export default function TrainingsIndex({
                         <p className="px-[18px] pb-3 text-sm text-[var(--popup-muted)]">
                             {canManageGroups ? (
                                 <>
-                                    No groups yet.{' '}
+                                    {t('No groups yet.')}{' '}
                                     <Link
                                         href="/groups"
                                         className="font-semibold text-[#1690c8] hover:underline"
                                     >
-                                        Create them in Groups
+                                        {t('Create them in Groups')}
                                     </Link>
                                 </>
                             ) : (
-                                'No groups yet. Ask an admin to add one.'
+                                t('No groups yet. Ask an admin to add one.')
                             )}
                         </p>
                     )}
@@ -479,12 +482,17 @@ export default function TrainingsIndex({
                     {activeChoice === '' ? (
                         groups.length > 0 && (
                             <p className="px-6 py-12 text-center text-sm text-[var(--popup-muted)]">
-                                Choose a group above to see its trainings and
-                                add attendance.
+                                {t(
+                                    'Choose a group above to see its trainings and add attendance.',
+                                )}
                             </p>
                         )
                     ) : (
-                        <LocalizationProvider dateAdapter={AdapterDayjs}>
+                        <LocalizationProvider
+                            dateAdapter={AdapterDayjs}
+                            adapterLocale={locale}
+                            localeText={pickerLocaleText}
+                        >
                             <DateCalendar
                                 onChange={(date: Dayjs | null) =>
                                     handleDateClick(date)
@@ -518,10 +526,10 @@ export default function TrainingsIndex({
                         title={selectedDate?.format('DD.MM.YYYY') ?? ''}
                         subtitle={
                             overview
-                                ? `${showAll ? groupLabel : `${groupLabel} · all groups`} · ${overviewCount} ${overviewCount === 1 ? 'member' : 'members'} attended`
+                                ? `${showAll ? groupLabel : `${groupLabel} · ${t('all groups')}`} · ${tc(':count member attended|:count members attended', overviewCount)}`
                                 : editMode
-                                  ? `${groupLabel} · tick who came, then save`
-                                  : `${groupLabel} · ${savedIds.length} ${savedIds.length === 1 ? 'member' : 'members'} attended`
+                                  ? `${groupLabel} · ${t('tick who came, then save')}`
+                                  : `${groupLabel} · ${tc(':count member attended|:count members attended', savedIds.length)}`
                         }
                         onClose={closeAttendance}
                     />
@@ -530,7 +538,7 @@ export default function TrainingsIndex({
                             <PillSearchField
                                 value={attendanceSearch}
                                 onChange={setAttendanceSearch}
-                                placeholder="Search members..."
+                                placeholder={t('Search members...')}
                             />
                         </div>
                     )}
@@ -547,12 +555,16 @@ export default function TrainingsIndex({
                                 </IconBadge>
                                 <div className="flex flex-col gap-1">
                                     <p className="text-base font-bold text-[var(--popup-fg)]">
-                                        No recorded members for this date
+                                        {t('No recorded members for this date')}
                                     </p>
                                     <p className="text-sm text-[var(--popup-muted)]">
                                         {showAll
-                                            ? 'Pick a group above to add the members who came.'
-                                            : 'Pick a subgroup above to add the members who came.'}
+                                            ? t(
+                                                  'Pick a group above to add the members who came.',
+                                              )
+                                            : t(
+                                                  'Pick a subgroup above to add the members who came.',
+                                              )}
                                     </p>
                                 </div>
                             </div>
@@ -562,7 +574,7 @@ export default function TrainingsIndex({
                             <div className="flex flex-col gap-4 py-3">
                                 <p className="flex items-center gap-1.5 px-[18px] text-[12.5px] text-[var(--popup-muted)]">
                                     <TouchAppIcon sx={{ fontSize: 16 }} />
-                                    Tap a member to see their details
+                                    {t('Tap a member to see their details')}
                                 </p>
                                 {overview.map((section) => (
                                     <section
@@ -631,10 +643,12 @@ export default function TrainingsIndex({
                             </IconBadge>
                             <div className="flex flex-col gap-1">
                                 <p className="text-base font-bold text-[var(--popup-fg)]">
-                                    No recorded members for this date
+                                    {t('No recorded members for this date')}
                                 </p>
                                 <p className="text-sm text-[var(--popup-muted)]">
-                                    Add the members who came to this training.
+                                    {t(
+                                        'Add the members who came to this training.',
+                                    )}
                                 </p>
                             </div>
                             <Button
@@ -643,18 +657,19 @@ export default function TrainingsIndex({
                                 onClick={() => setEditMode(true)}
                                 disabled={groupMembers.length === 0}
                             >
-                                Add members
+                                {t('Add members')}
                             </Button>
                             {groupMembers.length === 0 && (
                                 <p className="text-sm text-[var(--popup-muted)]">
-                                    There are no active members in this group
-                                    yet.
+                                    {t(
+                                        'There are no active members in this group yet.',
+                                    )}
                                 </p>
                             )}
                         </div>
                     ) : shownMembers.length === 0 ? (
                         <p className="mt-10 text-center text-sm text-[var(--popup-muted)]">
-                            No members match your search.
+                            {t('No members match your search.')}
                         </p>
                     ) : (
                         <List disablePadding>
@@ -719,7 +734,7 @@ export default function TrainingsIndex({
                             onClick={cancelEdit}
                             sx={{ px: 3 }}
                         >
-                            Cancel
+                            {t('Cancel')}
                         </Button>
                         <Button
                             variant="contained"
@@ -731,9 +746,11 @@ export default function TrainingsIndex({
                         >
                             {/* Two short lines: the action, and how many are ticked */}
                             <span className="flex flex-col items-center">
-                                <span>Save Attendance</span>
+                                <span>{t('Save Attendance')}</span>
                                 <span className="text-xs font-semibold opacity-85">
-                                    ({checkedIds.length} present)
+                                    {t('(:count present)', {
+                                        count: checkedIds.length,
+                                    })}
                                 </span>
                             </span>
                         </Button>
@@ -748,7 +765,7 @@ export default function TrainingsIndex({
                                 startIcon={<EditIcon />}
                                 onClick={() => setEditMode(true)}
                             >
-                                Edit attendance
+                                {t('Edit attendance')}
                             </Button>
                         </div>
                     )

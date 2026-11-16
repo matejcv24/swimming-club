@@ -10,6 +10,7 @@ import {
     DropdownMenuItem,
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { locale, t, tc } from '@/lib/i18n';
 import type { NotificationSharedData } from '@/types';
 
 function formatNotificationDate(value: string | null) {
@@ -17,7 +18,7 @@ function formatNotificationDate(value: string | null) {
         return '';
     }
 
-    return new Intl.DateTimeFormat(undefined, {
+    return new Intl.DateTimeFormat(locale, {
         month: 'short',
         day: 'numeric',
         hour: '2-digit',
@@ -45,7 +46,9 @@ export function NotificationsMenu() {
                 <button
                     type="button"
                     className="relative flex size-9 cursor-pointer items-center justify-center rounded-full text-foreground transition hover:bg-hydra-blue/15 hover:text-hydra-blue data-[state=open]:bg-hydra-blue/15 data-[state=open]:text-hydra-blue"
-                    aria-label={open ? 'Close notifications' : 'Notifications'}
+                    aria-label={
+                        open ? t('Close notifications') : t('Notifications')
+                    }
                 >
                     {open ? (
                         <X className="size-5" />
@@ -72,19 +75,22 @@ export function NotificationsMenu() {
                     </IconBadge>
                     <div className="min-w-0">
                         <p className="text-[15px] leading-tight font-extrabold">
-                            Notifications
+                            {t('Notifications')}
                         </p>
                         <p className="text-xs text-[var(--popup-muted)]">
                             {unreadCount === 0
-                                ? 'You are all caught up'
-                                : `${unreadCount} unread`}
+                                ? t('You are all caught up')
+                                : tc(
+                                      ':count unread|:count unread',
+                                      unreadCount,
+                                  )}
                         </p>
                     </div>
                 </div>
 
                 {unreadNotifications.length === 0 ? (
                     <p className="rounded-xl bg-[var(--popup-ghost)] px-3 py-5 text-center text-sm text-[var(--popup-muted)]">
-                        No new notifications.
+                        {t('No new notifications.')}
                     </p>
                 ) : (
                     <div className="max-h-80 overflow-y-auto">
@@ -113,7 +119,7 @@ export function NotificationsMenu() {
                                 </span>
                                 <span
                                     className="size-2.5 flex-none rounded-full bg-hydra-blue"
-                                    aria-label="Unread"
+                                    aria-label={t('Unread')}
                                 />
                             </DropdownMenuItem>
                         ))}
@@ -124,7 +130,7 @@ export function NotificationsMenu() {
                     className="mt-2 cursor-pointer justify-center rounded-full bg-hydra-blue py-2 text-sm font-bold text-white focus:bg-hydra-blue/90 focus:text-white"
                     onSelect={() => router.visit('/notifications')}
                 >
-                    See all notifications
+                    {t('See all notifications')}
                 </DropdownMenuItem>
             </DropdownMenuContent>
         </DropdownMenu>
