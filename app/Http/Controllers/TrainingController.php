@@ -44,11 +44,17 @@ class TrainingController extends Controller
             'member_ids.*' => ['exists:members,id'],
         ]);
 
-        // Coaches record attendance only for their groups and their members
+        // Coaches record attendance only for their groups and their members. Members
+        // already recorded on that day may stay, even if they have since moved to a
+        // group the coach doesn't have (past attendance belongs to the day).
         abort_unless(Auth::user()->canSeeGroup($validated['group_id']), 403);
+        $alreadyRecorded = $this->recordedOn($validated['date'], $validated['group_id'], $validated['subgroup_id'] ?? null);
         abort_if(
             Auth::user()->visibleGroupIds() !== null
-                && Member::whereIn('id', $validated['member_ids'])->whereNotIn('group_id', Auth::user()->visibleGroupIds())->exists(),
+                && Member::whereIn('id', $validated['member_ids'])
+                    ->whereNotIn('id', $alreadyRecorded)
+                    ->whereNotIn('group_id', Auth::user()->visibleGroupIds())
+                    ->exists(),
             403,
         );
 
@@ -143,13 +149,33 @@ class TrainingController extends Controller
         $training = $this->trainingOn($validated['date'], $validated['group_id'], $validated['subgroup_id'] ?? null);
 
         if (! $training) {
-            return response()->json(['member_ids' => []]);
+            return response()->json(['member_ids' => [], 'attended' => []]);
         }
 
-        $memberIds = Attendance::where('training_id', $training->id)
-            ->pluck('member_id');
+        // Who came that day, as recorded: also members who have since moved to
+        // another group or stopped training, so a past day never loses anyone
+        $attended = Member::whereIn('id', Attendance::where('training_id', $training->id)->select('member_id'))
+            ->orderBy('name')
+            ->get(['id', 'name', 'group_id', 'subgroup_id']);
 
-        return response()->json(['member_ids' => $memberIds]);
+        return response()->json([
+            'member_ids' => $attended->pluck('id'),
+            'attended' => $attended,
+        ]);
+    }
+
+    /**
+     * The members recorded on a group's (or subgroup's) training on a day.
+     *
+     * @return list<int>
+     */
+    private function recordedOn(string $date, int|string $groupId, int|string|null $subgroupId): array
+    {
+        $training = $this->trainingOn($date, $groupId, $subgroupId);
+
+        return $training
+            ? Attendance::where('training_id', $training->id)->pluck('member_id')->all()
+            : [];
     }
 
     /**

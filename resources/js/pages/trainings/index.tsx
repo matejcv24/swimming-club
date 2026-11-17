@@ -165,6 +165,8 @@ export default function TrainingsIndex({
     // A subgroup is optional for members, so every subgroup's training lists
     // all members of its main group
     const groupMembers = members.filter((m) => m.group_id === activeGroupId);
+    // Who came on the open day, as recorded (also members who have moved since)
+    const [attended, setAttended] = useState<Member[]>([]);
 
     const loadAttendance = useCallback(
         async (
@@ -194,11 +196,13 @@ export default function TrainingsIndex({
                     );
                     const data = await response.json();
                     setOverview(null);
+                    setAttended(data.attended ?? []);
                     setCheckedIds(data.member_ids ?? []);
                     setSavedIds(data.member_ids ?? []);
                 }
             } catch {
                 setOverview(asOverview ? [] : null);
+                setAttended([]);
                 setCheckedIds([]);
                 setSavedIds([]);
             }
@@ -335,7 +339,17 @@ export default function TrainingsIndex({
                   .filter(Boolean)
                   .join(' · ')
             : (section.name ?? t('All groups'));
-    const shownMembers = groupMembers.filter(
+    // The day's list: the group's members today, plus anyone recorded that day who
+    // has since moved to another group (their past attendance stays on the day)
+    const dayMembers = [
+        ...groupMembers,
+        ...attended.filter(
+            (person) => !groupMembers.some((m) => m.id === person.id),
+        ),
+    ].sort((a, b) => a.name.localeCompare(b.name));
+    const movedAway = (member: Member) =>
+        !groupMembers.some((m) => m.id === member.id);
+    const shownMembers = dayMembers.filter(
         (m) =>
             (editMode || checkedIds.includes(m.id)) &&
             m.name.toLowerCase().includes(attendanceSearch.toLowerCase()),
@@ -699,7 +713,10 @@ export default function TrainingsIndex({
                                                     e.stopPropagation()
                                                 }
                                                 inputProps={{
-                                                    'aria-label': `${member.name} attended`,
+                                                    'aria-label': t(
+                                                        ':name attended',
+                                                        { name: member.name },
+                                                    ),
                                                 }}
                                             />
                                         ) : undefined
@@ -718,6 +735,18 @@ export default function TrainingsIndex({
                                             >
                                                 {member.name}
                                             </Typography>
+                                        }
+                                        secondary={
+                                            // Came that day, but trains in another group now
+                                            movedAway(member)
+                                                ? t('Now in :group', {
+                                                      group: groupWithSubgroupName(
+                                                          groups,
+                                                          member.group_id,
+                                                          member.subgroup_id,
+                                                      ),
+                                                  })
+                                                : undefined
                                         }
                                     />
                                 </ListItem>
