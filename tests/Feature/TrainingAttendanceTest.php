@@ -38,7 +38,7 @@ class TrainingAttendanceTest extends TestCase
         $this->assertSame(0, Training::count());
         $this->actingAs($admin)
             ->getJson('/trainings/by-date?date=2026-11-16&group_id='.$this->group('Small pool'))
-            ->assertExactJson(['member_ids' => []]);
+            ->assertExactJson(['member_ids' => [], 'attended' => []]);
     }
 
     public function test_saving_nobody_on_an_empty_day_creates_nothing()
