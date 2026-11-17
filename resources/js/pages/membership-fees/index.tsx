@@ -462,12 +462,11 @@ export default function MembershipFeesIndex({
                                     ) : (
                                         <List disablePadding sx={{ mt: 1 }}>
                                             <ListItem
-                                                divider
                                                 sx={{
                                                     px: 0,
                                                     cursor: 'pointer',
                                                     display: 'flex',
-                                                    flexWrap: 'wrap',
+                                                    flexWrap: 'nowrap',
                                                     justifyContent:
                                                         'space-between',
                                                     alignItems: 'center',
@@ -544,11 +543,11 @@ export default function MembershipFeesIndex({
                                 type="number"
                                 value={amount}
                                 onChange={(e) => setAmount(e.target.value)}
-                                sx={{ ...inputSx, flex: '0 0 65%' }}
+                                sx={{ ...inputSx, flex: '1 1 0', minWidth: 0 }}
                             />
                             <FormControl
                                 sx={{
-                                    flex: '0 0 calc(35% - 12px)',
+                                    flex: '0 0 9rem',
                                     ...inputSx,
                                 }}
                             >
@@ -837,11 +836,15 @@ export default function MembershipFeesIndex({
                                         })
                                     }
                                     error={!!editFeeErrors.amount}
-                                    sx={{ ...inputSx, flex: '0 0 65%' }}
+                                    sx={{
+                                        ...inputSx,
+                                        flex: '1 1 0',
+                                        minWidth: 0,
+                                    }}
                                 />
                                 <FormControl
                                     sx={{
-                                        flex: '0 0 calc(35% - 12px)',
+                                        flex: '0 0 9rem',
                                         ...inputSx,
                                     }}
                                 >
@@ -1016,7 +1019,10 @@ export default function MembershipFeesIndex({
                                             variant="caption"
                                             color="primary"
                                         >
-                                            {monthData.fees.length} payments
+                                            {tc(
+                                                ':count payment|:count payments',
+                                                monthData.fees.length,
+                                            )}
                                         </Typography>
                                     </div>
 
