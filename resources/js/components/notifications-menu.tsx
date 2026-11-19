@@ -1,5 +1,6 @@
 import { router, usePage } from '@inertiajs/react';
 import NotificationsIcon from '@mui/icons-material/Notifications';
+import dayjs from 'dayjs';
 import { Bell, X } from 'lucide-react';
 import { useState } from 'react';
 import { NotificationIcon } from '@/components/notification-icon';
@@ -10,7 +11,7 @@ import {
     DropdownMenuItem,
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { locale, t, tc } from '@/lib/i18n';
+import { t, tc } from '@/lib/i18n';
 import type { NotificationSharedData } from '@/types';
 
 function formatNotificationDate(value: string | null) {
@@ -18,12 +19,7 @@ function formatNotificationDate(value: string | null) {
         return '';
     }
 
-    return new Intl.DateTimeFormat(locale, {
-        month: 'short',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-    }).format(new Date(value));
+    return dayjs(value).format('DD.MM.YYYY HH:mm');
 }
 
 export function NotificationsMenu() {

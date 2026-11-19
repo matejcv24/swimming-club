@@ -165,6 +165,42 @@ class TrainingController extends Controller
     }
 
     /**
+     * The days of a month with recorded attendance, for the calendar's dots: of
+     * one subgroup, of a whole group (any of its subgroups too) or, without a
+     * group, of every group.
+     */
+    public function recordedDays(Request $request)
+    {
+        $validated = $request->validate([
+            'month' => ['required', 'date_format:Y-m'],
+            'group_id' => ['nullable', 'integer'],
+            'subgroup_id' => ['nullable', 'integer'],
+        ]);
+
+        $groupId = isset($validated['group_id']) ? (int) $validated['group_id'] : null;
+
+        abort_unless(
+            $groupId === null ? Auth::user()->visibleGroupIds() === null : Auth::user()->canSeeGroup($groupId),
+            403,
+        );
+
+        $month = Carbon::createFromFormat('Y-m', $validated['month'])->startOfMonth();
+
+        $days = Training::whereBetween('date', [$month->toDateString(), $month->copy()->endOfMonth()->toDateString()])
+            ->whereNotNull('group_id')
+            ->when($groupId !== null, fn ($query) => $query->where('group_id', $groupId))
+            ->when($validated['subgroup_id'] ?? null, fn ($query, $subgroupId) => $query->where('subgroup_id', $subgroupId))
+            ->whereHas('attendances')
+            ->distinct()
+            ->pluck('date')
+            ->map(fn ($date) => Carbon::parse($date)->toDateString())
+            ->unique()
+            ->values();
+
+        return response()->json(['days' => $days]);
+    }
+
+    /**
      * The members recorded on a group's (or subgroup's) training on a day.
      *
      * @return list<int>

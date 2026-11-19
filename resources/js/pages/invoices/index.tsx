@@ -402,6 +402,14 @@ export default function InvoicesIndex({ invoices }: Props) {
 
                             <div className="flex gap-3">
                                 <Button
+                                    variant="outlined"
+                                    fullWidth
+                                    size="medium"
+                                    onClick={resetForm}
+                                >
+                                    {t('Cancel')}
+                                </Button>
+                                <Button
                                     variant="contained"
                                     fullWidth
                                     size="medium"
@@ -415,14 +423,6 @@ export default function InvoicesIndex({ invoices }: Props) {
                                     {isSaving
                                         ? t('Saving...')
                                         : t('Save Invoice')}
-                                </Button>
-                                <Button
-                                    variant="outlined"
-                                    fullWidth
-                                    size="medium"
-                                    onClick={resetForm}
-                                >
-                                    {t('Cancel')}
                                 </Button>
                             </div>
                         </div>
@@ -727,13 +727,14 @@ export default function InvoicesIndex({ invoices }: Props) {
 
                             <div className="flex gap-3">
                                 <Button
-                                    variant="contained"
-                                    fullWidth
+                                    variant="outlined"
                                     size="medium"
-                                    onClick={handleUpdateInvoice}
-                                    disabled={!editAmount}
+                                    onClick={() => {
+                                        setEditingInvoice(null);
+                                        setEditAmount('');
+                                    }}
                                 >
-                                    {t('Update')}
+                                    {t('Cancel')}
                                 </Button>
                                 {/* Asks first (Delete Invoice pop-up below) */}
                                 <Button
@@ -746,14 +747,13 @@ export default function InvoicesIndex({ invoices }: Props) {
                                     {t('Delete')}
                                 </Button>
                                 <Button
-                                    variant="outlined"
+                                    variant="contained"
+                                    fullWidth
                                     size="medium"
-                                    onClick={() => {
-                                        setEditingInvoice(null);
-                                        setEditAmount('');
-                                    }}
+                                    onClick={handleUpdateInvoice}
+                                    disabled={!editAmount}
                                 >
-                                    {t('Cancel')}
+                                    {t('Update')}
                                 </Button>
                             </div>
                         </div>
@@ -807,6 +807,15 @@ export default function InvoicesIndex({ invoices }: Props) {
                             </Typography>
                             <div className="flex gap-3">
                                 <Button
+                                    variant="outlined"
+                                    fullWidth
+                                    size="medium"
+                                    onClick={() => setConfirmDelete(false)}
+                                    disabled={deletingInvoice}
+                                >
+                                    {t('No')}
+                                </Button>
+                                <Button
                                     variant="contained"
                                     color="error"
                                     fullWidth
@@ -817,15 +826,6 @@ export default function InvoicesIndex({ invoices }: Props) {
                                     disabled={deletingInvoice}
                                 >
                                     {t('Yes')}
-                                </Button>
-                                <Button
-                                    variant="outlined"
-                                    fullWidth
-                                    size="medium"
-                                    onClick={() => setConfirmDelete(false)}
-                                    disabled={deletingInvoice}
-                                >
-                                    {t('No')}
                                 </Button>
                             </div>
                         </div>

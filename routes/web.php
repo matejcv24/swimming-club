@@ -1,20 +1,20 @@
 <?php
 
 use App\Http\Controllers\AdminController;
+use App\Http\Controllers\AttendanceController;
 use App\Http\Controllers\ClubParentController;
 use App\Http\Controllers\GroupController;
 use App\Http\Controllers\InvoiceController;
 use App\Http\Controllers\MemberController;
 use App\Http\Controllers\MembershipFeeController;
 use App\Http\Controllers\MonthlyReportController;
+use App\Http\Controllers\NotificationController;
+use App\Http\Controllers\ProfitController;
 use App\Http\Controllers\SalaryController;
 use App\Http\Controllers\StaffController;
 use App\Http\Controllers\TrainingController;
 use App\Http\Controllers\UnpaidFeeController;
-use App\Http\Controllers\ProfitController;
-use App\Http\Controllers\AttendanceController;
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\NotificationController;
 
 // The bare address goes to the login page (logged-in users are sent on to the dashboard)
 Route::redirect('/', '/login')->name('home');
@@ -31,6 +31,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('/attendance/by-member/{member}', [AttendanceController::class, 'byMember'])->name('attendance.byMember');
 
         Route::get('/trainings/by-date', [TrainingController::class, 'getByDate'])->name('trainings.byDate');
+        Route::get('/trainings/days', [TrainingController::class, 'recordedDays'])->name('trainings.days');
         Route::resource('trainings', TrainingController::class);
 
         Route::get('/membership-fees/by-member/{member}', [MembershipFeeController::class, 'getByMember'])

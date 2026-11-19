@@ -30,6 +30,8 @@ import Typography from '@mui/material/Typography';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import { DateCalendar } from '@mui/x-date-pickers/DateCalendar';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
+import { PickersDay } from '@mui/x-date-pickers/PickersDay';
+import type { PickersDayProps } from '@mui/x-date-pickers/PickersDay';
 import dayjs from 'dayjs';
 import type { Dayjs } from 'dayjs';
 import { useCallback, useEffect, useState } from 'react';
@@ -134,6 +136,38 @@ const SEGMENT_SX = {
         { bgcolor: '#1b8fd6', color: '#fff' },
 } as const;
 
+/** A calendar day, with a dot when attendance is recorded on it. */
+function RecordedDay({
+    recordedDays,
+    ...props
+}: PickersDayProps & { recordedDays?: Set<string> }) {
+    const recorded =
+        !props.outsideCurrentMonth &&
+        recordedDays?.has(props.day.format('YYYY-MM-DD'));
+
+    return (
+        <PickersDay
+            {...props}
+            sx={
+                recorded
+                    ? {
+                          '&::after': {
+                              content: '""',
+                              position: 'absolute',
+                              bottom: 3,
+                              width: 5,
+                              height: 5,
+                              borderRadius: '50%',
+                              bgcolor: '#22c55e',
+                          },
+                          '&.Mui-selected::after': { bgcolor: '#fff' },
+                      }
+                    : undefined
+            }
+        />
+    );
+}
+
 // Old links (e.g. notifications) used ?pool=big|small
 const LEGACY_POOL_NAMES: Record<string, string> = {
     big: 'big pool',
@@ -177,6 +211,13 @@ export default function TrainingsIndex({
     );
     // Adding attendance on a group's overview: a subgroup must be picked first
     const [showPickSubgroup, setShowPickSubgroup] = useState(false);
+    // The calendar's month, and its days with recorded attendance (the dots)
+    const [viewMonth, setViewMonth] = useState(() => dayjs().format('YYYY-MM'));
+    const [recordedDays, setRecordedDays] = useState<Set<string>>(
+        () => new Set(),
+    );
+    // Bumped after a save, so the dots are fetched again
+    const [daysVersion, setDaysVersion] = useState(0);
 
     // A deleted group or subgroup falls back to the default choice
     const showAll = choice === 'all' && canSeeAllGroups;
@@ -191,6 +232,33 @@ export default function TrainingsIndex({
           : '';
     const activeGroupId = resolved?.groupId ?? null;
     const activeSubgroupId = resolved?.subgroupId ?? null;
+
+    // The dots follow what is chosen: every group, a whole group or a subgroup
+    useEffect(() => {
+        if (!showAll && activeGroupId === null) {
+            return;
+        }
+
+        const params = new URLSearchParams({ month: viewMonth });
+
+        if (activeGroupId !== null) {
+            params.set('group_id', String(activeGroupId));
+        }
+
+        if (activeSubgroupId !== null) {
+            params.set('subgroup_id', String(activeSubgroupId));
+        }
+
+        const request = new AbortController();
+        fetch(`/trainings/days?${params}`, { signal: request.signal })
+            .then((response) => (response.ok ? response.json() : { days: [] }))
+            .then((data: { days: string[] }) =>
+                setRecordedDays(new Set(data.days)),
+            )
+            .catch(() => {});
+
+        return () => request.abort();
+    }, [showAll, activeGroupId, activeSubgroupId, viewMonth, daysVersion]);
     const subgroups = subgroupsOf(groups, activeGroupId);
     // A subgroup is optional for members, so every subgroup's training lists
     // all members of its main group
@@ -325,6 +393,7 @@ export default function TrainingsIndex({
             },
             {
                 onSuccess: () => {
+                    setDaysVersion((version) => version + 1);
                     setShowAttendanceModal(false);
                     setCheckedIds([]);
                     setSavedIds([]);
@@ -558,6 +627,17 @@ export default function TrainingsIndex({
                                 onChange={(date: Dayjs | null) =>
                                     handleDateClick(date)
                                 }
+                                onMonthChange={(month: Dayjs) =>
+                                    setViewMonth(month.format('YYYY-MM'))
+                                }
+                                slots={{ day: RecordedDay }}
+                                slotProps={{
+                                    day: { recordedDays } as Partial<
+                                        PickersDayProps & {
+                                            recordedDays: Set<string>;
+                                        }
+                                    >,
+                                }}
                                 sx={{ width: '100%' }}
                             />
                         </LocalizationProvider>

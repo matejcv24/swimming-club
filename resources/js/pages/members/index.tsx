@@ -408,6 +408,15 @@ export default function MembersIndex({ members, userRole }: Props) {
                             </Typography>
                             <div className="flex gap-3">
                                 <Button
+                                    variant="outlined"
+                                    fullWidth
+                                    size="medium"
+                                    onClick={() => setDeleteMember(null)}
+                                    disabled={deleting}
+                                >
+                                    {t('No')}
+                                </Button>
+                                <Button
                                     variant="contained"
                                     color="error"
                                     fullWidth
@@ -416,15 +425,6 @@ export default function MembersIndex({ members, userRole }: Props) {
                                     disabled={deleting}
                                 >
                                     {t('Yes')}
-                                </Button>
-                                <Button
-                                    variant="outlined"
-                                    fullWidth
-                                    size="medium"
-                                    onClick={() => setDeleteMember(null)}
-                                    disabled={deleting}
-                                >
-                                    {t('No')}
                                 </Button>
                             </div>
                         </div>
@@ -605,15 +605,6 @@ export default function MembersIndex({ members, userRole }: Props) {
 
                         <div className="flex gap-3">
                             <Button
-                                type="submit"
-                                variant="contained"
-                                fullWidth
-                                size="medium"
-                                disabled={!hasEditChanges}
-                            >
-                                {t('Save Changes')}
-                            </Button>
-                            <Button
                                 type="button"
                                 variant="outlined"
                                 fullWidth
@@ -621,6 +612,15 @@ export default function MembersIndex({ members, userRole }: Props) {
                                 onClick={() => setEditMember(null)}
                             >
                                 {t('Cancel')}
+                            </Button>
+                            <Button
+                                type="submit"
+                                variant="contained"
+                                fullWidth
+                                size="medium"
+                                disabled={!hasEditChanges}
+                            >
+                                {t('Save Changes')}
                             </Button>
                         </div>
                     </form>
@@ -806,14 +806,6 @@ export default function MembersIndex({ members, userRole }: Props) {
 
                             <div className="flex gap-3">
                                 <Button
-                                    type="submit"
-                                    variant="contained"
-                                    fullWidth
-                                    size="medium"
-                                >
-                                    {t('Save Member')}
-                                </Button>
-                                <Button
                                     type="button"
                                     variant="outlined"
                                     fullWidth
@@ -821,6 +813,14 @@ export default function MembersIndex({ members, userRole }: Props) {
                                     onClick={() => setShowAddModal(false)}
                                 >
                                     {t('Cancel')}
+                                </Button>
+                                <Button
+                                    type="submit"
+                                    variant="contained"
+                                    fullWidth
+                                    size="medium"
+                                >
+                                    {t('Save Member')}
                                 </Button>
                             </div>
                         </form>
