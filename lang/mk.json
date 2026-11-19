@@ -229,7 +229,6 @@
     "No unread notifications.": "Нема непрочитани известувања.",
     "Notifications": "Известувања",
     "Now in :group": "Сега во :group",
-    "OK": "Во ред",
     "Once your account is deleted, all of its resources and data will also be permanently deleted. Please enter your password to confirm you would like to permanently delete your account.": "Откако сметката ќе се избрише, сите нејзини податоци трајно ќе се избришат. Внесете ја лозинката за да потврдите дека сакате трајно да ја избришете сметката.",
     "or you can": "или можете да",
     "or, enter the code manually": "или, внесете го кодот рачно",
@@ -255,9 +254,7 @@
     "Payment History — :name": "Историја на уплати — :name",
     "Per member and group": "По член и група",
     "Phone:": "Телефон:",
-    "Pick a group above to add the members who came.": "Изберете група погоре за да ги додадете членовите што дошле.",
     "Pick a group and a day to see who trained": "Изберете група и ден за да видите кој тренирал",
-    "Pick a subgroup above to add the members who came.": "Изберете подгрупа погоре за да ги додадете членовите што дошле.",
     "Please confirm access to your account by entering one of your emergency recovery codes.": "Потврдете го пристапот до сметката со внесување на еден од кодовите за враќање.",
     "Please enter your new password below": "Внесете ја новата лозинка подолу",
     "Please proceed with caution, this cannot be undone.": "Продолжете внимателно, ова не може да се врати.",
@@ -360,5 +357,8 @@
     "You are all caught up": "Немате нови известувања",
     "You have not received any notifications yet.": "Сè уште немате добиено известувања.",
     "You will be prompted for a secure, random pin during login, which you can retrieve from the TOTP-supported application on your phone.": "При најава ќе ви биде побаран безбеден, случаен PIN, кој го добивате од TOTP апликацијата на вашиот телефон.",
-    "Your email address is unverified.": "Вашата е-пошта не е потврдена."
+    "Your email address is unverified.": "Вашата е-пошта не е потврдена.",
+    "Please select a subgroup so you can enter attendance.": "Ве молиме изберете подгрупа за да внесете присуство.",
+    "Tap a group to see who attended": "Допрете група за да видите кој присуствувал",
+    "Tap a subgroup to see who attended": "Допрете подгрупа за да видите кој присуствувал"
 }
