@@ -3,11 +3,15 @@ import CalendarMonthIcon from '@mui/icons-material/CalendarMonth';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import EditIcon from '@mui/icons-material/Edit';
 import EventAvailableIcon from '@mui/icons-material/EventAvailable';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import PersonAddAlt1Icon from '@mui/icons-material/PersonAddAlt1';
 import TouchAppIcon from '@mui/icons-material/TouchApp';
+import WarningAmberIcon from '@mui/icons-material/WarningAmber';
 import Avatar from '@mui/material/Avatar';
 import Button from '@mui/material/Button';
+import ButtonBase from '@mui/material/ButtonBase';
 import Checkbox from '@mui/material/Checkbox';
+import Collapse from '@mui/material/Collapse';
 import Dialog from '@mui/material/Dialog';
 import DialogContent from '@mui/material/DialogContent';
 import DialogTitle from '@mui/material/DialogTitle';
@@ -18,9 +22,10 @@ import ListItem from '@mui/material/ListItem';
 import ListItemAvatar from '@mui/material/ListItemAvatar';
 import ListItemButton from '@mui/material/ListItemButton';
 import ListItemText from '@mui/material/ListItemText';
-import ListSubheader from '@mui/material/ListSubheader';
 import MenuItem from '@mui/material/MenuItem';
 import Select from '@mui/material/Select';
+import ToggleButton from '@mui/material/ToggleButton';
+import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
 import Typography from '@mui/material/Typography';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import { DateCalendar } from '@mui/x-date-pickers/DateCalendar';
@@ -72,8 +77,9 @@ interface Props {
 }
 
 /**
- * What the Group drop-down shows: 'all' (every group, read-only), 'g:ID' (a
- * group), 's:ID' (one of its subgroups) or '' (nothing chosen yet).
+ * What is chosen: 'all' (every group, read-only), 'g:ID' (a group; with
+ * subgroups, a read-only overview of them), 's:ID' (one of its subgroups) or ''
+ * (nothing chosen yet).
  */
 type Choice = string;
 
@@ -112,6 +118,22 @@ function resolveChoice(
     return null;
 }
 
+const sectionKey = (section: DaySection) =>
+    `${section.group_id}-${section.subgroup_id ?? 'whole'}`;
+
+/** The subgroup buttons: one joined bar, the picked one filled. */
+const SEGMENT_SX = {
+    '& .MuiToggleButton-root': {
+        color: POPUP_FG,
+        borderColor: popupFg(0.3),
+        textTransform: 'none',
+        fontWeight: 600,
+        py: 0.75,
+    },
+    '& .MuiToggleButton-root.Mui-selected, & .MuiToggleButton-root.Mui-selected:hover':
+        { bgcolor: '#1b8fd6', color: '#fff' },
+} as const;
+
 // Old links (e.g. notifications) used ?pool=big|small
 const LEGACY_POOL_NAMES: Record<string, string> = {
     big: 'big pool',
@@ -144,9 +166,17 @@ export default function TrainingsIndex({
     const [attendanceSearch, setAttendanceSearch] = useState('');
     // "All groups" of a group with subgroups: a read-only overview of the day
     const [overview, setOverview] = useState<DaySection[] | null>(null);
+    // Which of the overview's groups are opened (all closed when a day opens)
+    const [openSections, setOpenSections] = useState<string[]>([]);
+    const toggleSection = (key: string) =>
+        setOpenSections((open) =>
+            open.includes(key) ? open.filter((k) => k !== key) : [...open, key],
+        );
     const [detailsMember, setDetailsMember] = useState<MemberDetails | null>(
         null,
     );
+    // Adding attendance on a group's overview: a subgroup must be picked first
+    const [showPickSubgroup, setShowPickSubgroup] = useState(false);
 
     // A deleted group or subgroup falls back to the default choice
     const showAll = choice === 'all' && canSeeAllGroups;
@@ -177,6 +207,7 @@ export default function TrainingsIndex({
         ) => {
             setSelectedDate(date);
             setEditMode(false);
+            setOpenSections([]);
             setLoading(true);
 
             // No group: the overview of every group ("All")
@@ -304,6 +335,18 @@ export default function TrainingsIndex({
         );
     };
 
+    // From the "pick a subgroup" warning: open that subgroup's day, ready to tick
+    const pickSubgroupAndAdd = async (subgroupId: number) => {
+        if (!selectedDate || activeGroupId === null) {
+            return;
+        }
+
+        setShowPickSubgroup(false);
+        setChoice(groupChoice(activeGroupId, subgroupId));
+        await loadAttendance(selectedDate, activeGroupId, subgroupId, false);
+        setEditMode(true);
+    };
+
     const getInitials = (name: string) =>
         name
             .split(' ')
@@ -341,14 +384,11 @@ export default function TrainingsIndex({
             : (section.name ?? t('All groups'));
     // The day's list: the group's members today, plus anyone recorded that day who
     // has since moved to another group (their past attendance stays on the day)
-    const dayMembers = [
-        ...groupMembers,
-        ...attended.filter(
-            (person) => !groupMembers.some((m) => m.id === person.id),
-        ),
-    ].sort((a, b) => a.name.localeCompare(b.name));
-    const movedAway = (member: Member) =>
-        !groupMembers.some((m) => m.id === member.id);
+    const inGroup = new Set(groupMembers.map((m) => m.id));
+    const movedAway = (member: Member) => !inGroup.has(member.id);
+    const dayMembers = [...groupMembers, ...attended.filter(movedAway)].sort(
+        (a, b) => a.name.localeCompare(b.name),
+    );
     const shownMembers = dayMembers.filter(
         (m) =>
             (editMode || checkedIds.includes(m.id)) &&
@@ -398,7 +438,13 @@ export default function TrainingsIndex({
                                     label={t('Group')}
                                     notched
                                     displayEmpty
-                                    value={activeChoice}
+                                    value={
+                                        showAll
+                                            ? 'all'
+                                            : activeGroupId === null
+                                              ? ''
+                                              : groupChoice(activeGroupId, null)
+                                    }
                                     onChange={(e) =>
                                         setChoice(String(e.target.value))
                                     }
@@ -407,7 +453,10 @@ export default function TrainingsIndex({
                                             ? t('Choose a group')
                                             : value === 'all'
                                               ? t('All')
-                                              : groupLabel
+                                              : (groups.find(
+                                                    (g) =>
+                                                        g.id === activeGroupId,
+                                                )?.name ?? '')
                                     }
                                     sx={{
                                         color:
@@ -423,54 +472,52 @@ export default function TrainingsIndex({
                                     }}
                                 >
                                     {canSeeAllGroups && (
-                                        <MenuItem value="all">All</MenuItem>
+                                        <MenuItem value="all">
+                                            {t('All')}
+                                        </MenuItem>
                                     )}
-                                    {groups.flatMap((group) => [
-                                        group.subgroups.length > 0 ? (
-                                            <ListSubheader
-                                                key={`h${group.id}`}
-                                                sx={{
-                                                    lineHeight: '32px',
-                                                    bgcolor: 'transparent',
-                                                }}
-                                            >
-                                                {group.name}
-                                            </ListSubheader>
-                                        ) : null,
-                                        // One subgroup: just that subgroup, no overview
-                                        group.subgroups.length === 1 ? null : (
-                                            <MenuItem
-                                                key={`g${group.id}`}
-                                                value={groupChoice(
-                                                    group.id,
-                                                    null,
-                                                )}
-                                                sx={
-                                                    group.subgroups.length > 0
-                                                        ? { pl: 4 }
-                                                        : undefined
-                                                }
-                                            >
-                                                {group.subgroups.length > 0
-                                                    ? t('All groups')
-                                                    : group.name}
-                                            </MenuItem>
-                                        ),
-                                        ...group.subgroups.map((subgroup) => (
-                                            <MenuItem
-                                                key={`s${subgroup.id}`}
-                                                value={groupChoice(
-                                                    group.id,
-                                                    subgroup.id,
-                                                )}
-                                                sx={{ pl: 4 }}
-                                            >
-                                                {subgroup.name}
-                                            </MenuItem>
-                                        )),
-                                    ])}
+                                    {groups.map((group) => (
+                                        <MenuItem
+                                            key={group.id}
+                                            value={groupChoice(group.id, null)}
+                                        >
+                                            {group.name}
+                                        </MenuItem>
+                                    ))}
                                 </Select>
                             </FormControl>
+                            {/* Subgroups: pick one to record its attendance. None picked
+                                (tap the picked one again): the whole group, read-only */}
+                            {activeGroupId !== null && subgroups.length > 0 && (
+                                <ToggleButtonGroup
+                                    exclusive
+                                    fullWidth
+                                    size="small"
+                                    value={activeChoice}
+                                    onChange={(_, value: Choice | null) =>
+                                        setChoice(
+                                            value ??
+                                                groupChoice(
+                                                    activeGroupId,
+                                                    null,
+                                                ),
+                                        )
+                                    }
+                                    sx={{ mt: 1.5, ...SEGMENT_SX }}
+                                >
+                                    {subgroups.map((subgroup) => (
+                                        <ToggleButton
+                                            key={subgroup.id}
+                                            value={groupChoice(
+                                                activeGroupId,
+                                                subgroup.id,
+                                            )}
+                                        >
+                                            {subgroup.name}
+                                        </ToggleButton>
+                                    ))}
+                                </ToggleButtonGroup>
+                            )}
                         </div>
                     ) : (
                         <p className="px-[18px] pb-3 text-sm text-[var(--popup-muted)]">
@@ -571,82 +618,135 @@ export default function TrainingsIndex({
                                     <p className="text-base font-bold text-[var(--popup-fg)]">
                                         {t('No recorded members for this date')}
                                     </p>
-                                    <p className="text-sm text-[var(--popup-muted)]">
-                                        {showAll
-                                            ? t(
-                                                  'Pick a group above to add the members who came.',
-                                              )
-                                            : t(
-                                                  'Pick a subgroup above to add the members who came.',
-                                              )}
-                                    </p>
+                                    {/* "All" is read-only: nothing to add from here */}
+                                    {!showAll && (
+                                        <p className="text-sm text-[var(--popup-muted)]">
+                                            {t(
+                                                'Add the members who came to this training.',
+                                            )}
+                                        </p>
+                                    )}
                                 </div>
                             </div>
                         ) : (
                             // Read-only: who came, per subgroup. Rows like the Members
                             // list; tapping one opens the member's details
-                            <div className="flex flex-col gap-4 py-3">
+                            <div className="flex flex-col gap-1 py-3">
                                 <p className="flex items-center gap-1.5 px-[18px] text-[12.5px] text-[var(--popup-muted)]">
                                     <TouchAppIcon sx={{ fontSize: 16 }} />
-                                    {t('Tap a member to see their details')}
-                                </p>
-                                {overview.map((section) => (
-                                    <section
-                                        key={`${section.group_id}-${section.subgroup_id ?? 'whole'}`}
-                                    >
-                                        <h3 className="px-[18px] text-base font-extrabold text-[var(--popup-fg)]">
-                                            {sectionTitle(section)}
-                                            <span className="ml-2 text-sm font-normal text-[var(--popup-muted)]">
-                                                {section.members.length}
-                                            </span>
-                                        </h3>
-                                        <List disablePadding>
-                                            {section.members.map(
-                                                (member, index) => (
-                                                    <ListItemButton
-                                                        key={member.id}
-                                                        divider
-                                                        onClick={() =>
-                                                            setDetailsMember(
-                                                                member,
-                                                            )
-                                                        }
-                                                        sx={{ px: 2.25 }}
-                                                    >
-                                                        <ListItemAvatar>
-                                                            <Avatar
-                                                                sx={avatarSx(
-                                                                    index,
-                                                                )}
-                                                            >
-                                                                {getInitials(
-                                                                    member.name,
-                                                                )}
-                                                            </Avatar>
-                                                        </ListItemAvatar>
-                                                        <ListItemText
-                                                            primary={
-                                                                <Typography
-                                                                    variant="body1"
-                                                                    fontWeight="bold"
-                                                                >
-                                                                    {
-                                                                        member.name
-                                                                    }
-                                                                </Typography>
-                                                            }
-                                                        />
-                                                        <ChevronRightIcon
-                                                            sx={{
-                                                                color: 'var(--popup-muted)',
-                                                            }}
-                                                        />
-                                                    </ListItemButton>
-                                                ),
+                                    {/* Folded groups/subgroups open first; a single one lists its members */}
+                                    {overview.length === 1
+                                        ? t('Tap a member to see their details')
+                                        : showAll
+                                          ? t('Tap a group to see who attended')
+                                          : t(
+                                                'Tap a subgroup to see who attended',
                                             )}
-                                        </List>
-                                    </section>
-                                ))}
+                                </p>
+                                {overview.map((section, _, all) => {
+                                    const key = sectionKey(section);
+                                    // Only a day with more than one group (or subgroup)
+                                    // folds them away; a single one is just listed
+                                    const foldable = all.length > 1;
+                                    const open =
+                                        !foldable || openSections.includes(key);
+
+                                    return (
+                                        <section key={key}>
+                                            {/* Group, how many came, arrow: tap to show who */}
+                                            <ButtonBase
+                                                disabled={!foldable}
+                                                onClick={() =>
+                                                    toggleSection(key)
+                                                }
+                                                aria-expanded={
+                                                    foldable ? open : undefined
+                                                }
+                                                sx={{
+                                                    width: '100%',
+                                                    justifyContent:
+                                                        'flex-start',
+                                                    gap: 1,
+                                                    px: 2.25,
+                                                    py: 1.25,
+                                                    textAlign: 'left',
+                                                    '&:hover': {
+                                                        bgcolor: popupFg(0.05),
+                                                    },
+                                                }}
+                                            >
+                                                <span className="min-w-0 truncate text-base font-extrabold text-[var(--popup-fg)]">
+                                                    {sectionTitle(section)}
+                                                </span>
+                                                <span className="flex-none text-sm text-[var(--popup-muted)]">
+                                                    {section.members.length}
+                                                </span>
+                                                {foldable && (
+                                                    <ExpandMoreIcon
+                                                        sx={{
+                                                            flex: 'none',
+                                                            color: POPUP_FG,
+                                                            transition:
+                                                                'transform 200ms',
+                                                            transform: open
+                                                                ? 'rotate(180deg)'
+                                                                : 'none',
+                                                        }}
+                                                    />
+                                                )}
+                                            </ButtonBase>
+                                            <Collapse in={open} unmountOnExit>
+                                                <List disablePadding>
+                                                    {section.members.map(
+                                                        (member, index) => (
+                                                            <ListItemButton
+                                                                key={member.id}
+                                                                divider
+                                                                onClick={() =>
+                                                                    setDetailsMember(
+                                                                        member,
+                                                                    )
+                                                                }
+                                                                sx={{
+                                                                    px: 2.25,
+                                                                }}
+                                                            >
+                                                                <ListItemAvatar>
+                                                                    <Avatar
+                                                                        sx={avatarSx(
+                                                                            index,
+                                                                        )}
+                                                                    >
+                                                                        {getInitials(
+                                                                            member.name,
+                                                                        )}
+                                                                    </Avatar>
+                                                                </ListItemAvatar>
+                                                                <ListItemText
+                                                                    primary={
+                                                                        <Typography
+                                                                            variant="body1"
+                                                                            fontWeight="bold"
+                                                                        >
+                                                                            {
+                                                                                member.name
+                                                                            }
+                                                                        </Typography>
+                                                                    }
+                                                                />
+                                                                <ChevronRightIcon
+                                                                    sx={{
+                                                                        color: 'var(--popup-muted)',
+                                                                    }}
+                                                                />
+                                                            </ListItemButton>
+                                                        ),
+                                                    )}
+                                                </List>
+                                            </Collapse>
+                                        </section>
+                                    );
+                                })}
                             </div>
                         )
                     ) : !editMode && !hasRecords ? (
@@ -755,8 +855,20 @@ export default function TrainingsIndex({
                     )}
                 </DialogContent>
 
-                {/* Footer (the whole-group overview is read-only) */}
-                {overview ? null : editMode ? (
+                {/* Footer: "All" is read-only; a group's overview asks for a subgroup to add */}
+                {overview && showAll ? null : overview ? (
+                    <div className="flex-shrink-0 p-4">
+                        <Button
+                            variant="outlined"
+                            fullWidth
+                            size="large"
+                            startIcon={<PersonAddAlt1Icon />}
+                            onClick={() => setShowPickSubgroup(true)}
+                        >
+                            {t('Add members')}
+                        </Button>
+                    </div>
+                ) : editMode ? (
                     <div className="flex flex-shrink-0 gap-3 p-4">
                         <Button
                             variant="outlined"
@@ -799,6 +911,52 @@ export default function TrainingsIndex({
                         </div>
                     )
                 )}
+            </Dialog>
+
+            {/* Attendance is recorded per subgroup */}
+            <Dialog
+                open={showPickSubgroup}
+                onClose={() => setShowPickSubgroup(false)}
+                maxWidth="xs"
+                fullWidth
+                PaperProps={{ sx: { bgcolor: POPUP_BG } }}
+            >
+                <div className="flex flex-col items-center gap-4 p-6 text-center">
+                    <IconBadge>
+                        <WarningAmberIcon fontSize="small" />
+                    </IconBadge>
+                    <p className="text-base font-bold text-[var(--popup-fg)]">
+                        {t(
+                            'Please select a subgroup so you can enter attendance.',
+                        )}
+                    </p>
+                    {/* Pick it right here and go on adding that subgroup's attendance */}
+                    <ToggleButtonGroup
+                        exclusive
+                        fullWidth
+                        size="small"
+                        value={null}
+                        onChange={(_, value: number | null) => {
+                            if (value !== null) {
+                                void pickSubgroupAndAdd(value);
+                            }
+                        }}
+                        sx={SEGMENT_SX}
+                    >
+                        {subgroups.map((subgroup) => (
+                            <ToggleButton key={subgroup.id} value={subgroup.id}>
+                                {subgroup.name}
+                            </ToggleButton>
+                        ))}
+                    </ToggleButtonGroup>
+                    <Button
+                        variant="outlined"
+                        fullWidth
+                        onClick={() => setShowPickSubgroup(false)}
+                    >
+                        {t('Cancel')}
+                    </Button>
+                </div>
             </Dialog>
 
             <MemberDetailsDialog
