@@ -483,14 +483,14 @@ export default function MembershipFeesIndex({
                                                                 fees[0]
                                                                     .start_date,
                                                             ).format(
-                                                                'DD MMM YYYY',
+                                                                'DD.MM.YYYY',
                                                             )}{' '}
                                                             →{' '}
                                                             {dayjs(
                                                                 fees[0]
                                                                     .end_date,
                                                             ).format(
-                                                                'DD MMM YYYY',
+                                                                'DD.MM.YYYY',
                                                             )}
                                                         </Typography>
                                                     }
@@ -584,7 +584,7 @@ export default function MembershipFeesIndex({
                                 value={startDate}
                                 onChange={(val) => setStartDate(val)}
                                 sx={inputSx}
-                                format="DD/MM/YYYY"
+                                format="DD.MM.YYYY"
                             />
                             <DatePicker
                                 label={t('End Date')}
@@ -592,11 +592,19 @@ export default function MembershipFeesIndex({
                                 onChange={(val) => setEndDate(val)}
                                 minDate={startDate ?? undefined}
                                 sx={inputSx}
-                                format="DD/MM/YYYY"
+                                format="DD.MM.YYYY"
                             />
                         </LocalizationProvider>
 
                         <div className="flex gap-3">
+                            <Button
+                                variant="outlined"
+                                fullWidth
+                                size="medium"
+                                onClick={handleCancel}
+                            >
+                                {t('Cancel')}
+                            </Button>
                             <Button
                                 variant="contained"
                                 fullWidth
@@ -610,14 +618,6 @@ export default function MembershipFeesIndex({
                                 }
                             >
                                 {t('Save')}
-                            </Button>
-                            <Button
-                                variant="outlined"
-                                fullWidth
-                                size="medium"
-                                onClick={handleCancel}
-                            >
-                                {t('Cancel')}
                             </Button>
                         </div>
 
@@ -888,7 +888,7 @@ export default function MembershipFeesIndex({
                                         })
                                     }
                                     sx={inputSx}
-                                    format="DD/MM/YYYY"
+                                    format="DD.MM.YYYY"
                                 />
                                 <DatePicker
                                     label={t('End Date')}
@@ -903,7 +903,7 @@ export default function MembershipFeesIndex({
                                         editFeeForm.start_date ?? undefined
                                     }
                                     sx={inputSx}
-                                    format="DD/MM/YYYY"
+                                    format="DD.MM.YYYY"
                                 />
                             </LocalizationProvider>
 
@@ -920,6 +920,14 @@ export default function MembershipFeesIndex({
 
                             <div className="flex gap-3">
                                 <Button
+                                    variant="outlined"
+                                    fullWidth
+                                    size="medium"
+                                    onClick={handleEditFeeClose}
+                                >
+                                    {t('Cancel')}
+                                </Button>
+                                <Button
                                     variant="contained"
                                     fullWidth
                                     size="medium"
@@ -931,14 +939,6 @@ export default function MembershipFeesIndex({
                                     }
                                 >
                                     {t('Save')}
-                                </Button>
-                                <Button
-                                    variant="outlined"
-                                    fullWidth
-                                    size="medium"
-                                    onClick={handleEditFeeClose}
-                                >
-                                    {t('Cancel')}
                                 </Button>
                             </div>
                         </div>

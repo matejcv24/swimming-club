@@ -5,13 +5,14 @@ import DialogContent from '@mui/material/DialogContent';
 import DialogTitle from '@mui/material/DialogTitle';
 import Tab from '@mui/material/Tab';
 import Tabs from '@mui/material/Tabs';
+import dayjs from 'dayjs';
 import { useState } from 'react';
 import { DashboardBackground } from '@/components/dashboard-background';
 import { MuiThemeProvider, POPUP_BG } from '@/components/mui-theme-provider';
 import { NotificationIcon } from '@/components/notification-icon';
 import { IconBadge, PopupHeader } from '@/components/popup-ui';
 import { usePagePopup } from '@/hooks/use-page-popup';
-import { locale, t } from '@/lib/i18n';
+import { t } from '@/lib/i18n';
 import type { AppNotification } from '@/types';
 
 type Props = {
@@ -24,10 +25,7 @@ function formatNotificationDate(value: string | null) {
         return '';
     }
 
-    return new Intl.DateTimeFormat(locale, {
-        dateStyle: 'medium',
-        timeStyle: 'short',
-    }).format(new Date(value));
+    return dayjs(value).format('DD.MM.YYYY HH:mm');
 }
 
 export default function NotificationsIndex({

@@ -16,6 +16,7 @@ import List from '@mui/material/List';
 import ListItem from '@mui/material/ListItem';
 import ListItemAvatar from '@mui/material/ListItemAvatar';
 import ListItemText from '@mui/material/ListItemText';
+import Tooltip from '@mui/material/Tooltip';
 import Typography from '@mui/material/Typography';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
@@ -372,21 +373,28 @@ export default function StaffIndex({ staff }: Props) {
                                     />
                                     {/* Add Salary, and the Edit pencil as in the Members list */}
                                     <div className="flex flex-none items-center gap-1">
-                                        <Button
-                                            variant="contained"
-                                            size="small"
-                                            aria-label={t(
-                                                'Add salary for :name',
-                                                { name: member.name },
-                                            )}
+                                        {/* Says what it does on hover, and on a phone when held */}
+                                        <Tooltip
                                             title={t('Add salary')}
-                                            onClick={() =>
-                                                handleCoachClick(member)
-                                            }
-                                            sx={{ minWidth: 0, px: 1.25 }}
+                                            arrow
+                                            enterTouchDelay={400}
+                                            leaveTouchDelay={2000}
                                         >
-                                            <AttachMoneyIcon fontSize="small" />
-                                        </Button>
+                                            <Button
+                                                variant="contained"
+                                                size="small"
+                                                aria-label={t(
+                                                    'Add salary for :name',
+                                                    { name: member.name },
+                                                )}
+                                                onClick={() =>
+                                                    handleCoachClick(member)
+                                                }
+                                                sx={{ minWidth: 0, px: 1.25 }}
+                                            >
+                                                <AttachMoneyIcon fontSize="small" />
+                                            </Button>
+                                        </Tooltip>
                                         <IconButton
                                             size="small"
                                             color="primary"
@@ -478,15 +486,6 @@ export default function StaffIndex({ staff }: Props) {
 
                             <div className="flex gap-3">
                                 <Button
-                                    variant="contained"
-                                    fullWidth
-                                    size="medium"
-                                    onClick={handleSalarySave}
-                                    disabled={!salaryAmount || !salaryMonth}
-                                >
-                                    {t('Save')}
-                                </Button>
-                                <Button
                                     variant="outlined"
                                     fullWidth
                                     size="medium"
@@ -496,6 +495,15 @@ export default function StaffIndex({ staff }: Props) {
                                     }}
                                 >
                                     {t('Cancel')}
+                                </Button>
+                                <Button
+                                    variant="contained"
+                                    fullWidth
+                                    size="medium"
+                                    onClick={handleSalarySave}
+                                    disabled={!salaryAmount || !salaryMonth}
+                                >
+                                    {t('Save')}
                                 </Button>
                             </div>
 
@@ -892,6 +900,15 @@ export default function StaffIndex({ staff }: Props) {
                         ))}
                         <div className="flex gap-3">
                             <Button
+                                type="button"
+                                variant="outlined"
+                                fullWidth
+                                size="medium"
+                                onClick={() => setShowAddModal(false)}
+                            >
+                                {t('Cancel')}
+                            </Button>
+                            <Button
                                 type="submit"
                                 variant="contained"
                                 fullWidth
@@ -902,15 +919,6 @@ export default function StaffIndex({ staff }: Props) {
                                 }
                             >
                                 {t('Create Coach')}
-                            </Button>
-                            <Button
-                                type="button"
-                                variant="outlined"
-                                fullWidth
-                                size="medium"
-                                onClick={() => setShowAddModal(false)}
-                            >
-                                {t('Cancel')}
                             </Button>
                         </div>
                     </form>
@@ -1024,6 +1032,15 @@ export default function StaffIndex({ staff }: Props) {
                         ))}
                         <div className="flex gap-3">
                             <Button
+                                type="button"
+                                variant="outlined"
+                                fullWidth
+                                size="medium"
+                                onClick={closeEdit}
+                            >
+                                {t('Cancel')}
+                            </Button>
+                            <Button
                                 type="submit"
                                 variant="contained"
                                 fullWidth
@@ -1034,15 +1051,6 @@ export default function StaffIndex({ staff }: Props) {
                                 }
                             >
                                 {t('Save')}
-                            </Button>
-                            <Button
-                                type="button"
-                                variant="outlined"
-                                fullWidth
-                                size="medium"
-                                onClick={closeEdit}
-                            >
-                                {t('Cancel')}
                             </Button>
                         </div>
                     </form>

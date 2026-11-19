@@ -642,6 +642,15 @@ export function ManageGroupsDialog({
 
                             <div className="flex gap-3">
                                 <Button
+                                    variant="outlined"
+                                    fullWidth
+                                    size="medium"
+                                    onClick={closeDelete}
+                                    disabled={busy}
+                                >
+                                    {t('No')}
+                                </Button>
+                                <Button
                                     variant="contained"
                                     color="error"
                                     fullWidth
@@ -655,15 +664,6 @@ export function ManageGroupsDialog({
                                     }
                                 >
                                     {t('Yes')}
-                                </Button>
-                                <Button
-                                    variant="outlined"
-                                    fullWidth
-                                    size="medium"
-                                    onClick={closeDelete}
-                                    disabled={busy}
-                                >
-                                    {t('No')}
                                 </Button>
                             </div>
                         </div>
