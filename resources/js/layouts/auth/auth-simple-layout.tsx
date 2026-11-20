@@ -9,19 +9,21 @@ export default function AuthSimpleLayout({
     return (
         // Club navy, the same color as the logo's background and the app icon.
         // "light" keeps these pages in light colors even when dark mode is on.
-        <div className="light relative flex min-h-svh flex-col items-center justify-center bg-hydra-navy px-4 py-10">
+        // Pinned to the screen: the page never scrolls or bounces, and the logo
+        // shrinks on short screens so everything fits.
+        <div className="light fixed inset-0 flex flex-col items-center justify-center overflow-hidden overscroll-none bg-hydra-navy px-4 py-4">
             {/* MK / EN, so the language can be chosen before logging in */}
             <div className="absolute top-3 right-3 text-white">
                 <LanguageSwitch />
             </div>
 
-            <div className="flex w-full max-w-sm flex-col items-center gap-6">
+            <div className="flex w-full max-w-sm flex-col items-center gap-[min(1.5rem,3svh)]">
                 <img
                     src="/images/hydra-logo.webp"
                     alt="Hydra Swimming Club"
                     width={362}
                     height={400}
-                    className="h-40 w-auto select-none sm:h-48"
+                    className="h-[min(10rem,22svh)] w-auto select-none sm:h-[min(12rem,24svh)]"
                     draggable={false}
                 />
 

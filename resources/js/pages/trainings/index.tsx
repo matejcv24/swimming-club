@@ -780,7 +780,7 @@ export default function TrainingsIndex({
                             // Read-only: one card per group (its subgroups as rows inside),
                             // with a few faces; a card or row opens who came
                             <div className="flex flex-col gap-3 px-4 py-3">
-                                {openSection && overview.length > 1 ? (
+                                {openSection ? (
                                     // Back to the cards
                                     <ButtonBase
                                         onClick={() => setOpenSection(null)}
@@ -810,60 +810,56 @@ export default function TrainingsIndex({
                                 ) : (
                                     <p className="flex items-center gap-1.5 px-1 text-[12.5px] text-[var(--popup-muted)]">
                                         <TouchAppIcon sx={{ fontSize: 16 }} />
-                                        {overview.length === 1
+                                        {showAll
                                             ? t(
-                                                  'Tap a member to see their details',
+                                                  'Tap a group to see who attended',
                                               )
-                                            : showAll
-                                              ? t(
-                                                    'Tap a group to see who attended',
-                                                )
-                                              : t(
-                                                    'Tap a subgroup to see who attended',
-                                                )}
+                                            : t(
+                                                  'Tap a subgroup to see who attended',
+                                              )}
                                     </p>
                                 )}
 
-                                {overview.length === 1 || openSection ? (
+                                {openSection ? (
                                     // Who came: tapping one opens the member's details
                                     <List disablePadding sx={{ mx: -2 }}>
-                                        {(
-                                            openSection ?? overview[0]
-                                        ).members.map((member, index) => (
-                                            <ListItemButton
-                                                key={member.id}
-                                                divider
-                                                onClick={() =>
-                                                    setDetailsMember(member)
-                                                }
-                                                sx={{ px: 2.25 }}
-                                            >
-                                                <ListItemAvatar>
-                                                    <Avatar
-                                                        sx={avatarSx(index)}
-                                                    >
-                                                        {getInitials(
-                                                            member.name,
-                                                        )}
-                                                    </Avatar>
-                                                </ListItemAvatar>
-                                                <ListItemText
-                                                    primary={
-                                                        <Typography
-                                                            variant="body1"
-                                                            fontWeight="bold"
-                                                        >
-                                                            {member.name}
-                                                        </Typography>
+                                        {openSection.members.map(
+                                            (member, index) => (
+                                                <ListItemButton
+                                                    key={member.id}
+                                                    divider
+                                                    onClick={() =>
+                                                        setDetailsMember(member)
                                                     }
-                                                />
-                                                <ChevronRightIcon
-                                                    sx={{
-                                                        color: 'var(--popup-muted)',
-                                                    }}
-                                                />
-                                            </ListItemButton>
-                                        ))}
+                                                    sx={{ px: 2.25 }}
+                                                >
+                                                    <ListItemAvatar>
+                                                        <Avatar
+                                                            sx={avatarSx(index)}
+                                                        >
+                                                            {getInitials(
+                                                                member.name,
+                                                            )}
+                                                        </Avatar>
+                                                    </ListItemAvatar>
+                                                    <ListItemText
+                                                        primary={
+                                                            <Typography
+                                                                variant="body1"
+                                                                fontWeight="bold"
+                                                            >
+                                                                {member.name}
+                                                            </Typography>
+                                                        }
+                                                    />
+                                                    <ChevronRightIcon
+                                                        sx={{
+                                                            color: 'var(--popup-muted)',
+                                                        }}
+                                                    />
+                                                </ListItemButton>
+                                            ),
+                                        )}
                                     </List>
                                 ) : (
                                     toGroupCards(overview).map((card) => {
