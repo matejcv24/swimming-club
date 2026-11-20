@@ -1,17 +1,17 @@
 import { Head, Link, router } from '@inertiajs/react';
+import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import CalendarMonthIcon from '@mui/icons-material/CalendarMonth';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import EditIcon from '@mui/icons-material/Edit';
 import EventAvailableIcon from '@mui/icons-material/EventAvailable';
-import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import PersonAddAlt1Icon from '@mui/icons-material/PersonAddAlt1';
 import TouchAppIcon from '@mui/icons-material/TouchApp';
 import WarningAmberIcon from '@mui/icons-material/WarningAmber';
 import Avatar from '@mui/material/Avatar';
+import AvatarGroup from '@mui/material/AvatarGroup';
 import Button from '@mui/material/Button';
 import ButtonBase from '@mui/material/ButtonBase';
 import Checkbox from '@mui/material/Checkbox';
-import Collapse from '@mui/material/Collapse';
 import Dialog from '@mui/material/Dialog';
 import DialogContent from '@mui/material/DialogContent';
 import DialogTitle from '@mui/material/DialogTitle';
@@ -123,6 +123,89 @@ function resolveChoice(
 const sectionKey = (section: DaySection) =>
     `${section.group_id}-${section.subgroup_id ?? 'whole'}`;
 
+const getInitials = (name: string) =>
+    name
+        .split(' ')
+        .map((n) => n[0])
+        .join('')
+        .toUpperCase()
+        .slice(0, 2);
+
+/** One card of the day overview: a group and its subgroups' trainings. */
+interface DayGroupCard {
+    groupId: number;
+    name: string;
+    total: number;
+    sections: DaySection[];
+}
+
+/** The day's sections (already in group order) as one card per group. */
+function toGroupCards(sections: DaySection[]): DayGroupCard[] {
+    const cards: DayGroupCard[] = [];
+
+    for (const section of sections) {
+        const last = cards[cards.length - 1];
+
+        if (last && last.groupId === section.group_id) {
+            last.sections.push(section);
+            last.total += section.members.length;
+        } else {
+            cards.push({
+                groupId: section.group_id,
+                name: section.group_name ?? '—',
+                total: section.members.length,
+                sections: [section],
+            });
+        }
+    }
+
+    return cards;
+}
+
+/** A few faces of who came, then "+N" for the rest. */
+function Faces({ members }: { members: MemberDetails[] }) {
+    return (
+        <AvatarGroup
+            max={5}
+            total={members.length}
+            sx={{
+                '& .MuiAvatar-root': {
+                    width: 26,
+                    height: 26,
+                    fontSize: 11,
+                    fontWeight: 700,
+                    borderColor: POPUP_BG,
+                },
+            }}
+        >
+            {members.slice(0, 5).map((member, index) => (
+                <Avatar key={member.id} sx={avatarSx(index)}>
+                    {getInitials(member.name)}
+                </Avatar>
+            ))}
+        </AvatarGroup>
+    );
+}
+
+/** How many came, as a small blue pill. */
+function CountPill({ count }: { count: number }) {
+    return (
+        <span className="flex-none rounded-full bg-[rgba(27,143,214,0.16)] px-2 py-0.5 text-xs font-bold text-[#1b8fd6]">
+            {count}
+        </span>
+    );
+}
+
+const CARD_SX = {
+    width: '100%',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 1.5,
+    textAlign: 'left',
+    borderRadius: '12px',
+} as const;
+
 /** The subgroup buttons: one joined bar, the picked one filled. */
 const SEGMENT_SX = {
     '& .MuiToggleButton-root': {
@@ -200,12 +283,8 @@ export default function TrainingsIndex({
     const [attendanceSearch, setAttendanceSearch] = useState('');
     // "All groups" of a group with subgroups: a read-only overview of the day
     const [overview, setOverview] = useState<DaySection[] | null>(null);
-    // Which of the overview's groups are opened (all closed when a day opens)
-    const [openSections, setOpenSections] = useState<string[]>([]);
-    const toggleSection = (key: string) =>
-        setOpenSections((open) =>
-            open.includes(key) ? open.filter((k) => k !== key) : [...open, key],
-        );
+    // The overview's group or subgroup whose members are shown (null: the cards)
+    const [openSection, setOpenSection] = useState<DaySection | null>(null);
     const [detailsMember, setDetailsMember] = useState<MemberDetails | null>(
         null,
     );
@@ -275,7 +354,7 @@ export default function TrainingsIndex({
         ) => {
             setSelectedDate(date);
             setEditMode(false);
-            setOpenSections([]);
+            setOpenSection(null);
             setLoading(true);
 
             // No group: the overview of every group ("All")
@@ -416,14 +495,6 @@ export default function TrainingsIndex({
         setEditMode(true);
     };
 
-    const getInitials = (name: string) =>
-        name
-            .split(' ')
-            .map((n) => n[0])
-            .join('')
-            .toUpperCase()
-            .slice(0, 2);
-
     // Leave edit mode without saving: back to what is recorded for the day
     const cancelEdit = () => {
         setCheckedIds(savedIds);
@@ -433,6 +504,7 @@ export default function TrainingsIndex({
 
     const closeAttendance = () => {
         setShowAttendanceModal(false);
+        setOpenSection(null);
         setOverview(null);
         setEditMode(false);
         setAttendanceSearch('');
@@ -446,11 +518,7 @@ export default function TrainingsIndex({
         ? t('All groups')
         : groupWithSubgroupName(groups, activeGroupId, activeSubgroupId);
     const sectionTitle = (section: DaySection) =>
-        showAll
-            ? [section.group_name ?? '—', section.name]
-                  .filter(Boolean)
-                  .join(' · ')
-            : (section.name ?? t('All groups'));
+        [section.group_name, section.name].filter(Boolean).join(' · ');
     // The day's list: the group's members today, plus anyone recorded that day who
     // has since moved to another group (their past attendance stays on the day)
     const inGroup = new Set(groupMembers.map((m) => m.id));
@@ -709,109 +777,208 @@ export default function TrainingsIndex({
                                 </div>
                             </div>
                         ) : (
-                            // Read-only: who came, per subgroup. Rows like the Members
-                            // list; tapping one opens the member's details
-                            <div className="flex flex-col gap-1 py-3">
-                                <p className="flex items-center gap-1.5 px-[18px] text-[12.5px] text-[var(--popup-muted)]">
-                                    <TouchAppIcon sx={{ fontSize: 16 }} />
-                                    {/* Folded groups/subgroups open first; a single one lists its members */}
-                                    {overview.length === 1
-                                        ? t('Tap a member to see their details')
-                                        : showAll
-                                          ? t('Tap a group to see who attended')
-                                          : t(
-                                                'Tap a subgroup to see who attended',
-                                            )}
-                                </p>
-                                {overview.map((section, _, all) => {
-                                    const key = sectionKey(section);
-                                    // Only a day with more than one group (or subgroup)
-                                    // folds them away; a single one is just listed
-                                    const foldable = all.length > 1;
-                                    const open =
-                                        !foldable || openSections.includes(key);
+                            // Read-only: one card per group (its subgroups as rows inside),
+                            // with a few faces; a card or row opens who came
+                            <div className="flex flex-col gap-3 px-4 py-3">
+                                {openSection && overview.length > 1 ? (
+                                    // Back to the cards
+                                    <ButtonBase
+                                        onClick={() => setOpenSection(null)}
+                                        sx={{
+                                            ...CARD_SX,
+                                            justifyContent: 'flex-start',
+                                            px: 1,
+                                            py: 1,
+                                            '&:hover': {
+                                                bgcolor: popupFg(0.05),
+                                            },
+                                        }}
+                                    >
+                                        <ArrowBackIcon
+                                            sx={{
+                                                color: POPUP_FG,
+                                                fontSize: 20,
+                                            }}
+                                        />
+                                        <span className="min-w-0 truncate text-base font-extrabold text-[var(--popup-fg)]">
+                                            {sectionTitle(openSection)}
+                                        </span>
+                                        <CountPill
+                                            count={openSection.members.length}
+                                        />
+                                    </ButtonBase>
+                                ) : (
+                                    <p className="flex items-center gap-1.5 px-1 text-[12.5px] text-[var(--popup-muted)]">
+                                        <TouchAppIcon sx={{ fontSize: 16 }} />
+                                        {overview.length === 1
+                                            ? t(
+                                                  'Tap a member to see their details',
+                                              )
+                                            : showAll
+                                              ? t(
+                                                    'Tap a group to see who attended',
+                                                )
+                                              : t(
+                                                    'Tap a subgroup to see who attended',
+                                                )}
+                                    </p>
+                                )}
 
-                                    return (
-                                        <section key={key}>
-                                            {/* Group, how many came, arrow: tap to show who */}
-                                            <ButtonBase
-                                                disabled={!foldable}
+                                {overview.length === 1 || openSection ? (
+                                    // Who came: tapping one opens the member's details
+                                    <List disablePadding sx={{ mx: -2 }}>
+                                        {(
+                                            openSection ?? overview[0]
+                                        ).members.map((member, index) => (
+                                            <ListItemButton
+                                                key={member.id}
+                                                divider
                                                 onClick={() =>
-                                                    toggleSection(key)
+                                                    setDetailsMember(member)
                                                 }
-                                                aria-expanded={
-                                                    foldable ? open : undefined
+                                                sx={{ px: 2.25 }}
+                                            >
+                                                <ListItemAvatar>
+                                                    <Avatar
+                                                        sx={avatarSx(index)}
+                                                    >
+                                                        {getInitials(
+                                                            member.name,
+                                                        )}
+                                                    </Avatar>
+                                                </ListItemAvatar>
+                                                <ListItemText
+                                                    primary={
+                                                        <Typography
+                                                            variant="body1"
+                                                            fontWeight="bold"
+                                                        >
+                                                            {member.name}
+                                                        </Typography>
+                                                    }
+                                                />
+                                                <ChevronRightIcon
+                                                    sx={{
+                                                        color: 'var(--popup-muted)',
+                                                    }}
+                                                />
+                                            </ListItemButton>
+                                        ))}
+                                    </List>
+                                ) : (
+                                    toGroupCards(overview).map((card) => {
+                                        const whole =
+                                            card.sections.length === 1 &&
+                                            card.sections[0].subgroup_id ===
+                                                null;
+
+                                        // A group trained as a whole: the card itself opens it
+                                        return whole ? (
+                                            <ButtonBase
+                                                key={card.groupId}
+                                                onClick={() =>
+                                                    setOpenSection(
+                                                        card.sections[0],
+                                                    )
                                                 }
                                                 sx={{
-                                                    width: '100%',
-                                                    justifyContent:
-                                                        'flex-start',
-                                                    gap: 1,
-                                                    px: 2.25,
-                                                    py: 1.25,
-                                                    textAlign: 'left',
+                                                    ...CARD_SX,
+                                                    flexDirection: 'column',
+                                                    alignItems: 'stretch',
+                                                    p: 1.5,
+                                                    bgcolor: popupFg(0.04),
+                                                    border: `1px solid ${popupFg(0.12)}`,
                                                     '&:hover': {
-                                                        bgcolor: popupFg(0.05),
+                                                        bgcolor: popupFg(0.08),
                                                     },
                                                 }}
                                             >
-                                                <span className="min-w-0 truncate text-base font-extrabold text-[var(--popup-fg)]">
-                                                    {sectionTitle(section)}
+                                                <span className="flex items-center justify-between gap-2">
+                                                    <span className="min-w-0 truncate text-base font-extrabold text-[var(--popup-fg)]">
+                                                        {card.name}
+                                                    </span>
+                                                    <CountPill
+                                                        count={card.total}
+                                                    />
                                                 </span>
-                                                <span className="flex-none text-sm text-[var(--popup-muted)]">
-                                                    {section.members.length}
-                                                </span>
-                                                {foldable && (
-                                                    <ExpandMoreIcon
+                                                <span className="mt-2 flex items-center justify-between">
+                                                    <Faces
+                                                        members={
+                                                            card.sections[0]
+                                                                .members
+                                                        }
+                                                    />
+                                                    <ChevronRightIcon
                                                         sx={{
-                                                            flex: 'none',
-                                                            color: POPUP_FG,
-                                                            transition:
-                                                                'transform 200ms',
-                                                            transform: open
-                                                                ? 'rotate(180deg)'
-                                                                : 'none',
+                                                            color: 'var(--popup-muted)',
                                                         }}
                                                     />
-                                                )}
+                                                </span>
                                             </ButtonBase>
-                                            <Collapse in={open} unmountOnExit>
-                                                <List disablePadding>
-                                                    {section.members.map(
-                                                        (member, index) => (
-                                                            <ListItemButton
-                                                                key={member.id}
-                                                                divider
-                                                                onClick={() =>
-                                                                    setDetailsMember(
-                                                                        member,
-                                                                    )
-                                                                }
-                                                                sx={{
-                                                                    px: 2.25,
-                                                                }}
-                                                            >
-                                                                <ListItemAvatar>
-                                                                    <Avatar
-                                                                        sx={avatarSx(
-                                                                            index,
-                                                                        )}
-                                                                    >
-                                                                        {getInitials(
-                                                                            member.name,
-                                                                        )}
-                                                                    </Avatar>
-                                                                </ListItemAvatar>
-                                                                <ListItemText
-                                                                    primary={
-                                                                        <Typography
-                                                                            variant="body1"
-                                                                            fontWeight="bold"
-                                                                        >
-                                                                            {
-                                                                                member.name
-                                                                            }
-                                                                        </Typography>
+                                        ) : (
+                                            // A group with subgroups: one row per subgroup
+                                            <div
+                                                key={card.groupId}
+                                                className="rounded-xl p-3"
+                                                style={{
+                                                    background: popupFg(0.04),
+                                                    border: `1px solid ${popupFg(0.12)}`,
+                                                }}
+                                            >
+                                                <div className="mb-1 flex items-center justify-between gap-2">
+                                                    <span className="min-w-0 truncate text-base font-extrabold text-[var(--popup-fg)]">
+                                                        {card.name}
+                                                    </span>
+                                                    <CountPill
+                                                        count={card.total}
+                                                    />
+                                                </div>
+                                                {card.sections.map(
+                                                    (section) => (
+                                                        <ButtonBase
+                                                            key={sectionKey(
+                                                                section,
+                                                            )}
+                                                            onClick={() =>
+                                                                setOpenSection(
+                                                                    section,
+                                                                )
+                                                            }
+                                                            sx={{
+                                                                ...CARD_SX,
+                                                                mt: 1,
+                                                                px: 1.25,
+                                                                py: 1,
+                                                                borderRadius:
+                                                                    '8px',
+                                                                bgcolor:
+                                                                    POPUP_BG,
+                                                                '&:hover': {
+                                                                    bgcolor:
+                                                                        popupFg(
+                                                                            0.06,
+                                                                        ),
+                                                                },
+                                                            }}
+                                                        >
+                                                            <span className="min-w-0 truncate text-sm font-bold text-[var(--popup-fg)]">
+                                                                {section.name ??
+                                                                    t(
+                                                                        'Whole group',
+                                                                    )}
+                                                                <span className="font-normal text-[var(--popup-muted)]">
+                                                                    {' · '}
+                                                                    {
+                                                                        section
+                                                                            .members
+                                                                            .length
+                                                                    }
+                                                                </span>
+                                                            </span>
+                                                            <span className="flex flex-none items-center gap-1">
+                                                                <Faces
+                                                                    members={
+                                                                        section.members
                                                                     }
                                                                 />
                                                                 <ChevronRightIcon
@@ -819,14 +986,14 @@ export default function TrainingsIndex({
                                                                         color: 'var(--popup-muted)',
                                                                     }}
                                                                 />
-                                                            </ListItemButton>
-                                                        ),
-                                                    )}
-                                                </List>
-                                            </Collapse>
-                                        </section>
-                                    );
-                                })}
+                                                            </span>
+                                                        </ButtonBase>
+                                                    ),
+                                                )}
+                                            </div>
+                                        );
+                                    })
+                                )}
                             </div>
                         )
                     ) : !editMode && !hasRecords ? (
