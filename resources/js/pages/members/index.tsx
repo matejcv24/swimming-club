@@ -10,9 +10,7 @@ import DialogContent from '@mui/material/DialogContent';
 import DialogTitle from '@mui/material/DialogTitle';
 import Divider from '@mui/material/Divider';
 import FormControl from '@mui/material/FormControl';
-import FormControlLabel from '@mui/material/FormControlLabel';
 import IconButton from '@mui/material/IconButton';
-import Input from '@mui/material/Input';
 import InputLabel from '@mui/material/InputLabel';
 import List from '@mui/material/List';
 import ListItemAvatar from '@mui/material/ListItemAvatar';
@@ -23,8 +21,10 @@ import Select from '@mui/material/Select';
 import Switch from '@mui/material/Switch';
 import Tab from '@mui/material/Tab';
 import Tabs from '@mui/material/Tabs';
+import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 import { useEffect, useState } from 'react';
+import type { ReactNode } from 'react';
 import { DashboardBackground } from '@/components/dashboard-background';
 import { MemberDetailsDialog } from '@/components/member-details-dialog';
 import {
@@ -65,13 +65,6 @@ interface Props {
     members: Member[];
     userRole: 'admin' | 'coach';
 }
-
-const inputSx = {
-    color: POPUP_FG,
-    '&::before': { borderBottomColor: POPUP_FG },
-    '&::after': { borderBottomColor: POPUP_FG },
-    '& input::placeholder': { color: popupFg(0.5) },
-};
 
 export default function MembersIndex({ members, userRole }: Props) {
     // Fades in and out over the dashboard
@@ -472,57 +465,23 @@ export default function MembersIndex({ members, userRole }: Props) {
                 PaperProps={{ sx: { bgcolor: POPUP_BG } }}
             >
                 <DialogTitle sx={{ p: 0 }}>
-                    <div className="flex items-center justify-between px-4 py-3">
-                        {/* LEFT: Switch */}
-                        <FormControlLabel
-                            control={
-                                <Switch
-                                    checked={editForm.status === 'active'}
-                                    onChange={(e) =>
-                                        setEditForm({
-                                            ...editForm,
-                                            status: e.target.checked
-                                                ? 'active'
-                                                : 'inactive',
-                                        })
-                                    }
-                                />
-                            }
-                            label={
-                                editForm.status === 'active'
-                                    ? t('Active')
-                                    : t('Inactive')
-                            }
-                            sx={{
-                                m: 0,
-                                '& .MuiTypography-root': { fontSize: '0.9rem' },
-                            }}
-                        />
-
-                        {/* RIGHT: Close button */}
-                        <CloseButton onClick={() => setEditMember(null)} />
-                    </div>
-                    <Divider />
+                    <PopupHeader
+                        icon={<EditIcon fontSize="small" />}
+                        title={t('Edit member')}
+                        subtitle={editMember?.name}
+                        onClose={() => setEditMember(null)}
+                    />
                 </DialogTitle>
 
-                <DialogContent>
+                <DialogContent sx={{ px: 2.25, pt: 0.5 }}>
                     <form
                         onSubmit={handleEditSubmit}
-                        className="flex flex-col gap-6 py-4"
+                        className="flex flex-col gap-5 pb-2"
                     >
-                        <Typography
-                            variant="caption"
-                            color="text.secondary"
-                            sx={{
-                                textTransform: 'uppercase',
-                                letterSpacing: 1,
-                            }}
-                        >
-                            {t('Member Info')}
-                        </Typography>
+                        <SectionLabel>{t('Member Info')}</SectionLabel>
 
-                        <Input
-                            placeholder={t('Full name')}
+                        <TextField
+                            label={t('Full name')}
                             value={editForm.name}
                             onChange={(e) =>
                                 setEditForm({
@@ -532,8 +491,7 @@ export default function MembersIndex({ members, userRole }: Props) {
                             }
                             required
                             fullWidth
-                            inputProps={{ 'aria-label': t('Member name') }}
-                            sx={inputSx}
+                            sx={FIELD_SX}
                         />
 
                         <FormControl fullWidth>
@@ -561,13 +519,7 @@ export default function MembersIndex({ members, userRole }: Props) {
                                         subgroup_id: '',
                                     })
                                 }
-                                sx={{
-                                    color: POPUP_FG,
-                                    '& .MuiOutlinedInput-notchedOutline': {
-                                        borderColor: popupFg(0.3),
-                                    },
-                                    '& .MuiSvgIcon-root': { color: POPUP_FG },
-                                }}
+                                sx={SELECT_SX}
                             >
                                 <MenuItem value="">{t('All groups')}</MenuItem>
                                 {groups.map((group) => (
@@ -591,21 +543,20 @@ export default function MembersIndex({ members, userRole }: Props) {
                             }
                         />
 
-                        <Divider />
+                        <StatusRow
+                            active={editForm.status === 'active'}
+                            onChange={(active) =>
+                                setEditForm({
+                                    ...editForm,
+                                    status: active ? 'active' : 'inactive',
+                                })
+                            }
+                        />
 
-                        <Typography
-                            variant="caption"
-                            color="text.secondary"
-                            sx={{
-                                textTransform: 'uppercase',
-                                letterSpacing: 1,
-                            }}
-                        >
-                            {t('Parent Info')}
-                        </Typography>
+                        <SectionLabel>{t('Parent Info')}</SectionLabel>
 
-                        <Input
-                            placeholder={t('Parent full name')}
+                        <TextField
+                            label={t('Parent full name')}
                             value={editForm.parent_name}
                             onChange={(e) =>
                                 setEditForm({
@@ -615,12 +566,11 @@ export default function MembersIndex({ members, userRole }: Props) {
                             }
                             required
                             fullWidth
-                            inputProps={{ 'aria-label': t('Parent name') }}
-                            sx={inputSx}
+                            sx={FIELD_SX}
                         />
-
-                        <Input
-                            placeholder={t('Parent phone')}
+                        <TextField
+                            label={t('Parent phone')}
+                            type="tel"
                             value={editForm.parent_phone}
                             onChange={(e) =>
                                 setEditForm({
@@ -630,8 +580,7 @@ export default function MembersIndex({ members, userRole }: Props) {
                             }
                             required
                             fullWidth
-                            inputProps={{ 'aria-label': t('Parent phone') }}
-                            sx={inputSx}
+                            sx={FIELD_SX}
                         />
 
                         <div className="flex gap-3">
@@ -669,56 +618,30 @@ export default function MembersIndex({ members, userRole }: Props) {
                     PaperProps={{ sx: { bgcolor: POPUP_BG } }}
                 >
                     <DialogTitle sx={{ p: 0 }}>
-                        <div className="flex items-center justify-between px-4 py-3">
-                            {/* LEFT: Switch */}
-                            <FormControlLabel
-                                control={<Switch checked disabled />}
-                                label={t('Active')}
-                                sx={{
-                                    m: 0,
-                                    '& .MuiTypography-root': {
-                                        fontSize: '0.9rem',
-                                    },
-                                }}
-                            />
-
-                            {/* CENTER: Title */}
-                            <Typography variant="h6" fontWeight="bold">
-                                {t('Add Member')}
-                            </Typography>
-
-                            {/* RIGHT: Close */}
-                            <CloseButton onClick={closeAdd} />
-                        </div>
-                        <Divider />
+                        <PopupHeader
+                            icon={<PersonAddAlt1Icon fontSize="small" />}
+                            title={t('Add member')}
+                            subtitle={t('A new member of the club')}
+                            onClose={closeAdd}
+                        />
                     </DialogTitle>
 
-                    <DialogContent>
+                    <DialogContent sx={{ px: 2.25, pt: 0.5 }}>
                         <form
                             onSubmit={handleAddSubmit}
-                            className="flex flex-col gap-6 py-4"
+                            className="flex flex-col gap-5 pb-2"
                         >
-                            <Typography
-                                variant="caption"
-                                color="text.secondary"
-                                sx={{
-                                    textTransform: 'uppercase',
-                                    letterSpacing: 1,
-                                }}
-                            >
-                                {t('Member Info')}
-                            </Typography>
+                            <SectionLabel>{t('Member Info')}</SectionLabel>
 
-                            <Input
-                                placeholder={t("Enter member's full name")}
+                            <TextField
+                                label={t('Full name')}
                                 value={form.name}
                                 onChange={(e) =>
                                     setForm({ ...form, name: e.target.value })
                                 }
                                 required
                                 fullWidth
-                                inputProps={{ 'aria-label': t('Member name') }}
-                                sx={inputSx}
+                                sx={FIELD_SX}
                             />
 
                             {/* Members need a group: point to where groups are made */}
@@ -763,15 +686,7 @@ export default function MembersIndex({ members, userRole }: Props) {
                                             subgroup_id: '',
                                         })
                                     }
-                                    sx={{
-                                        color: POPUP_FG,
-                                        '& .MuiOutlinedInput-notchedOutline': {
-                                            borderColor: popupFg(0.3),
-                                        },
-                                        '& .MuiSvgIcon-root': {
-                                            color: POPUP_FG,
-                                        },
-                                    }}
+                                    sx={SELECT_SX}
                                 >
                                     <MenuItem value="">
                                         {t('All groups')}
@@ -800,21 +715,20 @@ export default function MembersIndex({ members, userRole }: Props) {
                                 }
                             />
 
-                            <Divider />
+                            <StatusRow
+                                active={form.status === 'active'}
+                                onChange={(active) =>
+                                    setForm({
+                                        ...form,
+                                        status: active ? 'active' : 'inactive',
+                                    })
+                                }
+                            />
 
-                            <Typography
-                                variant="caption"
-                                color="text.secondary"
-                                sx={{
-                                    textTransform: 'uppercase',
-                                    letterSpacing: 1,
-                                }}
-                            >
-                                {t('Parent Info')}
-                            </Typography>
+                            <SectionLabel>{t('Parent Info')}</SectionLabel>
 
-                            <Input
-                                placeholder={t("Enter parent's full name")}
+                            <TextField
+                                label={t('Parent full name')}
                                 value={form.parent_name}
                                 onChange={(e) =>
                                     setForm({
@@ -824,11 +738,11 @@ export default function MembersIndex({ members, userRole }: Props) {
                                 }
                                 required
                                 fullWidth
-                                inputProps={{ 'aria-label': t('Parent name') }}
-                                sx={inputSx}
+                                sx={FIELD_SX}
                             />
-                            <Input
-                                placeholder={t("Enter parent's phone number")}
+                            <TextField
+                                label={t('Parent phone')}
+                                type="tel"
                                 value={form.parent_phone}
                                 onChange={(e) =>
                                     setForm({
@@ -838,8 +752,7 @@ export default function MembersIndex({ members, userRole }: Props) {
                                 }
                                 required
                                 fullWidth
-                                inputProps={{ 'aria-label': t('Parent phone') }}
-                                sx={inputSx}
+                                sx={FIELD_SX}
                             />
 
                             <div className="flex gap-3">
@@ -870,6 +783,70 @@ export default function MembersIndex({ members, userRole }: Props) {
 }
 
 /** Optional subgroup of the chosen group; hidden when the group has none. */
+/** Outlined text fields in the pop-up's colors, like the Group field. */
+const FIELD_SX = {
+    '& .MuiOutlinedInput-root': {
+        color: POPUP_FG,
+        '& fieldset': { borderColor: popupFg(0.3) },
+        '&:hover fieldset': { borderColor: popupFg(0.6) },
+    },
+    '& .MuiInputLabel-root': { color: popupFg(0.5) },
+} as const;
+
+const SELECT_SX = {
+    color: POPUP_FG,
+    '& .MuiOutlinedInput-notchedOutline': { borderColor: popupFg(0.3) },
+    '& .MuiSvgIcon-root': { color: POPUP_FG },
+} as const;
+
+/** A small all-caps heading of a form section. */
+function SectionLabel({ children }: { children: ReactNode }) {
+    return (
+        <Typography
+            variant="caption"
+            color="text.secondary"
+            sx={{ textTransform: 'uppercase', letterSpacing: 1, mb: -1.5 }}
+        >
+            {children}
+        </Typography>
+    );
+}
+
+/** Active / inactive, as one row with an explanation and the switch. */
+function StatusRow({
+    active,
+    onChange,
+}: {
+    active: boolean;
+    onChange: (active: boolean) => void;
+}) {
+    return (
+        <label className="flex cursor-pointer items-center justify-between gap-3 rounded-xl bg-[var(--popup-ghost)] px-3.5 py-2.5">
+            <span className="min-w-0">
+                <span className="block text-sm font-semibold text-[var(--popup-fg)]">
+                    {t('Status')}
+                </span>
+                <span className="block text-xs text-[var(--popup-muted)]">
+                    {active
+                        ? t('Active members train and pay')
+                        : t("Inactive members don't train for now")}
+                </span>
+            </span>
+            <span className="flex flex-none items-center gap-1">
+                <span
+                    className={`text-sm font-semibold ${active ? 'text-green-500' : 'text-[var(--popup-muted)]'}`}
+                >
+                    {active ? t('Active') : t('Inactive')}
+                </span>
+                <Switch
+                    checked={active}
+                    onChange={(e) => onChange(e.target.checked)}
+                />
+            </span>
+        </label>
+    );
+}
+
 function SubgroupSelect({
     id,
     groups,

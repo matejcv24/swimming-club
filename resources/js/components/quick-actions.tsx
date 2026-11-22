@@ -81,6 +81,10 @@ function useQuickActions() {
         key: string;
         icon: ReactNode;
         label: string;
+        /** Under the icon in the phone bar */
+        short: string;
+        /** The phone bar's colored circle: background and icon color */
+        tint: string;
         href?: string;
         onClick?: () => void;
     }[] = [
@@ -88,18 +92,24 @@ function useQuickActions() {
             key: 'attendance',
             icon: <EventAvailableIcon fontSize="inherit" />,
             label: t('Add attendance'),
+            short: t('Attendance'),
+            tint: 'bg-hydra-blue/15 text-hydra-blue dark:bg-sky-400/20 dark:text-sky-300',
             onClick: addAttendance,
         },
         {
             key: 'member',
             icon: <PersonAddAlt1Icon fontSize="inherit" />,
             label: t('Add member'),
+            short: t('Member'),
+            tint: 'bg-violet-500/15 text-violet-600 dark:bg-violet-400/20 dark:text-violet-300',
             href: '/members?add=1',
         },
         {
             key: 'payment',
             icon: <AddCardIcon fontSize="inherit" />,
             label: t('Add payment'),
+            short: t('Payment'),
+            tint: 'bg-emerald-500/15 text-emerald-600 dark:bg-emerald-400/20 dark:text-emerald-300',
             href: '/membership-fees?add=1',
         },
     ];
@@ -261,9 +271,9 @@ function useScrollingDown(): boolean {
 }
 
 /**
- * Phones and tablets: a frosted-glass bar of icons fixed to the bottom of the
- * dashboard, like Instagram's: a little smaller while scrolling down, back to
- * full size when scrolling up.
+ * Phones and tablets: a floating bar fixed to the bottom of the dashboard, each
+ * action a colored circle with its name under it. While scrolling down it gets
+ * a little smaller (names hidden); scrolling up brings it back.
  */
 export function QuickActionsBar() {
     const { actions, picker } = useQuickActions();
@@ -272,21 +282,36 @@ export function QuickActionsBar() {
     return (
         <nav
             aria-label={t('Quick actions')}
-            className={`fixed bottom-[calc(0.75rem+env(safe-area-inset-bottom))] left-1/2 z-40 grid -translate-x-1/2 grid-cols-3 rounded-full border border-white/60 bg-white/55 shadow-[0_8px_32px_rgba(0,16,49,0.18)] backdrop-blur-xl backdrop-saturate-150 transition-all duration-300 ease-out lg:hidden dark:border-white/15 dark:bg-white/10 dark:shadow-[0_8px_32px_rgba(0,0,0,0.45)] ${
-                compact ? 'w-[min(66%,17rem)] p-1' : 'w-[min(86%,22rem)] p-1.5'
+            className={`fixed bottom-[calc(0.75rem+env(safe-area-inset-bottom))] left-1/2 z-40 grid -translate-x-1/2 grid-cols-3 rounded-[22px] border border-white/70 bg-white/80 shadow-[0_8px_32px_rgba(0,16,49,0.18)] backdrop-blur-xl transition-all duration-300 ease-out lg:hidden dark:border-[#2a3a5c] dark:bg-[#16223f]/90 dark:shadow-[0_8px_32px_rgba(0,0,0,0.5)] ${
+                compact
+                    ? 'w-[min(62%,16rem)] px-1 py-1.5'
+                    : 'w-[min(88%,22rem)] px-1 pt-2 pb-1.5'
             }`}
         >
             {actions.map((action) => (
                 <ActionButton
                     key={action.key}
                     action={action}
-                    className={`flex items-center justify-center rounded-full text-hydra-blue transition-all duration-300 ease-out active:scale-90 active:bg-white/40 dark:text-sky-300 dark:active:bg-white/10 ${
-                        compact
-                            ? 'py-1.5 text-[30px] [&_svg]:text-[30px]'
-                            : 'py-2 text-[38px] [&_svg]:text-[38px]'
-                    }`}
+                    className="flex flex-col items-center rounded-2xl transition active:scale-95"
                 >
-                    {action.icon}
+                    <span
+                        className={`flex items-center justify-center rounded-full transition-all duration-300 ease-out ${action.tint} ${
+                            compact
+                                ? 'size-9 text-[20px]'
+                                : 'size-11 text-[24px]'
+                        }`}
+                    >
+                        {action.icon}
+                    </span>
+                    <span
+                        className={`overflow-hidden text-[11px] leading-tight font-semibold text-hydra-navy transition-all duration-300 ease-out dark:text-[#e8eefb] ${
+                            compact
+                                ? 'max-h-0 opacity-0'
+                                : 'mt-1 max-h-5 opacity-100'
+                        }`}
+                    >
+                        {action.short}
+                    </span>
                 </ActionButton>
             ))}
             {picker}
