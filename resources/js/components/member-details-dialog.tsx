@@ -7,7 +7,7 @@ import IconButton from '@mui/material/IconButton';
 import Link from '@mui/material/Link';
 import Typography from '@mui/material/Typography';
 import { POPUP_BG } from '@/components/mui-theme-provider';
-import { CloseButton } from '@/components/popup-ui';
+import { CloseButton, Hint } from '@/components/popup-ui';
 import { groupWithSubgroupName, useGroups } from '@/lib/groups';
 import { t } from '@/lib/i18n';
 
@@ -42,9 +42,11 @@ export function MemberDetailsDialog({
         >
             <DialogTitle sx={{ p: 0 }}>
                 <div className="flex items-center justify-between px-4 py-3">
-                    <IconButton onClick={onClose} aria-label={t('Back')}>
-                        <ArrowBackIcon />
-                    </IconButton>
+                    <Hint title={t('Back')}>
+                        <IconButton onClick={onClose} aria-label={t('Back')}>
+                            <ArrowBackIcon />
+                        </IconButton>
+                    </Hint>
                     <Typography variant="h6" fontWeight="bold">
                         {t('Member Details')}
                     </Typography>

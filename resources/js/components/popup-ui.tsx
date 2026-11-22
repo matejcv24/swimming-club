@@ -1,12 +1,14 @@
 import CloseIcon from '@mui/icons-material/Close';
 import SearchIcon from '@mui/icons-material/Search';
+import Button from '@mui/material/Button';
 import IconButton from '@mui/material/IconButton';
 import type { IconButtonProps } from '@mui/material/IconButton';
 import InputBase from '@mui/material/InputBase';
 import Tab from '@mui/material/Tab';
 import Tabs from '@mui/material/Tabs';
+import Tooltip from '@mui/material/Tooltip';
 import { useEffect, useRef, useState } from 'react';
-import type { ReactNode } from 'react';
+import type { ReactElement, ReactNode } from 'react';
 import { t } from '@/lib/i18n';
 import { clearOnClick } from '@/lib/search-field';
 
@@ -40,25 +42,75 @@ export function IconBadge({
     );
 }
 
+/**
+ * Says what a button does: on hover, and on a phone when the button is held for
+ * a moment. A normal tap still just presses the button.
+ */
+export function Hint({
+    title,
+    children,
+}: {
+    title: string;
+    children: ReactElement;
+}) {
+    return (
+        <Tooltip
+            title={title}
+            arrow
+            enterTouchDelay={400}
+            leaveTouchDelay={2000}
+        >
+            {children}
+        </Tooltip>
+    );
+}
+
+/** The "add" button of a pop-up's header: just its icon, explained by a hint. */
+export function AddButton({
+    label,
+    icon,
+    onClick,
+}: {
+    label: string;
+    icon: ReactNode;
+    onClick: () => void;
+}) {
+    return (
+        <Hint title={label}>
+            <Button
+                variant="contained"
+                size="small"
+                aria-label={label}
+                onClick={onClick}
+                sx={{ minWidth: 0, px: 1.25 }}
+            >
+                {icon}
+            </Button>
+        </Hint>
+    );
+}
+
 /** Soft round close button for every pop-up. */
 export function CloseButton({ sx, ...props }: IconButtonProps) {
     return (
-        <IconButton
-            aria-label={t('Close')}
-            {...props}
-            sx={[
-                {
-                    width: 34,
-                    height: 34,
-                    bgcolor: 'var(--popup-ghost)',
-                    color: 'var(--popup-muted)',
-                    '&:hover': { bgcolor: 'var(--popup-ghost-hover)' },
-                },
-                ...(Array.isArray(sx) ? sx : [sx]),
-            ]}
-        >
-            <CloseIcon fontSize="small" />
-        </IconButton>
+        <Hint title={t('Close')}>
+            <IconButton
+                aria-label={t('Close')}
+                {...props}
+                sx={[
+                    {
+                        width: 34,
+                        height: 34,
+                        bgcolor: 'var(--popup-ghost)',
+                        color: 'var(--popup-muted)',
+                        '&:hover': { bgcolor: 'var(--popup-ghost-hover)' },
+                    },
+                    ...(Array.isArray(sx) ? sx : [sx]),
+                ]}
+            >
+                <CloseIcon fontSize="small" />
+            </IconButton>
+        </Hint>
     );
 }
 

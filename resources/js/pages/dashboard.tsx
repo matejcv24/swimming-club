@@ -18,6 +18,10 @@ import {
     popupFg,
 } from '@/components/mui-theme-provider';
 import { CloseButton } from '@/components/popup-ui';
+import {
+    QuickActionsBar,
+    QuickActionsSpacer,
+} from '@/components/quick-actions';
 import { PopupSkeleton } from '@/components/skeletons';
 import { useDashboardScroll } from '@/hooks/use-dashboard-scroll';
 import { usePendingPopup } from '@/hooks/use-pending-popup';
@@ -164,6 +168,9 @@ export default function Dashboard({
                 onOpenSalary={() => setShowSalaryModal(true)}
                 onOpenReport={() => setShowReportModal(true)}
             />
+            {/* Phones: the quick actions bar, and room for it under the last card */}
+            <QuickActionsSpacer />
+            <QuickActionsBar />
 
             <Dialog
                 open={showSalaryModal}

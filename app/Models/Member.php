@@ -8,12 +8,23 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Member extends Model
 {
-    /** Only members of the groups the user may see (coaches see their own groups). */
+    /**
+     * Only members of the groups the user may see (coaches see their own groups).
+     * Members of all groups (no single group) are in everyone's groups.
+     */
     public function scopeVisibleTo($query, User $user)
     {
         $ids = $user->visibleGroupIds();
 
-        return $ids === null ? $query : $query->whereIn('group_id', $ids);
+        return $ids === null
+            ? $query
+            : $query->where(fn ($q) => $q->whereIn('group_id', $ids)->orWhereNull('group_id'));
+    }
+
+    /** Trains in every group rather than in one. */
+    public function inAllGroups(): bool
+    {
+        return $this->group_id === null;
     }
 
     protected $fillable = ['name', 'date_of_birth', 'pool', 'group_id', 'subgroup_id', 'status', 'parent_id'];

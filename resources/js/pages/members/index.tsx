@@ -34,8 +34,10 @@ import {
     popupFg,
 } from '@/components/mui-theme-provider';
 import {
+    AddButton,
     avatarSx,
     CloseButton,
+    Hint,
     PillSearchField,
     GroupChip,
     PopupHeader,
@@ -75,9 +77,21 @@ export default function MembersIndex({ members, userRole }: Props) {
     // Fades in and out over the dashboard
     const popup = usePagePopup();
     const groups = useGroups();
-    // New members go to the club's first group unless another is picked
-    const firstGroupId: number | '' = groups[0]?.id ?? '';
-    const [showAddModal, setShowAddModal] = useState(false);
+    // From the dashboard's "New member" quick action: just the Add Member form
+    const [openedToAdd] = useState(
+        () =>
+            typeof window !== 'undefined' &&
+            new URLSearchParams(window.location.search).get('add') === '1',
+    );
+    const [showAddModal, setShowAddModal] = useState(openedToAdd);
+    const closeAdd = () => {
+        setShowAddModal(false);
+
+        // Only the form was open: straight back to the dashboard
+        if (openedToAdd) {
+            router.visit('/dashboard', { preserveScroll: true });
+        }
+    };
     const [deleteMember, setDeleteMember] = useState<Member | null>(null);
     const [deleting, setDeleting] = useState(false);
     const [selectedMember, setSelectedMember] = useState<Member | null>(null);
@@ -86,7 +100,8 @@ export default function MembersIndex({ members, userRole }: Props) {
     const [memberStatusTab, setMemberStatusTab] = useState(0);
     const [form, setForm] = useState({
         name: '',
-        group_id: firstGroupId as number | '',
+        // '' = all groups: the member trains in every group
+        group_id: '' as number | '',
         // '' = no subgroup
         subgroup_id: '' as number | '',
         status: 'active' as 'active' | 'inactive',
@@ -96,7 +111,8 @@ export default function MembersIndex({ members, userRole }: Props) {
 
     const [editForm, setEditForm] = useState({
         name: '',
-        group_id: firstGroupId as number | '',
+        // '' = all groups: the member trains in every group
+        group_id: '' as number | '',
         // '' = no subgroup
         subgroup_id: '' as number | '',
         status: 'active' as 'active' | 'inactive',
@@ -155,10 +171,10 @@ export default function MembersIndex({ members, userRole }: Props) {
         e.preventDefault();
         router.post('/members', form, {
             onSuccess: () => {
-                setShowAddModal(false);
+                closeAdd();
                 setForm({
                     name: '',
-                    group_id: firstGroupId as number | '',
+                    group_id: '',
                     subgroup_id: '',
                     status: 'active',
                     parent_name: '',
@@ -224,6 +240,8 @@ export default function MembersIndex({ members, userRole }: Props) {
             {/* Members List Modal */}
             <Dialog
                 {...popup.dialogProps}
+                // The "Add member" quick action shows only the form, not the list
+                open={popup.dialogProps.open && !openedToAdd}
                 fullWidth
                 maxWidth="sm"
                 PaperProps={{
@@ -245,14 +263,11 @@ export default function MembersIndex({ members, userRole }: Props) {
                             inactive: inactiveMembers.length,
                         })}
                         actions={
-                            <Button
-                                variant="contained"
-                                size="small"
-                                startIcon={<PersonAddAlt1Icon />}
+                            <AddButton
+                                label={t('Add member')}
+                                icon={<PersonAddAlt1Icon fontSize="small" />}
                                 onClick={() => setShowAddModal(true)}
-                            >
-                                {t('Add')}
-                            </Button>
+                            />
                         }
                         onClose={popup.close}
                     />
@@ -341,27 +356,36 @@ export default function MembersIndex({ members, userRole }: Props) {
                                     />
                                     {/* Edit + Delete icons */}
                                     <div className="ml-auto flex items-center gap-1">
-                                        <IconButton
-                                            size="small"
-                                            color="primary"
-                                            onClick={(e) =>
-                                                handleEditClick(e, member)
-                                            }
-                                        >
-                                            <EditIcon fontSize="small" />
-                                        </IconButton>
-                                        {userRole === 'admin' && (
+                                        <Hint title={t('Edit member')}>
                                             <IconButton
                                                 size="small"
-                                                color="error"
-                                                aria-label={t('Delete member')}
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    setDeleteMember(member);
-                                                }}
+                                                color="primary"
+                                                aria-label={t('Edit :name', {
+                                                    name: member.name,
+                                                })}
+                                                onClick={(e) =>
+                                                    handleEditClick(e, member)
+                                                }
                                             >
-                                                <DeleteIcon fontSize="small" />
+                                                <EditIcon fontSize="small" />
                                             </IconButton>
+                                        </Hint>
+                                        {userRole === 'admin' && (
+                                            <Hint title={t('Delete member')}>
+                                                <IconButton
+                                                    size="small"
+                                                    color="error"
+                                                    aria-label={t(
+                                                        'Delete member',
+                                                    )}
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        setDeleteMember(member);
+                                                    }}
+                                                >
+                                                    <DeleteIcon fontSize="small" />
+                                                </IconButton>
+                                            </Hint>
                                         )}
                                     </div>
                                 </ListItemButton>
@@ -515,6 +539,7 @@ export default function MembersIndex({ members, userRole }: Props) {
                         <FormControl fullWidth>
                             <InputLabel
                                 id="edit-pool-label"
+                                shrink
                                 sx={{ color: popupFg(0.5) }}
                             >
                                 {t('Group')}
@@ -522,11 +547,16 @@ export default function MembersIndex({ members, userRole }: Props) {
                             <Select
                                 labelId="edit-pool-label"
                                 value={editForm.group_id}
+                                displayEmpty
+                                notched
                                 label={t('Group')}
                                 onChange={(e) =>
                                     setEditForm({
                                         ...editForm,
-                                        group_id: Number(e.target.value),
+                                        group_id:
+                                            String(e.target.value) === ''
+                                                ? ''
+                                                : Number(e.target.value),
                                         // Subgroups belong to one group
                                         subgroup_id: '',
                                     })
@@ -539,6 +569,7 @@ export default function MembersIndex({ members, userRole }: Props) {
                                     '& .MuiSvgIcon-root': { color: POPUP_FG },
                                 }}
                             >
+                                <MenuItem value="">{t('All groups')}</MenuItem>
                                 {groups.map((group) => (
                                     <MenuItem key={group.id} value={group.id}>
                                         {group.name}
@@ -631,7 +662,7 @@ export default function MembersIndex({ members, userRole }: Props) {
             {showAddModal && (
                 <Dialog
                     open={showAddModal}
-                    onClose={() => setShowAddModal(false)}
+                    onClose={closeAdd}
                     disableRestoreFocus
                     fullWidth
                     maxWidth="sm"
@@ -657,9 +688,7 @@ export default function MembersIndex({ members, userRole }: Props) {
                             </Typography>
 
                             {/* RIGHT: Close */}
-                            <CloseButton
-                                onClick={() => setShowAddModal(false)}
-                            />
+                            <CloseButton onClick={closeAdd} />
                         </div>
                         <Divider />
                     </DialogTitle>
@@ -712,6 +741,7 @@ export default function MembersIndex({ members, userRole }: Props) {
                             <FormControl fullWidth>
                                 <InputLabel
                                     id="pool-label"
+                                    shrink
                                     sx={{ color: popupFg(0.5) }}
                                 >
                                     {t('Group')}
@@ -719,11 +749,16 @@ export default function MembersIndex({ members, userRole }: Props) {
                                 <Select
                                     labelId="pool-label"
                                     value={form.group_id}
+                                    displayEmpty
+                                    notched
                                     label={t('Group')}
                                     onChange={(e) =>
                                         setForm({
                                             ...form,
-                                            group_id: Number(e.target.value),
+                                            group_id:
+                                                String(e.target.value) === ''
+                                                    ? ''
+                                                    : Number(e.target.value),
                                             // Subgroups belong to one group
                                             subgroup_id: '',
                                         })
@@ -738,6 +773,9 @@ export default function MembersIndex({ members, userRole }: Props) {
                                         },
                                     }}
                                 >
+                                    <MenuItem value="">
+                                        {t('All groups')}
+                                    </MenuItem>
                                     {groups.map((group) => (
                                         <MenuItem
                                             key={group.id}
@@ -810,7 +848,7 @@ export default function MembersIndex({ members, userRole }: Props) {
                                     variant="outlined"
                                     fullWidth
                                     size="medium"
-                                    onClick={() => setShowAddModal(false)}
+                                    onClick={closeAdd}
                                 >
                                     {t('Cancel')}
                                 </Button>

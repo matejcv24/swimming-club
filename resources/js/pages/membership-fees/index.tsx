@@ -37,7 +37,7 @@ import {
     POPUP_FG,
     popupFg,
 } from '@/components/mui-theme-provider';
-import { CloseButton, PopupHeader } from '@/components/popup-ui';
+import { CloseButton, Hint, PopupHeader } from '@/components/popup-ui';
 import { CardsSkeleton } from '@/components/skeletons';
 import { usePagePopup } from '@/hooks/use-page-popup';
 import { groupNameOf, useGroups } from '@/lib/groups';
@@ -144,6 +144,13 @@ export default function MembershipFeesIndex({
 }: Props) {
     // Fades in and out over the dashboard
     const popup = usePagePopup();
+    // From the dashboard's "Add payment" quick action: just the payment form, and
+    // saving or cancelling goes back to the dashboard
+    const [openedToAdd] = useState(
+        () =>
+            typeof window !== 'undefined' &&
+            new URLSearchParams(window.location.search).get('add') === '1',
+    );
     const groups = useGroups();
     const activeMembers = members.filter((m) => m.status === 'active');
     const [selectedMember, setSelectedMember] = useState<Member | null>(null);
@@ -323,6 +330,12 @@ export default function MembershipFeesIndex({
             },
             {
                 onSuccess: () => {
+                    if (openedToAdd) {
+                        popup.close();
+
+                        return;
+                    }
+
                     handleMemberSelect(selectedMember);
                     setAmount('');
                     setPaymentMethod('cash');
@@ -378,6 +391,12 @@ export default function MembershipFeesIndex({
     };
 
     const handleCancel = () => {
+        if (openedToAdd) {
+            popup.close();
+
+            return;
+        }
+
         setSelectedMember(null);
         setFees([]);
         setAmount('');
@@ -621,9 +640,10 @@ export default function MembershipFeesIndex({
                             </Button>
                         </div>
 
-                        <Divider />
+                        {/* The yearly history: not when only adding a payment */}
+                        {!openedToAdd && <Divider />}
 
-                        {userRole === 'admin' && (
+                        {userRole === 'admin' && !openedToAdd && (
                             <div className="flex flex-col gap-4">
                                 <Typography
                                     variant="caption"
@@ -780,16 +800,18 @@ export default function MembershipFeesIndex({
                                 <div className="flex flex-none items-center gap-1">
                                     <PaymentMethodBadge fee={fee} />
                                     {userRole === 'admin' && (
-                                        <IconButton
-                                            size="small"
-                                            color="primary"
-                                            onClick={() =>
-                                                handleEditFeeOpen(fee)
-                                            }
-                                            aria-label={t('Edit payment')}
-                                        >
-                                            <EditIcon fontSize="small" />
-                                        </IconButton>
+                                        <Hint title={t('Edit payment')}>
+                                            <IconButton
+                                                size="small"
+                                                color="primary"
+                                                onClick={() =>
+                                                    handleEditFeeOpen(fee)
+                                                }
+                                                aria-label={t('Edit payment')}
+                                            >
+                                                <EditIcon fontSize="small" />
+                                            </IconButton>
+                                        </Hint>
                                     )}
                                 </div>
                             </ListItem>

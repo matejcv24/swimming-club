@@ -265,6 +265,12 @@ export default function TrainingsIndex({
     // Fades in and out over the dashboard
     const popup = usePagePopup();
     const groups = useGroups();
+    // From the dashboard's "Add attendance" quick action
+    const [openedToAdd] = useState(
+        () =>
+            typeof window !== 'undefined' &&
+            new URLSearchParams(window.location.search).get('quick') === '1',
+    );
     // Who sees every group starts on "All"; a coach of one group starts on it;
     // a coach of several groups first picks one
     const defaultChoice: Choice = canSeeAllGroups
@@ -341,7 +347,10 @@ export default function TrainingsIndex({
     const subgroups = subgroupsOf(groups, activeGroupId);
     // A subgroup is optional for members, so every subgroup's training lists
     // all members of its main group
-    const groupMembers = members.filter((m) => m.group_id === activeGroupId);
+    // Members of all groups (no single group) train in every group
+    const groupMembers = members.filter(
+        (m) => m.group_id === activeGroupId || m.group_id === null,
+    );
     // Who came on the open day, as recorded (also members who have moved since)
     const [attended, setAttended] = useState<Member[]>([]);
 
@@ -356,6 +365,7 @@ export default function TrainingsIndex({
             setEditMode(false);
             setOpenSection(null);
             setLoading(true);
+            setShowAttendanceModal(true);
 
             // No group: the overview of every group ("All")
             const day = `date=${date.format('YYYY-MM-DD')}${group === null ? '' : `&group_id=${group}`}`;
@@ -386,7 +396,6 @@ export default function TrainingsIndex({
             }
 
             setLoading(false);
-            setShowAttendanceModal(true);
         },
         [],
     );
@@ -434,14 +443,19 @@ export default function TrainingsIndex({
                 (s) => s.id === Number(params.get('subgroup')),
             ) ?? null;
 
-        queueMicrotask(() => {
+        queueMicrotask(async () => {
             setChoice(groupChoice(group.id, subgroup?.id ?? null));
-            void loadAttendance(
+            await loadAttendance(
                 dayjs(date),
                 group.id,
                 subgroup?.id ?? null,
                 group.subgroups.length > 0 && subgroup === null,
             );
+
+            // "Add attendance" quick action: ready to tick who came
+            if (openedToAdd) {
+                setEditMode(true);
+            }
         });
         // Only on the first visit: later group changes must not reopen it
         // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -472,6 +486,12 @@ export default function TrainingsIndex({
             },
             {
                 onSuccess: () => {
+                    if (openedToAdd) {
+                        backToDashboard();
+
+                        return;
+                    }
+
                     setDaysVersion((version) => version + 1);
                     setShowAttendanceModal(false);
                     setCheckedIds([]);
@@ -502,7 +522,17 @@ export default function TrainingsIndex({
         setAttendanceSearch('');
     };
 
+    // Only the day was open (quick action): straight back to the dashboard
+    const backToDashboard = () =>
+        router.visit('/dashboard', { preserveScroll: true });
+
     const closeAttendance = () => {
+        if (openedToAdd) {
+            backToDashboard();
+
+            return;
+        }
+
         setShowAttendanceModal(false);
         setOpenSection(null);
         setOverview(null);
@@ -540,6 +570,8 @@ export default function TrainingsIndex({
             {/* Main Attendance Modal */}
             <Dialog
                 {...popup.dialogProps}
+                // The "Add attendance" quick action shows only the day, not the calendar
+                open={popup.dialogProps.open && !openedToAdd}
                 fullWidth
                 maxWidth="sm"
                 PaperProps={{

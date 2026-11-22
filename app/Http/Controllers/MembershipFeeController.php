@@ -14,7 +14,7 @@ use Inertia\Inertia;
 
 class MembershipFeeController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
         $members = Member::visibleTo(Auth::user())->get(['id', 'name', 'group_id', 'status']);
 
@@ -22,7 +22,8 @@ class MembershipFeeController extends Controller
             'members' => $members,
             // The payment history (it grows every month) follows right after the page,
             // so the pop-up opens at once; a placeholder shows until it arrives
-            'allFees' => Inertia::defer(fn () => MembershipFee::query()
+            // The "Add payment" quick action shows only the form: no history then
+            'allFees' => $request->boolean('add') ? null : Inertia::defer(fn () => MembershipFee::query()
                 ->with(['member:id,name', 'group:id,name'])
                 // Coaches see the payments of members in their groups
                 ->when(
@@ -43,7 +44,7 @@ class MembershipFeeController extends Controller
                 Rule::exists('members', 'id')->where('status', 'active'),
                 // Coaches record payments only for members of their groups
                 function ($attribute, $value, $fail) {
-                    if (! Auth::user()->canSeeGroup(Member::find($value)?->group_id)) {
+                    if (! ($member = Member::find($value)) || ! Auth::user()->canSeeMember($member)) {
                         $fail(__('This member is not in one of your groups.'));
                     }
                 },
@@ -63,7 +64,7 @@ class MembershipFeeController extends Controller
         ]);
 
         if (Auth::user()?->role === 'coach' && $member) {
-            $admins = User::where('role', 'admin')->get();
+            $admins = User::where('role', 'admin')->active()->get();
 
             foreach ($admins as $admin) {
                 $admin->notify(new MembershipPaymentNotification(
@@ -96,7 +97,7 @@ class MembershipFeeController extends Controller
 
     public function getByMember(Member $member)
     {
-        abort_unless(Auth::user()->canSeeGroup($member->group_id), 403);
+        abort_unless(Auth::user()->canSeeMember($member), 403);
 
         $fees = MembershipFee::where('member_id', $member->id)
             ->orderBy('start_date', 'desc')

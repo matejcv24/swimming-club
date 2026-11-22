@@ -52,6 +52,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
         Route::post('/staff', [StaffController::class, 'store'])->name('staff.store');
         Route::put('/staff/{coach}', [StaffController::class, 'update'])->name('staff.update');
+        Route::put('/staff/{coach}/active', [StaffController::class, 'setActive'])->name('staff.active');
 
         Route::put('/membership-fees/{membershipFee}', [MembershipFeeController::class, 'update'])->name('membership-fees.update');
         Route::delete('/members/{member}', [MemberController::class, 'destroy'])->name('members.destroy');

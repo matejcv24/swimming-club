@@ -3,6 +3,7 @@
 namespace App\Http\Middleware;
 
 use App\Models\Group;
+use App\Models\Member;
 use App\Support\DashboardSummary;
 use App\Support\NotificationText;
 use Illuminate\Http\Request;
@@ -74,7 +75,7 @@ class HandleInertiaRequests extends Middleware
                     ->map(fn (Group $group) => [
                         'id' => $group->id,
                         'name' => $group->name,
-                        'members_count' => $group->members_count,
+                        'members_count' => $group->members_count + $this->allGroupsMemberCount(),
                         'subgroups' => $group->subgroups->map(fn (Group $subgroup) => [
                             'id' => $subgroup->id,
                             'name' => $subgroup->name,
@@ -113,5 +114,13 @@ class HandleInertiaRequests extends Middleware
         }
 
         return $notification->data['url'] ?? '/dashboard';
+    }
+
+    private ?int $allGroupsMemberCount = null;
+
+    /** Members of all groups (no single group): part of every group's count. */
+    private function allGroupsMemberCount(): int
+    {
+        return $this->allGroupsMemberCount ??= Member::whereNull('group_id')->count();
     }
 }

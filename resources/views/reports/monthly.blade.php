@@ -6,6 +6,8 @@
     };
     // A club-made group's name; records without one (e.g. a general invoice)
     $groupName = fn (?string $group) => $group ?: __('No specific group');
+    // Payments without a group are of members who train in all groups
+    $feeGroupName = fn (?string $group) => $group ?: __('All groups');
     // The month in the report's language, e.g. "November 2026" / "Ноември 2026"
     $monthName = \Illuminate\Support\Str::ucfirst($month->copy()->locale(app()->getLocale())->translatedFormat('F Y'));
 @endphp
@@ -290,7 +292,7 @@
             &middot; {{ __('Cash') }} <strong>{{ $money($feesByMethod['cash']) }} MKD</strong>
             &middot; {{ __('Card') }} <strong>{{ $money($feesByMethod['card']) }} MKD</strong>
             @foreach ($feesByGroup as $group)
-                &middot; {{ $groupName($group['group']) }} <strong>{{ $money($group['total']) }} MKD</strong>
+                &middot; {{ $feeGroupName($group['group']) }} <strong>{{ $money($group['total']) }} MKD</strong>
             @endforeach
         </div>
 
@@ -298,7 +300,7 @@
         <h2>1. {{ __('Membership fees') }}</h2>
 
         @forelse ($feesByGroup as $group)
-            <h3>{{ $groupName($group['group']) }} &middot; {{ trans_choice(':count payment|:count payments', $group['rows']->count()) }}</h3>
+            <h3>{{ $feeGroupName($group['group']) }} &middot; {{ trans_choice(':count payment|:count payments', $group['rows']->count()) }}</h3>
             <table class="data">
                 <thead>
                     <tr>
@@ -324,7 +326,7 @@
                 </tbody>
                 <tfoot>
                     <tr>
-                        <td colspan="5" class="num">{{ __(':group subtotal', ['group' => $groupName($group['group'])]) }}</td>
+                        <td colspan="5" class="num">{{ __(':group subtotal', ['group' => $feeGroupName($group['group'])]) }}</td>
                         <td class="num">{{ $money($group['total']) }} MKD</td>
                     </tr>
                 </tfoot>

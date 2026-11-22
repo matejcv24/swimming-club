@@ -1,5 +1,6 @@
 import { Check } from 'lucide-react';
 import { useId } from 'react';
+import { Hint } from '@/components/popup-ui';
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -78,16 +79,18 @@ export function LanguageSwitch() {
 
     return (
         <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-                <button
-                    type="button"
-                    className="flex h-9 items-center gap-1.5 rounded-md px-2 text-xs font-bold transition hover:bg-sidebar-accent"
-                    aria-label={t('Language')}
-                >
-                    <current.Flag className={flagClass} />
-                    {current.code.toUpperCase()}
-                </button>
-            </DropdownMenuTrigger>
+            <Hint title={t('Change language')}>
+                <DropdownMenuTrigger asChild>
+                    <button
+                        type="button"
+                        className="flex h-9 items-center gap-1.5 rounded-md px-2 text-xs font-bold transition hover:bg-sidebar-accent"
+                        aria-label={t('Language')}
+                    >
+                        <current.Flag className={flagClass} />
+                        {current.code.toUpperCase()}
+                    </button>
+                </DropdownMenuTrigger>
+            </Hint>
             <DropdownMenuContent align="end" className="w-44">
                 {LANGUAGES.map(({ code, name, Flag }) => (
                     <DropdownMenuItem

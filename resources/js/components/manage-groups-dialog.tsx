@@ -19,7 +19,7 @@ import MenuItem from '@mui/material/MenuItem';
 import Select from '@mui/material/Select';
 import Tooltip from '@mui/material/Tooltip';
 import Typography from '@mui/material/Typography';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
     GroupMembersDialog,
     MembersLink,
@@ -27,7 +27,7 @@ import {
 import type { MembersOf } from '@/components/group-members-dialog';
 import type { MemberDetails } from '@/components/member-details-dialog';
 import { POPUP_BG } from '@/components/mui-theme-provider';
-import { CloseButton, PopupHeader } from '@/components/popup-ui';
+import { CloseButton, PopupHeader, SlidingText } from '@/components/popup-ui';
 import type { ClubGroup, ClubSubgroup } from '@/lib/groups';
 import { t, tc } from '@/lib/i18n';
 
@@ -80,7 +80,7 @@ export function ManageGroupsDialog({
     const activeIn = (kind: MembersOf['kind'], id: number) =>
         members.filter((member) =>
             kind === 'group'
-                ? member.group_id === id
+                ? member.group_id === id || member.group_id === null
                 : member.subgroup_id === id,
         ).length;
     const [newName, setNewName] = useState('');
@@ -125,6 +125,29 @@ export function ManageGroupsDialog({
         setNewSubgroupName('');
         setError(null);
     };
+
+    // On phones, bring the new subgroup's field to the middle of the screen once
+    // it opens and the keyboard has come up
+    const newSubgroupRef = useRef<HTMLLIElement>(null);
+    useEffect(() => {
+        if (
+            addingTo === null ||
+            !window.matchMedia('(pointer: coarse)').matches
+        ) {
+            return;
+        }
+
+        const timer = window.setTimeout(
+            () =>
+                newSubgroupRef.current?.scrollIntoView({
+                    block: 'center',
+                    behavior: 'smooth',
+                }),
+            350,
+        );
+
+        return () => window.clearTimeout(timer);
+    }, [addingTo]);
 
     const addSubgroup = (group: ClubGroup) => {
         if (newSubgroupName.trim() === '') {
@@ -298,15 +321,24 @@ export function ManageGroupsDialog({
                                 }}
                                 sx={fieldSx}
                             />
-                            <Button
-                                type="submit"
-                                variant="contained"
-                                startIcon={<AddIcon />}
-                                disabled={busy || newName.trim() === ''}
-                                sx={{ flex: 'none' }}
-                            >
-                                {t('Add')}
-                            </Button>
+                            <Tooltip title={t('Add group')}>
+                                {/* A disabled button needs a wrapper for its hint */}
+                                <span className="flex-none">
+                                    <Button
+                                        type="submit"
+                                        variant="contained"
+                                        aria-label={t('Add group')}
+                                        disabled={busy || newName.trim() === ''}
+                                        sx={{
+                                            minWidth: 0,
+                                            px: 1.25,
+                                            height: 40,
+                                        }}
+                                    >
+                                        <AddIcon />
+                                    </Button>
+                                </span>
+                            </Tooltip>
                         </form>
 
                         {error && (
@@ -448,7 +480,7 @@ export function ManageGroupsDialog({
 
                                             {/* New subgroup */}
                                             {addingTo === group.id && (
-                                                <li>
+                                                <li ref={newSubgroupRef}>
                                                     <form
                                                         className="flex items-center gap-1.5"
                                                         onSubmit={(e) => {
@@ -456,32 +488,41 @@ export function ManageGroupsDialog({
                                                             addSubgroup(group);
                                                         }}
                                                     >
-                                                        <InputBase
-                                                            fullWidth
-                                                            autoFocus
-                                                            value={
-                                                                newSubgroupName
-                                                            }
-                                                            onChange={(e) =>
-                                                                setNewSubgroupName(
-                                                                    e.target
-                                                                        .value,
-                                                                )
-                                                            }
-                                                            placeholder={t(
-                                                                'New subgroup name, e.g. 18:00',
+                                                        <div className="relative min-w-0 flex-1">
+                                                            <InputBase
+                                                                fullWidth
+                                                                autoFocus
+                                                                value={
+                                                                    newSubgroupName
+                                                                }
+                                                                onChange={(e) =>
+                                                                    setNewSubgroupName(
+                                                                        e.target
+                                                                            .value,
+                                                                    )
+                                                                }
+                                                                inputProps={{
+                                                                    'aria-label':
+                                                                        t(
+                                                                            'New subgroup name for :name',
+                                                                            {
+                                                                                name: group.name,
+                                                                            },
+                                                                        ),
+                                                                    maxLength: 60,
+                                                                }}
+                                                                sx={fieldSx}
+                                                            />
+                                                            {/* The hint, sliding to show all of it when the field is narrow */}
+                                                            {newSubgroupName ===
+                                                                '' && (
+                                                                <SlidingText className="pointer-events-none absolute inset-y-0 right-[15px] left-[15px] flex items-center text-sm text-[var(--popup-muted)] pointer-coarse:text-base">
+                                                                    {t(
+                                                                        'New subgroup name, e.g. 18:00',
+                                                                    )}
+                                                                </SlidingText>
                                                             )}
-                                                            inputProps={{
-                                                                'aria-label': t(
-                                                                    'New subgroup name for :name',
-                                                                    {
-                                                                        name: group.name,
-                                                                    },
-                                                                ),
-                                                                maxLength: 60,
-                                                            }}
-                                                            sx={fieldSx}
-                                                        />
+                                                        </div>
                                                         <Tooltip
                                                             title={t(
                                                                 'Add subgroup',

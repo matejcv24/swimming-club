@@ -77,7 +77,7 @@ export function GroupMembersDialog({
         ? members
               .filter((member) =>
                   of.kind === 'group'
-                      ? member.group_id === of.id
+                      ? member.group_id === of.id || member.group_id === null
                       : member.subgroup_id === of.id,
               )
               .sort((a, b) => a.name.localeCompare(b.name))

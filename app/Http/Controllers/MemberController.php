@@ -34,8 +34,9 @@ class MemberController extends Controller
     {
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
+            // Empty: the member trains in all groups
             'group_id' => [
-                'required',
+                'nullable',
                 Rule::exists('groups', 'id')->whereNull('deleted_at')->whereNull('parent_id'),
                 // Coaches add and move members only within their groups
                 function ($attribute, $value, $fail) {
@@ -60,14 +61,15 @@ class MemberController extends Controller
 
         $member = Member::create([
             'name' => $validated['name'],
-            'group_id' => $validated['group_id'],
-            'subgroup_id' => $validated['subgroup_id'] ?? null,
+            'group_id' => $validated['group_id'] ?? null,
+            // A subgroup belongs to one group, so all groups means none
+            'subgroup_id' => isset($validated['group_id']) ? ($validated['subgroup_id'] ?? null) : null,
             'status' => 'active',
             'parent_id' => $parent->id,
         ]);
 
         if (Auth::user()?->role === 'coach') {
-            $admins = User::where('role', 'admin')->get();
+            $admins = User::where('role', 'admin')->active()->get();
 
             foreach ($admins as $admin) {
                 $admin->notify(new MemberChangedNotification(
@@ -96,12 +98,13 @@ class MemberController extends Controller
 
     public function update(Request $request, Member $member)
     {
-        abort_unless(Auth::user()->canSeeGroup($member->group_id), 403);
+        abort_unless(Auth::user()->canSeeMember($member), 403);
 
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
+            // Empty: the member trains in all groups
             'group_id' => [
-                'required',
+                'nullable',
                 Rule::exists('groups', 'id')->whereNull('deleted_at')->whereNull('parent_id'),
                 // Coaches add and move members only within their groups
                 function ($attribute, $value, $fail) {
@@ -126,7 +129,7 @@ class MemberController extends Controller
             $changes[] = 'name';
         }
 
-        if ((int) $member->group_id !== (int) $validated['group_id']) {
+        if ((int) $member->group_id !== (int) ($validated['group_id'] ?? 0)) {
             $changes[] = 'group';
         }
 
@@ -148,8 +151,9 @@ class MemberController extends Controller
 
         $member->update([
             'name' => $validated['name'],
-            'group_id' => $validated['group_id'],
-            'subgroup_id' => $validated['subgroup_id'] ?? null,
+            'group_id' => $validated['group_id'] ?? null,
+            // A subgroup belongs to one group, so all groups means none
+            'subgroup_id' => isset($validated['group_id']) ? ($validated['subgroup_id'] ?? null) : null,
             'status' => $validated['status'],
         ]);
 
@@ -161,7 +165,7 @@ class MemberController extends Controller
         }
 
         if (Auth::user()?->role === 'coach' && count($changes) > 0) {
-            $admins = User::where('role', 'admin')->get();
+            $admins = User::where('role', 'admin')->active()->get();
             $changeSummary = implode(', ', $changes);
 
             foreach ($admins as $admin) {

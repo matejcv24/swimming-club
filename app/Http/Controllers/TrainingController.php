@@ -99,7 +99,7 @@ class TrainingController extends Controller
         }
 
         if (Auth::user()?->role === 'coach') {
-            $admins = User::where('role', 'admin')->get();
+            $admins = User::where('role', 'admin')->active()->get();
             $formattedDate = Carbon::parse($validated['date'])->format('d.m.Y');
             $groupName = Group::withTrashed()->find($validated['group_id'])?->name ?? 'group';
 
