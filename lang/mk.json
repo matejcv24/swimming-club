@@ -382,5 +382,9 @@
     "Add attendance": "Додади присуство",
     "Add payment": "Додади уплата",
     "Which group is the attendance for?": "За која група е присуството?",
-    "Change language": "Промени јазик"
+    "Change language": "Промени јазик",
+    "A new member of the club": "Нов член на клубот",
+    "Active members train and pay": "Активниот член тренира и плаќа",
+    "Inactive members don't train for now": "Неактивниот член засега не тренира",
+    "Payment": "Уплата"
 }

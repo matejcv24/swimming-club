@@ -50,6 +50,7 @@ class MemberController extends Controller
                 'nullable',
                 Rule::exists('groups', 'id')->whereNull('deleted_at')->where('parent_id', (int) $request->input('group_id')),
             ],
+            'status' => ['nullable', 'in:active,inactive'],
             'parent_name' => ['required', 'string', 'max:255'],
             'parent_phone' => ['required', 'string', 'max:20'],
         ]);
@@ -64,7 +65,7 @@ class MemberController extends Controller
             'group_id' => $validated['group_id'] ?? null,
             // A subgroup belongs to one group, so all groups means none
             'subgroup_id' => isset($validated['group_id']) ? ($validated['subgroup_id'] ?? null) : null,
-            'status' => 'active',
+            'status' => $validated['status'] ?? 'active',
             'parent_id' => $parent->id,
         ]);
 
