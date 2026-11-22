@@ -4,7 +4,7 @@ import EventAvailableIcon from '@mui/icons-material/EventAvailable';
 import PersonAddAlt1Icon from '@mui/icons-material/PersonAddAlt1';
 import Dialog from '@mui/material/Dialog';
 import dayjs from 'dayjs';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 import { MuiThemeProvider, POPUP_BG } from '@/components/mui-theme-provider';
 import { CloseButton, IconBadge } from '@/components/popup-ui';
@@ -186,13 +186,19 @@ function ActionButton({
     children: ReactNode;
 }) {
     return action.href ? (
-        <Link href={action.href} prefetch className={className}>
+        <Link
+            href={action.href}
+            prefetch
+            aria-label={action.label}
+            className={className}
+        >
             {children}
         </Link>
     ) : (
         <button
             type="button"
             onClick={action.onClick}
+            aria-label={action.label}
             className={`cursor-pointer ${className}`}
         >
             {children}
@@ -225,25 +231,62 @@ export function QuickActionsTopBar() {
 }
 
 /**
- * Phones and tablets: a frosted-glass bar fixed to the bottom of the dashboard,
- * above the iPhone home line. The dashboard leaves room under its last card.
+ * Whether the page is being scrolled down (away from the top): the phone bar then
+ * shrinks a little, and grows back as soon as the page is scrolled up again.
+ */
+function useScrollingDown(): boolean {
+    const [down, setDown] = useState(false);
+
+    useEffect(() => {
+        let last = window.scrollY;
+
+        const onScroll = () => {
+            const y = window.scrollY;
+
+            // Small jitters (and the bounce at the ends) don't count
+            if (Math.abs(y - last) < 6) {
+                return;
+            }
+
+            setDown(y > last && y > 24);
+            last = y;
+        };
+
+        window.addEventListener('scroll', onScroll, { passive: true });
+
+        return () => window.removeEventListener('scroll', onScroll);
+    }, []);
+
+    return down;
+}
+
+/**
+ * Phones and tablets: a frosted-glass bar of icons fixed to the bottom of the
+ * dashboard, like Instagram's: a little smaller while scrolling down, back to
+ * full size when scrolling up.
  */
 export function QuickActionsBar() {
     const { actions, picker } = useQuickActions();
+    const compact = useScrollingDown();
 
     return (
         <nav
             aria-label={t('Quick actions')}
-            className="fixed inset-x-3 bottom-[calc(0.75rem+env(safe-area-inset-bottom))] z-40 grid grid-cols-3 rounded-2xl border border-white/60 bg-white/55 p-1.5 shadow-[0_8px_32px_rgba(0,16,49,0.18)] backdrop-blur-xl backdrop-saturate-150 lg:hidden dark:border-white/15 dark:bg-white/10 dark:shadow-[0_8px_32px_rgba(0,0,0,0.45)]"
+            className={`fixed bottom-[calc(0.75rem+env(safe-area-inset-bottom))] left-1/2 z-40 grid -translate-x-1/2 grid-cols-3 rounded-full border border-white/60 bg-white/55 shadow-[0_8px_32px_rgba(0,16,49,0.18)] backdrop-blur-xl backdrop-saturate-150 transition-all duration-300 ease-out lg:hidden dark:border-white/15 dark:bg-white/10 dark:shadow-[0_8px_32px_rgba(0,0,0,0.45)] ${
+                compact ? 'w-[min(60%,15rem)] p-1' : 'w-[min(80%,20rem)] p-1.5'
+            }`}
         >
             {actions.map((action) => (
                 <ActionButton
                     key={action.key}
                     action={action}
-                    className="flex flex-col items-center gap-0.5 rounded-xl px-1 py-1.5 text-center text-[11.5px] leading-tight font-semibold text-hydra-navy transition active:scale-95 active:bg-white/40 dark:text-white dark:active:bg-white/10 [&_svg]:text-[22px] [&_svg]:text-hydra-blue dark:[&_svg]:text-sky-300"
+                    className={`flex items-center justify-center rounded-full text-hydra-blue transition-all duration-300 ease-out active:scale-90 active:bg-white/40 dark:text-sky-300 dark:active:bg-white/10 ${
+                        compact
+                            ? 'py-1.5 [&_svg]:text-[22px]'
+                            : 'py-2.5 [&_svg]:text-[27px]'
+                    }`}
                 >
                     {action.icon}
-                    {action.label}
                 </ActionButton>
             ))}
             {picker}
@@ -256,7 +299,7 @@ export function QuickActionsSpacer() {
     return (
         <div
             aria-hidden
-            className="h-[calc(5.5rem+env(safe-area-inset-bottom))] shrink-0 lg:hidden"
+            className="h-[calc(5rem+env(safe-area-inset-bottom))] shrink-0 lg:hidden"
         />
     );
 }
