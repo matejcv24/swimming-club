@@ -273,7 +273,7 @@ export function QuickActionsBar() {
         <nav
             aria-label={t('Quick actions')}
             className={`fixed bottom-[calc(0.75rem+env(safe-area-inset-bottom))] left-1/2 z-40 grid -translate-x-1/2 grid-cols-3 rounded-full border border-white/60 bg-white/55 shadow-[0_8px_32px_rgba(0,16,49,0.18)] backdrop-blur-xl backdrop-saturate-150 transition-all duration-300 ease-out lg:hidden dark:border-white/15 dark:bg-white/10 dark:shadow-[0_8px_32px_rgba(0,0,0,0.45)] ${
-                compact ? 'w-[min(60%,15rem)] p-1' : 'w-[min(80%,20rem)] p-1.5'
+                compact ? 'w-[min(66%,17rem)] p-1' : 'w-[min(86%,22rem)] p-1.5'
             }`}
         >
             {actions.map((action) => (
@@ -282,8 +282,8 @@ export function QuickActionsBar() {
                     action={action}
                     className={`flex items-center justify-center rounded-full text-hydra-blue transition-all duration-300 ease-out active:scale-90 active:bg-white/40 dark:text-sky-300 dark:active:bg-white/10 ${
                         compact
-                            ? 'py-1.5 [&_svg]:text-[22px]'
-                            : 'py-2.5 [&_svg]:text-[27px]'
+                            ? 'py-1.5 text-[30px] [&_svg]:text-[30px]'
+                            : 'py-2 text-[38px] [&_svg]:text-[38px]'
                     }`}
                 >
                     {action.icon}
