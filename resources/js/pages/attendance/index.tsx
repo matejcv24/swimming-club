@@ -94,7 +94,9 @@ export default function AttendanceIndex({ members }: Props) {
 
     const filteredMembers = members.filter(
         (member) =>
-            (activeFilter === 'all' || member.group_id === activeFilter) &&
+            (activeFilter === 'all' ||
+                member.group_id === activeFilter ||
+                member.group_id === null) &&
             member.name.toLowerCase().includes(attendanceSearch.toLowerCase()),
     );
 

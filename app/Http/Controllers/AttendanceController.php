@@ -40,7 +40,7 @@ class AttendanceController extends Controller
     /** The training days a member came to, newest first. */
     public function byMember(Member $member)
     {
-        abort_unless(Auth::user()->canSeeGroup($member->group_id), 403);
+        abort_unless(Auth::user()->canSeeMember($member), 403);
 
         $rows = Attendance::query()
             ->join('trainings', 'trainings.id', '=', 'attendances.training_id')

@@ -63,6 +63,13 @@ class FortifyServiceProvider extends ServiceProvider
             }
 
             if ($user && $user->password && Hash::check($request->password, $user->password)) {
+                // A deactivated account is told so (only after the right password)
+                if (! $user->isActive()) {
+                    throw ValidationException::withMessages([
+                        Fortify::username() => __('This account has been deactivated. Contact the club admin.'),
+                    ]);
+                }
+
                 return $user;
             }
 

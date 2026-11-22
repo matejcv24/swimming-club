@@ -68,7 +68,9 @@ export default function UnpaidFeesIndex({ unpaidMembers }: Props) {
         activeFilter === 'all'
             ? unpaidMembers
             : unpaidMembers.filter(
-                  (member) => member.group_id === activeFilter,
+                  (member) =>
+                      member.group_id === activeFilter ||
+                      member.group_id === null,
               );
 
     const getInitials = (name: string) =>

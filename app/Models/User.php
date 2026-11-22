@@ -6,6 +6,7 @@ namespace App\Models;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -35,7 +36,20 @@ class User extends Authenticatable
             'password' => 'hashed',
             'two_factor_confirmed_at' => 'datetime',
             'all_groups' => 'boolean',
+            'deactivated_at' => 'datetime',
         ];
+    }
+
+    /** A deactivated account can't log in until an admin activates it again. */
+    public function isActive(): bool
+    {
+        return $this->deactivated_at === null;
+    }
+
+    /** Accounts that may log in (for notifications to admins, for example). */
+    public function scopeActive(Builder $query): void
+    {
+        $query->whereNull('deactivated_at');
     }
 
     public function trainings(): HasMany
@@ -68,6 +82,12 @@ class User extends Authenticatable
             ->pluck('groups.id')
             ->map(fn ($id) => (int) $id)
             ->all();
+    }
+
+    /** A member of one of this user's groups, or of all groups (no single group). */
+    public function canSeeMember(Member $member): bool
+    {
+        return $member->group_id === null || $this->canSeeGroup($member->group_id);
     }
 
     public function canSeeGroup(int|string|null $groupId): bool

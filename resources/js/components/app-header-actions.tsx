@@ -2,6 +2,7 @@ import { Link, router, usePage } from '@inertiajs/react';
 import { LogOut, Settings } from 'lucide-react';
 import { LanguageSwitch } from '@/components/language-switch';
 import { NotificationsMenu } from '@/components/notifications-menu';
+import { QuickActionsTopBar } from '@/components/quick-actions';
 import { forgetThemeUser, ThemeToggle } from '@/components/theme-toggle';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
@@ -37,6 +38,7 @@ export function AppHeaderActions() {
 
     return (
         <div className="ml-auto flex max-w-full shrink-0 items-center gap-1">
+            <QuickActionsTopBar />
             <LanguageSwitch />
             <ThemeToggle />
             <NotificationsMenu />

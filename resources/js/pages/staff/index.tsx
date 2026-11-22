@@ -1,6 +1,9 @@
 import { Head, router } from '@inertiajs/react';
 import AttachMoneyIcon from '@mui/icons-material/AttachMoney';
+import BlockIcon from '@mui/icons-material/Block';
 import EditIcon from '@mui/icons-material/Edit';
+import LockOpenIcon from '@mui/icons-material/LockOpen';
+import MoreVertIcon from '@mui/icons-material/MoreVert';
 import PersonIcon from '@mui/icons-material/Person';
 import PersonAddAlt1Icon from '@mui/icons-material/PersonAddAlt1';
 import Avatar from '@mui/material/Avatar';
@@ -10,13 +13,19 @@ import Dialog from '@mui/material/Dialog';
 import DialogContent from '@mui/material/DialogContent';
 import DialogTitle from '@mui/material/DialogTitle';
 import Divider from '@mui/material/Divider';
+import FormControl from '@mui/material/FormControl';
 import IconButton from '@mui/material/IconButton';
 import Input from '@mui/material/Input';
+import InputLabel from '@mui/material/InputLabel';
 import List from '@mui/material/List';
 import ListItem from '@mui/material/ListItem';
 import ListItemAvatar from '@mui/material/ListItemAvatar';
+import ListItemIcon from '@mui/material/ListItemIcon';
 import ListItemText from '@mui/material/ListItemText';
-import Tooltip from '@mui/material/Tooltip';
+import ListSubheader from '@mui/material/ListSubheader';
+import Menu from '@mui/material/Menu';
+import MenuItem from '@mui/material/MenuItem';
+import Select from '@mui/material/Select';
 import Typography from '@mui/material/Typography';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
@@ -36,20 +45,43 @@ import {
     POPUP_FG,
     popupFg,
 } from '@/components/mui-theme-provider';
-import { avatarSx, CloseButton, PopupHeader } from '@/components/popup-ui';
+import {
+    AddButton,
+    avatarSx,
+    CloseButton,
+    Hint,
+    PopupHeader,
+} from '@/components/popup-ui';
 import { CardsSkeleton } from '@/components/skeletons';
 import { usePagePopup } from '@/hooks/use-page-popup';
 import { useGroups } from '@/lib/groups';
 import { locale, pickerLocaleText, t, tc } from '@/lib/i18n';
 
+type Role = 'admin' | 'coach';
+
 interface Staff extends CoachGroups {
     id: number;
     name: string;
     email: string;
+    role: Role;
+    /** False: deactivated, can't log in */
+    active: boolean;
+    deactivated_at: string | null;
+    /** The admin looking at the list (can't deactivate themselves) */
+    is_self: boolean;
 }
 
 // New coaches start with no group chosen: the admin must pick
 const NO_GROUPS: CoachGroups = { all_groups: false, group_ids: [] };
+
+// A new staff member: the role must be chosen too
+const EMPTY_NEW = {
+    name: '',
+    email: '',
+    password: '',
+    role: '' as Role | '',
+    ...NO_GROUPS,
+};
 
 interface Salary {
     id: number;
@@ -96,12 +128,7 @@ export default function StaffIndex({ staff }: Props) {
     const popup = usePagePopup();
     const groups = useGroups();
     const [showAddModal, setShowAddModal] = useState(false);
-    const [form, setForm] = useState({
-        name: '',
-        email: '',
-        password: '',
-        ...NO_GROUPS,
-    });
+    const [form, setForm] = useState(EMPTY_NEW);
     const [formErrors, setFormErrors] = useState<Record<string, string>>({});
 
     // The coach being edited (null: the Edit Coach pop-up is closed)
@@ -113,6 +140,44 @@ export default function StaffIndex({ staff }: Props) {
         ...NO_GROUPS,
     });
     const [editErrors, setEditErrors] = useState<Record<string, string>>({});
+
+    // Asking before deactivating someone
+    const [deactivating, setDeactivating] = useState<Staff | null>(null);
+    // The ⋮ menu of one staff member
+    const [menu, setMenu] = useState<{
+        anchor: HTMLElement;
+        person: Staff;
+    } | null>(null);
+    const closeMenu = () => setMenu(null);
+
+    // Admins, coaches, then deactivated accounts, each as its own section
+    const sections = [
+        {
+            key: 'admin',
+            title: t('Admins'),
+            people: staff.filter((p) => p.active && p.role === 'admin'),
+        },
+        {
+            key: 'coach',
+            title: t('Coaches'),
+            people: staff.filter((p) => p.active && p.role === 'coach'),
+        },
+        {
+            key: 'deactivated',
+            title: t('Deactivated'),
+            people: staff.filter((p) => !p.active),
+        },
+    ].filter((section) => section.people.length > 0);
+
+    const setActive = (person: Staff, active: boolean) =>
+        router.put(
+            `/staff/${person.id}/active`,
+            { active },
+            {
+                preserveScroll: true,
+                onSuccess: () => setDeactivating(null),
+            },
+        );
 
     const [selectedCoach, setSelectedCoach] = useState<Staff | null>(null);
     const [salaries, setSalaries] = useState<Salary[]>([]);
@@ -199,7 +264,7 @@ export default function StaffIndex({ staff }: Props) {
         router.post('/staff', form, {
             onSuccess: () => {
                 setShowAddModal(false);
-                setForm({ name: '', email: '', password: '', ...NO_GROUPS });
+                setForm(EMPTY_NEW);
                 setFormErrors({});
             },
             onError: (errors) => setFormErrors(errors),
@@ -307,18 +372,15 @@ export default function StaffIndex({ staff }: Props) {
                         icon={<PersonIcon fontSize="small" />}
                         title={t('Staff')}
                         subtitle={tc(
-                            ':count coach|:count coaches',
+                            ':count staff member|:count staff members',
                             staff.length,
                         )}
                         actions={
-                            <Button
-                                variant="contained"
-                                size="small"
-                                startIcon={<PersonAddAlt1Icon />}
+                            <AddButton
+                                label={t('Add staff member')}
+                                icon={<PersonAddAlt1Icon fontSize="small" />}
                                 onClick={() => setShowAddModal(true)}
-                            >
-                                {t('Add')}
-                            </Button>
+                            />
                         }
                         onClose={popup.close}
                     />
@@ -335,83 +397,219 @@ export default function StaffIndex({ staff }: Props) {
                         </Typography>
                     ) : (
                         <List disablePadding>
-                            {staff.map((member, index) => (
-                                <ListItem
-                                    key={member.id}
-                                    divider
-                                    sx={{ gap: 1, pr: 2 }}
-                                >
-                                    <ListItemAvatar>
-                                        <Avatar sx={avatarSx(index)}>
-                                            {getInitials(member.name)}
-                                        </Avatar>
-                                    </ListItemAvatar>
-                                    <ListItemText
-                                        primary={
-                                            <Typography
-                                                variant="body1"
-                                                fontWeight="bold"
-                                            >
-                                                {member.name}
-                                            </Typography>
-                                        }
-                                        secondary={
-                                            <Typography
-                                                variant="caption"
-                                                color="primary"
-                                                component="span"
-                                                noWrap
-                                                sx={{ display: 'block' }}
-                                            >
-                                                {coachGroupsLabel(
-                                                    member,
-                                                    groups,
-                                                )}
-                                            </Typography>
-                                        }
-                                        sx={{ minWidth: 0 }}
-                                    />
-                                    {/* Add Salary, and the Edit pencil as in the Members list */}
-                                    <div className="flex flex-none items-center gap-1">
-                                        {/* Says what it does on hover, and on a phone when held */}
-                                        <Tooltip
-                                            title={t('Add salary')}
-                                            arrow
-                                            enterTouchDelay={400}
-                                            leaveTouchDelay={2000}
+                            {sections.map((section) => (
+                                <li key={section.key}>
+                                    <ul>
+                                        <ListSubheader
+                                            sx={{
+                                                bgcolor: POPUP_BG,
+                                                color: 'var(--popup-muted)',
+                                                fontSize: 11.5,
+                                                fontWeight: 700,
+                                                letterSpacing: '0.08em',
+                                                textTransform: 'uppercase',
+                                                lineHeight: '34px',
+                                                px: 2.25,
+                                            }}
                                         >
-                                            <Button
-                                                variant="contained"
-                                                size="small"
-                                                aria-label={t(
-                                                    'Add salary for :name',
-                                                    { name: member.name },
-                                                )}
-                                                onClick={() =>
-                                                    handleCoachClick(member)
-                                                }
-                                                sx={{ minWidth: 0, px: 1.25 }}
+                                            {section.title}
+                                        </ListSubheader>
+                                        {section.people.map((member, index) => (
+                                            <ListItem
+                                                key={member.id}
+                                                divider
+                                                sx={{
+                                                    pr: 1,
+                                                    opacity: member.active
+                                                        ? 1
+                                                        : 0.6,
+                                                }}
                                             >
-                                                <AttachMoneyIcon fontSize="small" />
-                                            </Button>
-                                        </Tooltip>
-                                        <IconButton
-                                            size="small"
-                                            color="primary"
-                                            aria-label={t('Edit :name', {
-                                                name: member.name,
-                                            })}
-                                            onClick={() =>
-                                                handleEditOpen(member)
-                                            }
-                                        >
-                                            <EditIcon fontSize="small" />
-                                        </IconButton>
-                                    </div>
-                                </ListItem>
+                                                <ListItemAvatar>
+                                                    <Avatar
+                                                        sx={
+                                                            member.active
+                                                                ? avatarSx(
+                                                                      index,
+                                                                  )
+                                                                : {
+                                                                      bgcolor:
+                                                                          popupFg(
+                                                                              0.15,
+                                                                          ),
+                                                                      color: POPUP_FG,
+                                                                  }
+                                                        }
+                                                    >
+                                                        {member.active ? (
+                                                            getInitials(
+                                                                member.name,
+                                                            )
+                                                        ) : (
+                                                            <BlockIcon fontSize="small" />
+                                                        )}
+                                                    </Avatar>
+                                                </ListItemAvatar>
+                                                <ListItemText
+                                                    primary={
+                                                        <Typography
+                                                            variant="body1"
+                                                            fontWeight="bold"
+                                                            noWrap
+                                                        >
+                                                            {member.name}
+                                                        </Typography>
+                                                    }
+                                                    secondary={
+                                                        <Typography
+                                                            variant="caption"
+                                                            color={
+                                                                member.active
+                                                                    ? 'primary'
+                                                                    : 'error'
+                                                            }
+                                                            component="span"
+                                                            noWrap
+                                                            sx={{
+                                                                display:
+                                                                    'block',
+                                                            }}
+                                                        >
+                                                            {!member.active
+                                                                ? t(
+                                                                      "Can't log in since :date",
+                                                                      {
+                                                                          date: dayjs(
+                                                                              member.deactivated_at,
+                                                                          ).format(
+                                                                              'DD.MM.YYYY',
+                                                                          ),
+                                                                      },
+                                                                  )
+                                                                : member.role ===
+                                                                    'admin'
+                                                                  ? t(
+                                                                        'All groups',
+                                                                    )
+                                                                  : coachGroupsLabel(
+                                                                        member,
+                                                                        groups,
+                                                                    )}
+                                                        </Typography>
+                                                    }
+                                                    sx={{ minWidth: 0 }}
+                                                />
+                                                <Hint title={t('Options')}>
+                                                    <IconButton
+                                                        aria-label={t(
+                                                            'Options for :name',
+                                                            {
+                                                                name: member.name,
+                                                            },
+                                                        )}
+                                                        aria-haspopup="menu"
+                                                        onClick={(e) =>
+                                                            setMenu({
+                                                                anchor: e.currentTarget,
+                                                                person: member,
+                                                            })
+                                                        }
+                                                        sx={{
+                                                            color: 'var(--popup-muted)',
+                                                        }}
+                                                    >
+                                                        <MoreVertIcon />
+                                                    </IconButton>
+                                                </Hint>
+                                            </ListItem>
+                                        ))}
+                                    </ul>
+                                </li>
                             ))}
                         </List>
                     )}
+
+                    {/* One person's actions: salary, edit, deactivate / activate */}
+                    <Menu
+                        anchorEl={menu?.anchor ?? null}
+                        open={!!menu}
+                        onClose={closeMenu}
+                        anchorOrigin={{
+                            vertical: 'bottom',
+                            horizontal: 'right',
+                        }}
+                        transformOrigin={{
+                            vertical: 'top',
+                            horizontal: 'right',
+                        }}
+                    >
+                        <MenuItem
+                            onClick={() => {
+                                if (menu) {
+                                    handleCoachClick(menu.person);
+                                }
+
+                                closeMenu();
+                            }}
+                        >
+                            <ListItemIcon>
+                                <AttachMoneyIcon
+                                    fontSize="small"
+                                    color="primary"
+                                />
+                            </ListItemIcon>
+                            {t('Add salary')}
+                        </MenuItem>
+                        <MenuItem
+                            onClick={() => {
+                                if (menu) {
+                                    handleEditOpen(menu.person);
+                                }
+
+                                closeMenu();
+                            }}
+                        >
+                            <ListItemIcon>
+                                <EditIcon fontSize="small" color="primary" />
+                            </ListItemIcon>
+                            {t('Edit')}
+                        </MenuItem>
+                        {menu &&
+                            !menu.person.is_self &&
+                            (menu.person.active ? (
+                                <MenuItem
+                                    onClick={() => {
+                                        setDeactivating(menu.person);
+                                        closeMenu();
+                                    }}
+                                    sx={{ color: 'error.main' }}
+                                >
+                                    <ListItemIcon>
+                                        <BlockIcon
+                                            fontSize="small"
+                                            color="error"
+                                        />
+                                    </ListItemIcon>
+                                    {t('Deactivate')}
+                                </MenuItem>
+                            ) : (
+                                <MenuItem
+                                    onClick={() => {
+                                        setActive(menu.person, true);
+                                        closeMenu();
+                                    }}
+                                    sx={{ color: 'success.main' }}
+                                >
+                                    <ListItemIcon>
+                                        <LockOpenIcon
+                                            fontSize="small"
+                                            color="success"
+                                        />
+                                    </ListItemIcon>
+                                    {t('Activate')}
+                                </MenuItem>
+                            ))}
+                    </Menu>
                 </DialogContent>
             </Dialog>
 
@@ -813,6 +1011,48 @@ export default function StaffIndex({ staff }: Props) {
                 </DialogContent>
             </Dialog>
 
+            {/* Asks before taking away someone's login */}
+            <Dialog
+                open={!!deactivating}
+                onClose={() => setDeactivating(null)}
+                maxWidth="xs"
+                fullWidth
+                PaperProps={{ sx: { bgcolor: POPUP_BG } }}
+            >
+                <div className="flex flex-col gap-4 p-6">
+                    <Typography variant="h6" fontWeight="bold">
+                        {t('Deactivate :name?', {
+                            name: deactivating?.name ?? '',
+                        })}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                        {t(
+                            "They won't be able to log in until you activate them again, and they are logged out now. Their trainings, salaries and history stay.",
+                        )}
+                    </Typography>
+                    <div className="flex gap-3">
+                        <Button
+                            variant="outlined"
+                            fullWidth
+                            onClick={() => setDeactivating(null)}
+                        >
+                            {t('Cancel')}
+                        </Button>
+                        <Button
+                            variant="contained"
+                            color="error"
+                            fullWidth
+                            startIcon={<BlockIcon />}
+                            onClick={() =>
+                                deactivating && setActive(deactivating, false)
+                            }
+                        >
+                            {t('Deactivate')}
+                        </Button>
+                    </div>
+                </div>
+            </Dialog>
+
             <Dialog
                 open={showAddModal}
                 onClose={() => setShowAddModal(false)}
@@ -826,7 +1066,7 @@ export default function StaffIndex({ staff }: Props) {
                     <div className="relative flex items-center justify-between px-4 py-3">
                         <div className="w-10" />
                         <Typography variant="h6" fontWeight="bold">
-                            {t('Add Coach')}
+                            {t('Add staff member')}
                         </Typography>
                         <CloseButton onClick={() => setShowAddModal(false)} />
                     </div>
@@ -879,15 +1119,55 @@ export default function StaffIndex({ staff }: Props) {
                             error={!!formErrors.password}
                             sx={inputSx}
                         />
-                        <CoachGroupsField
-                            id="add-coach-groups"
-                            groups={groups}
-                            value={form}
-                            onChange={(value) => setForm({ ...form, ...value })}
-                            error={
-                                formErrors.group_ids ?? formErrors.all_groups
-                            }
-                        />
+                        <FormControl
+                            fullWidth
+                            required
+                            error={!!formErrors.role}
+                        >
+                            {/* Outlined like the Groups field below it */}
+                            <InputLabel
+                                id="add-staff-role"
+                                sx={{ color: popupFg(0.5) }}
+                            >
+                                {t('Role')}
+                            </InputLabel>
+                            <Select
+                                labelId="add-staff-role"
+                                label={t('Role')}
+                                value={form.role}
+                                onChange={(e) =>
+                                    setForm({
+                                        ...form,
+                                        role: e.target.value as Role,
+                                    })
+                                }
+                                sx={{
+                                    color: POPUP_FG,
+                                    '& .MuiOutlinedInput-notchedOutline': {
+                                        borderColor: popupFg(0.3),
+                                    },
+                                    '& .MuiSvgIcon-root': { color: POPUP_FG },
+                                }}
+                            >
+                                <MenuItem value="admin">{t('Admin')}</MenuItem>
+                                <MenuItem value="coach">{t('Coach')}</MenuItem>
+                            </Select>
+                        </FormControl>
+                        {/* Admins see every group: only a coach gets groups */}
+                        {form.role === 'coach' && (
+                            <CoachGroupsField
+                                id="add-coach-groups"
+                                groups={groups}
+                                value={form}
+                                onChange={(value) =>
+                                    setForm({ ...form, ...value })
+                                }
+                                error={
+                                    formErrors.group_ids ??
+                                    formErrors.all_groups
+                                }
+                            />
+                        )}
                         {Object.values(formErrors).map((message) => (
                             <Typography
                                 key={message}
@@ -914,11 +1194,13 @@ export default function StaffIndex({ staff }: Props) {
                                 fullWidth
                                 size="medium"
                                 disabled={
-                                    !form.all_groups &&
-                                    form.group_ids.length === 0
+                                    form.role === '' ||
+                                    (form.role === 'coach' &&
+                                        !form.all_groups &&
+                                        form.group_ids.length === 0)
                                 }
                             >
-                                {t('Create Coach')}
+                                {t('Create')}
                             </Button>
                         </div>
                     </form>
@@ -938,7 +1220,7 @@ export default function StaffIndex({ staff }: Props) {
                     <div className="relative flex items-center justify-between px-4 py-3">
                         <div className="w-10" />
                         <Typography variant="h6" fontWeight="bold">
-                            {t('Edit Coach')}
+                            {t('Edit staff member')}
                         </Typography>
                         <CloseButton onClick={closeEdit} />
                     </div>
@@ -1009,17 +1291,20 @@ export default function StaffIndex({ staff }: Props) {
                                 'Leave empty to keep the current password. A new password logs the coach out on all devices.',
                             )}
                         </Typography>
-                        <CoachGroupsField
-                            id="edit-coach-groups"
-                            groups={groups}
-                            value={editForm}
-                            onChange={(value) =>
-                                setEditForm({ ...editForm, ...value })
-                            }
-                            error={
-                                editErrors.group_ids ?? editErrors.all_groups
-                            }
-                        />
+                        {editingCoach?.role === 'coach' && (
+                            <CoachGroupsField
+                                id="edit-coach-groups"
+                                groups={groups}
+                                value={editForm}
+                                onChange={(value) =>
+                                    setEditForm({ ...editForm, ...value })
+                                }
+                                error={
+                                    editErrors.group_ids ??
+                                    editErrors.all_groups
+                                }
+                            />
+                        )}
                         {Object.values(editErrors).map((message) => (
                             <Typography
                                 key={message}
@@ -1046,6 +1331,7 @@ export default function StaffIndex({ staff }: Props) {
                                 fullWidth
                                 size="medium"
                                 disabled={
+                                    editingCoach?.role === 'coach' &&
                                     !editForm.all_groups &&
                                     editForm.group_ids.length === 0
                                 }

@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\ClubParent;
+use App\Models\Group;
 use App\Models\Member;
 use App\Models\MembershipFee;
 use App\Models\User;
@@ -32,10 +33,11 @@ class CoachGroupsTest extends TestCase
 
     public function test_admin_creates_a_coach_with_groups_and_groups_are_required()
     {
-        $admin = User::factory()->create(['role' => 'admin']);
+        // Named to be listed after the coach (Staff lists admins too, by name)
+        $admin = User::factory()->create(['role' => 'admin', 'name' => 'Zoran Admin']);
         $small = $this->group('Small pool');
         $big = $this->group('Big pool');
-        $data = ['name' => 'Coach', 'email' => 'coach@example.com', 'password' => 'secret-pass'];
+        $data = ['name' => 'Coach', 'email' => 'coach@example.com', 'password' => 'secret-pass', 'role' => 'coach'];
 
         $this->actingAs($admin)->post('/staff', $data)->assertSessionHasErrors('all_groups');
         $this->actingAs($admin)->post('/staff', [...$data, 'all_groups' => false, 'group_ids' => []])->assertSessionHasErrors('group_ids');
@@ -144,7 +146,7 @@ class CoachGroupsTest extends TestCase
         $admin = User::factory()->create(['role' => 'admin']);
         $big = $this->group('Big pool');
         $small = $this->group('Small pool');
-        $evening = \App\Models\Group::create(['name' => '18:00', 'parent_id' => $big, 'position' => 1])->id;
+        $evening = Group::create(['name' => '18:00', 'parent_id' => $big, 'position' => 1])->id;
         $bojan = $this->member('Big Bojan', $big);
         $ana = $this->member('Small Ana', $small);
 

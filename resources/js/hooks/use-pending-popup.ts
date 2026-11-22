@@ -44,6 +44,9 @@ export function usePendingPopup(): string | null {
 
             if (
                 !popupTitle ||
+                // Quick actions open only a form, not the whole pop-up
+                visit.url.searchParams.has('add') ||
+                visit.url.searchParams.has('quick') ||
                 visit.prefetch ||
                 visit.method !== 'get' ||
                 visit.only.length > 0

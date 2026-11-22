@@ -121,7 +121,7 @@ class GroupTest extends TestCase
         $this->assertSoftDeleted('groups', ['id' => $group->id]);
     }
 
-    public function test_members_need_a_group_in_use()
+    public function test_a_members_group_must_be_in_use()
     {
         $admin = $this->admin();
         $deleted = Group::create(['name' => 'Old', 'position' => 3]);
@@ -129,7 +129,7 @@ class GroupTest extends TestCase
 
         $payload = ['name' => 'Mia', 'parent_name' => 'Parent', 'parent_phone' => '070111222'];
 
-        $this->actingAs($admin)->post('/members', $payload)->assertSessionHasErrors('group_id');
+        // (No group at all means all groups: see AllGroupsMemberTest)
         $this->actingAs($admin)->post('/members', [...$payload, 'group_id' => $deleted->id])->assertSessionHasErrors('group_id');
         $this->actingAs($admin)->post('/members', [...$payload, 'group_id' => $this->group('Small pool')])->assertSessionHasNoErrors();
 

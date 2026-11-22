@@ -1,4 +1,5 @@
 import { usePage } from '@inertiajs/react';
+import { t } from '@/lib/i18n';
 
 /** A subgroup of a club group (e.g. "Big pool" → "18:00"). */
 export type ClubSubgroup = {
@@ -19,12 +20,19 @@ export function useGroups(): ClubGroup[] {
     return groups ?? [];
 }
 
-/** A group's name; records of a deleted group fall back to their own copy of it. */
+/**
+ * A group's name; records of a deleted group fall back to their own copy of it.
+ * No group: a member (or their payment) of all groups.
+ */
 export function groupNameOf(
     groups: ClubGroup[],
     id: number | null | undefined,
     fallback?: string | null,
 ): string {
+    if (id === null && !fallback) {
+        return t('All groups');
+    }
+
     return groups.find((group) => group.id === id)?.name ?? fallback ?? '—';
 }
 
