@@ -564,7 +564,6 @@ export default function MembersIndex({ members, userRole }: Props) {
                                     parent_name: e.target.value,
                                 })
                             }
-                            required
                             fullWidth
                             sx={FIELD_SX}
                         />
@@ -578,7 +577,6 @@ export default function MembersIndex({ members, userRole }: Props) {
                                     parent_phone: e.target.value,
                                 })
                             }
-                            required
                             fullWidth
                             sx={FIELD_SX}
                         />
@@ -736,7 +734,6 @@ export default function MembersIndex({ members, userRole }: Props) {
                                         parent_name: e.target.value,
                                     })
                                 }
-                                required
                                 fullWidth
                                 sx={FIELD_SX}
                             />
@@ -750,7 +747,6 @@ export default function MembersIndex({ members, userRole }: Props) {
                                         parent_phone: e.target.value,
                                     })
                                 }
-                                required
                                 fullWidth
                                 sx={FIELD_SX}
                             />

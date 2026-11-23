@@ -81,4 +81,24 @@ class AllGroupsMemberTest extends TestCase
 
         $this->assertDatabaseHas('membership_fees', ['member_id' => $ana->id, 'group_id' => null]);
     }
+
+    public function test_parent_details_are_optional()
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+
+        $this->actingAs($admin)->post('/members', ['name' => 'Ana', 'group_id' => ''])
+            ->assertSessionHasNoErrors();
+        $ana = Member::where('name', 'Ana')->firstOrFail();
+        $this->assertNull($ana->parent_id);
+
+        // Added later, then cleared again
+        $edit = ['name' => 'Ana', 'group_id' => '', 'status' => 'active'];
+        $this->actingAs($admin)->put("/members/{$ana->id}", [...$edit, 'parent_phone' => '070111222'])
+            ->assertSessionHasNoErrors();
+        $this->assertSame('070111222', $ana->fresh()->parent->phone);
+
+        $this->actingAs($admin)->put("/members/{$ana->id}", $edit)->assertSessionHasNoErrors();
+        $this->assertNull($ana->fresh()->parent->phone);
+        $this->actingAs($admin)->get('/members')->assertOk();
+    }
 }
