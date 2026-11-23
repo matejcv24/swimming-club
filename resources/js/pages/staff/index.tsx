@@ -51,6 +51,7 @@ import {
     CloseButton,
     Hint,
     PopupHeader,
+    ShowHistoryButton,
 } from '@/components/popup-ui';
 import { CardsSkeleton } from '@/components/skeletons';
 import { usePagePopup } from '@/hooks/use-page-popup';
@@ -773,6 +774,13 @@ export default function StaffIndex({ staff }: Props) {
                                             color="success"
                                             size="small"
                                         />
+                                        {/* Says plainly that the whole history opens from here */}
+                                        <ShowHistoryButton
+                                            label={t('View full history')}
+                                            onClick={() =>
+                                                setShowSalaryHistoryModal(true)
+                                            }
+                                        />
                                     </ListItem>
                                 </List>
                             ) : (
@@ -860,6 +868,16 @@ export default function StaffIndex({ staff }: Props) {
                                                 )} MKD`}
                                                 color="success"
                                                 size="small"
+                                            />
+                                            {/* Says plainly that the whole history opens from here */}
+                                            <ShowHistoryButton
+                                                label={t('View months')}
+                                                onClick={() => {
+                                                    setSelectedSalaryYear(year);
+                                                    setShowSalaryYearDetailModal(
+                                                        true,
+                                                    );
+                                                }}
                                             />
                                         </ListItem>
                                     ))}

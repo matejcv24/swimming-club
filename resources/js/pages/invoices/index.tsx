@@ -28,7 +28,11 @@ import {
     POPUP_FG,
     popupFg,
 } from '@/components/mui-theme-provider';
-import { CloseButton, PopupHeader } from '@/components/popup-ui';
+import {
+    CloseButton,
+    PopupHeader,
+    ShowHistoryButton,
+} from '@/components/popup-ui';
 import { usePagePopup } from '@/hooks/use-page-popup';
 import { groupNameOf, useGroups } from '@/lib/groups';
 import { locale, pickerLocaleText, t, tc } from '@/lib/i18n';
@@ -510,6 +514,16 @@ export default function InvoicesIndex({ invoices }: Props) {
                                                     sx={chipSx}
                                                 />
                                             </div>
+                                            {/* Says plainly that the whole history opens from here */}
+                                            <ShowHistoryButton
+                                                label={t('View months')}
+                                                onClick={() => {
+                                                    setSelectedYear(year);
+                                                    setShowYearDetailModal(
+                                                        true,
+                                                    );
+                                                }}
+                                            />
                                         </ListItem>
                                     ))}
                                 </List>

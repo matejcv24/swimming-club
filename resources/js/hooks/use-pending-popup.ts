@@ -2,23 +2,23 @@ import { router } from '@inertiajs/react';
 import { useEffect, useState } from 'react';
 import { t } from '@/lib/i18n';
 
-/** The pop-ups the dashboard opens, by address, with the title they show. */
+/** The pop-ups the dashboard opens, by address, with the title they show (in English, translated when shown). */
 const POPUP_TITLES: Record<string, string> = {
-    '/members': t('Members'),
-    '/trainings': t('Trainings'),
-    '/membership-fees': t('Membership Fees'),
-    '/attendance': t('Attendance'),
-    '/unpaid-fees': t('Unpaid Fees'),
-    '/staff': t('Staff'),
-    '/invoices': t('Invoices'),
-    '/profit': t('Profit'),
-    '/groups': t('Groups'),
-    '/notifications': t('Notifications'),
+    '/members': 'Members',
+    '/trainings': 'Trainings',
+    '/membership-fees': 'Membership Fees',
+    '/attendance': 'Attendance',
+    '/unpaid-fees': 'Unpaid Fees',
+    '/staff': 'Staff',
+    '/invoices': 'Invoices',
+    '/profit': 'Profit',
+    '/groups': 'Groups',
+    '/notifications': 'Notifications',
 };
 
 // Pages that arrive faster than this (already loaded, or a quick connection) open
 // straight away, without the placeholder flashing in between.
-const SHOW_AFTER_MS = 120;
+const SHOW_AFTER_MS = 50;
 
 // Whether the placeholder frame was on screen when the page arrived
 let skeletonShown = false;
@@ -40,7 +40,8 @@ export function usePendingPopup(): string | null {
 
         const stopStart = router.on('start', (event) => {
             const visit = event.detail.visit;
-            const popupTitle = POPUP_TITLES[visit.url.pathname];
+            const english = POPUP_TITLES[visit.url.pathname];
+            const popupTitle = english ? t(english) : undefined;
 
             if (
                 !popupTitle ||

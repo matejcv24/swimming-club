@@ -37,7 +37,12 @@ import {
     POPUP_FG,
     popupFg,
 } from '@/components/mui-theme-provider';
-import { CloseButton, Hint, PopupHeader } from '@/components/popup-ui';
+import {
+    CloseButton,
+    Hint,
+    PopupHeader,
+    ShowHistoryButton,
+} from '@/components/popup-ui';
 import { CardsSkeleton } from '@/components/skeletons';
 import { usePagePopup } from '@/hooks/use-page-popup';
 import { groupNameOf, useGroups } from '@/lib/groups';
@@ -100,6 +105,19 @@ const inputSx = {
     '& .MuiInputBase-input': { color: POPUP_FG },
     '& .MuiSvgIcon-root': { color: POPUP_FG },
 };
+
+/**
+ * The member's name stays in place while a wide table is scrolled sideways (on
+ * phones), on the pop-up's own background so the other columns pass under it.
+ */
+const STICKY_FIRST_COLUMN = {
+    position: 'sticky',
+    left: 0,
+    zIndex: 1,
+    bgcolor: POPUP_BG,
+    whiteSpace: 'nowrap',
+    boxShadow: `1px 0 0 ${popupFg(0.12)}`,
+} as const;
 
 const methodLabel = (method: 'cash' | 'card') =>
     method === 'card' ? t('Card') : t('Cash');
@@ -479,65 +497,72 @@ export default function MembershipFeesIndex({
                                             {t('No payments recorded yet.')}
                                         </Typography>
                                     ) : (
-                                        <List disablePadding sx={{ mt: 1 }}>
-                                            <ListItem
-                                                sx={{
-                                                    px: 0,
-                                                    cursor: 'pointer',
-                                                    display: 'flex',
-                                                    flexWrap: 'nowrap',
-                                                    justifyContent:
-                                                        'space-between',
-                                                    alignItems: 'center',
-                                                    gap: 1,
-                                                }}
-                                                onClick={() =>
-                                                    setShowHistoryModal(true)
-                                                }
-                                            >
-                                                <ListItemText
-                                                    primary={
-                                                        <Typography variant="body2">
-                                                            {dayjs(
-                                                                fees[0]
-                                                                    .start_date,
-                                                            ).format(
-                                                                'DD.MM.YYYY',
-                                                            )}{' '}
-                                                            →{' '}
-                                                            {dayjs(
-                                                                fees[0]
-                                                                    .end_date,
-                                                            ).format(
-                                                                'DD.MM.YYYY',
-                                                            )}
-                                                        </Typography>
+                                        <>
+                                            <List disablePadding sx={{ mt: 1 }}>
+                                                <ListItem
+                                                    sx={{
+                                                        px: 0,
+                                                        cursor: 'pointer',
+                                                        display: 'flex',
+                                                        flexWrap: 'nowrap',
+                                                        justifyContent:
+                                                            'space-between',
+                                                        alignItems: 'center',
+                                                        gap: 1,
+                                                    }}
+                                                    onClick={() =>
+                                                        setShowHistoryModal(
+                                                            true,
+                                                        )
                                                     }
-                                                    secondary={
-                                                        fees.length > 1 ? (
-                                                            <Typography
-                                                                variant="caption"
-                                                                color="primary"
-                                                            >
-                                                                {t(
-                                                                    'Click to see all :count payments',
-                                                                    {
-                                                                        count: fees.length,
-                                                                    },
+                                                >
+                                                    <ListItemText
+                                                        primary={
+                                                            <Typography variant="body2">
+                                                                {dayjs(
+                                                                    fees[0]
+                                                                        .start_date,
+                                                                ).format(
+                                                                    'DD.MM.YYYY',
+                                                                )}{' '}
+                                                                →{' '}
+                                                                {dayjs(
+                                                                    fees[0]
+                                                                        .end_date,
+                                                                ).format(
+                                                                    'DD.MM.YYYY',
                                                                 )}
                                                             </Typography>
-                                                        ) : null
-                                                    }
-                                                    sx={{
-                                                        flex: '1 1 auto',
-                                                        minWidth: 0,
-                                                    }}
-                                                />
-                                                <PaymentMethodBadge
-                                                    fee={fees[0]}
-                                                />
-                                            </ListItem>
-                                        </List>
+                                                        }
+                                                        sx={{
+                                                            flex: '1 1 auto',
+                                                            minWidth: 0,
+                                                        }}
+                                                    />
+                                                    <PaymentMethodBadge
+                                                        fee={fees[0]}
+                                                    />
+                                                </ListItem>
+                                            </List>
+                                            {/* The whole payment history opens from here */}
+                                            {fees.length > 1 && (
+                                                <div className="mt-2 flex justify-center">
+                                                    <ShowHistoryButton
+                                                        label={t(
+                                                            'View all :count payments',
+                                                            {
+                                                                count: fees.length,
+                                                            },
+                                                        )}
+                                                        onClick={() =>
+                                                            setShowHistoryModal(
+                                                                true,
+                                                            )
+                                                        }
+                                                    />
+                                                </div>
+                                            )}
+                                        </>
                                     )}
                                 </div>
                                 <Divider />
@@ -720,6 +745,16 @@ export default function MembershipFeesIndex({
                                                     )}
                                                     color="success"
                                                     size="small"
+                                                />
+                                                {/* Says plainly that the whole history opens from here */}
+                                                <ShowHistoryButton
+                                                    label={t('View months')}
+                                                    onClick={() => {
+                                                        setSelectedYear(year);
+                                                        setShowYearHistoryModal(
+                                                            true,
+                                                        );
+                                                    }}
                                                 />
                                             </ListItem>
                                         ))}
@@ -1057,6 +1092,14 @@ export default function MembershipFeesIndex({
                                         color="success"
                                         size="small"
                                     />
+                                    <ShowHistoryButton
+                                        label={t('View payments')}
+                                        onClick={() => {
+                                            setSelectedMonth(month);
+                                            setMonthPoolFilter('all');
+                                            setShowMonthDetailModal(true);
+                                        }}
+                                    />
                                 </ListItem>
                             );
                         })}
@@ -1146,6 +1189,7 @@ export default function MembershipFeesIndex({
                                         sx={{
                                             color: POPUP_FG,
                                             fontWeight: 'bold',
+                                            ...STICKY_FIRST_COLUMN,
                                         }}
                                     >
                                         {t('Member')}
@@ -1211,7 +1255,13 @@ export default function MembershipFeesIndex({
                                 )}
                                 {filteredSelectedMonthFees.map((fee) => (
                                     <TableRow key={fee.id}>
-                                        <TableCell sx={{ color: POPUP_FG }}>
+                                        <TableCell
+                                            sx={{
+                                                color: POPUP_FG,
+                                                fontWeight: 600,
+                                                ...STICKY_FIRST_COLUMN,
+                                            }}
+                                        >
                                             {fee.member?.name ??
                                                 fee.member_name ??
                                                 '—'}

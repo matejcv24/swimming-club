@@ -198,7 +198,8 @@ function ActionButton({
     return action.href ? (
         <Link
             href={action.href}
-            prefetch
+            prefetch={['mount', 'hover']}
+            cacheFor={['30s', '10m']}
             aria-label={action.label}
             className={className}
         >
@@ -216,7 +217,7 @@ function ActionButton({
     );
 }
 
-/** Wide screens (laptops and up): small buttons in the top bar. */
+/** Wide screens (laptops and up): the phone bar's buttons, in a row in the top bar. */
 export function QuickActionsTopBar() {
     const { actions, picker } = useQuickActions();
 
@@ -229,10 +230,15 @@ export function QuickActionsTopBar() {
                 <ActionButton
                     key={action.key}
                     action={action}
-                    className="flex h-8 items-center gap-1.5 rounded-full border border-hydra-blue/30 px-3 text-sm font-semibold text-hydra-blue transition hover:bg-hydra-blue/10 dark:border-sky-200/25 dark:text-sky-100 dark:hover:bg-sky-200/10 [&_svg]:text-[18px]"
+                    className="flex h-9 items-center gap-2 rounded-full py-1 pr-3 pl-1 text-sm font-semibold text-hydra-navy transition hover:bg-black/5 dark:text-[#e8eefb] dark:hover:bg-white/10"
                 >
-                    {action.icon}
-                    {action.label}
+                    {/* The same colored circle as in the phone bar */}
+                    <span
+                        className={`flex size-7 items-center justify-center rounded-full text-[17px] ${action.tint}`}
+                    >
+                        {action.icon}
+                    </span>
+                    {action.short}
                 </ActionButton>
             ))}
             {picker}

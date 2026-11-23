@@ -66,7 +66,6 @@
     "Choose where its members go.": "Изберете каде да се преместат членовите.",
     "Clear": "Исчисти",
     "Click here to resend the verification email.": "Кликнете тука за повторно да ја испратите е-поштата за потврда.",
-    "Click to see all :count payments": "Прикажи ги сите :count уплати",
     "Close": "Затвори",
     "Close notifications": "Затвори известувања",
     "Coach": "Тренер",
@@ -386,5 +385,10 @@
     "A new member of the club": "Нов член на клубот",
     "Active members train and pay": "Активниот член тренира и плаќа",
     "Inactive members don't train for now": "Неактивниот член засега не тренира",
-    "Payment": "Уплата"
+    "Payment": "Уплата",
+    "View full history": "Види ја целата историја",
+    "View months": "Види ги месеците",
+    "View all :count payments": "Види ги сите :count уплати",
+    "View dates": "Види ги датумите",
+    "View payments": "Види ги уплатите"
 }
