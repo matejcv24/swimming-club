@@ -29,6 +29,7 @@ import {
     CloseButton,
     PillSearchField,
     PopupHeader,
+    ShowHistoryButton,
 } from '@/components/popup-ui';
 import { CardsSkeleton } from '@/components/skeletons';
 import { usePagePopup } from '@/hooks/use-page-popup';
@@ -443,6 +444,15 @@ export default function AttendanceIndex({ members }: Props) {
                                                 size="small"
                                                 sx={chipSx}
                                             />
+                                            {/* Says plainly that the whole history opens from here */}
+                                            <ShowHistoryButton
+                                                label={t('View full history')}
+                                                onClick={() =>
+                                                    setShowCurrentYearMonthsModal(
+                                                        true,
+                                                    )
+                                                }
+                                            />
                                         </ListItem>
                                     </List>
                                 ) : (
@@ -533,6 +543,16 @@ export default function AttendanceIndex({ members }: Props) {
                                                     size="small"
                                                     sx={chipSx}
                                                 />
+                                                {/* Says plainly that the whole history opens from here */}
+                                                <ShowHistoryButton
+                                                    label={t('View months')}
+                                                    onClick={() => {
+                                                        setSelectedYear(year);
+                                                        setShowYearDetailModal(
+                                                            true,
+                                                        );
+                                                    }}
+                                                />
                                             </ListItem>
                                         ))}
                                     </List>
@@ -611,6 +631,13 @@ export default function AttendanceIndex({ members }: Props) {
                                         color="success"
                                         size="small"
                                         sx={chipSx}
+                                    />
+                                    <ShowHistoryButton
+                                        label={t('View dates')}
+                                        onClick={() => {
+                                            setSelectedMonth(month);
+                                            setShowMonthDatesModal(true);
+                                        }}
                                     />
                                 </ListItem>
                             );
@@ -750,6 +777,13 @@ export default function AttendanceIndex({ members }: Props) {
                                         color="success"
                                         size="small"
                                         sx={chipSx}
+                                    />
+                                    <ShowHistoryButton
+                                        label={t('View dates')}
+                                        onClick={() => {
+                                            setSelectedMonth(month);
+                                            setShowMonthDatesModal(true);
+                                        }}
                                     />
                                 </ListItem>
                             );

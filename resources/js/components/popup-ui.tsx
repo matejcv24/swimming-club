@@ -1,4 +1,6 @@
+import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import CloseIcon from '@mui/icons-material/Close';
+import HistoryIcon from '@mui/icons-material/History';
 import SearchIcon from '@mui/icons-material/Search';
 import Button from '@mui/material/Button';
 import IconButton from '@mui/material/IconButton';
@@ -90,27 +92,53 @@ export function AddButton({
     );
 }
 
+/**
+ * Under the latest month (or a year) of a history: opens the whole history, so
+ * it's plain that there is more to see.
+ */
+export function ShowHistoryButton({
+    label,
+    onClick,
+}: {
+    label: string;
+    onClick: () => void;
+}) {
+    return (
+        <button
+            type="button"
+            onClick={(event) => {
+                // The row around it may open the same history: once is enough
+                event.stopPropagation();
+                onClick();
+            }}
+            className="inline-flex cursor-pointer items-center gap-1 py-1 text-[13px] font-semibold text-hydra-blue underline-offset-4 transition hover:underline dark:text-sky-300"
+        >
+            <HistoryIcon sx={{ fontSize: 17 }} />
+            {label}
+            <ChevronRightIcon sx={{ fontSize: 17 }} />
+        </button>
+    );
+}
+
 /** Soft round close button for every pop-up. */
 export function CloseButton({ sx, ...props }: IconButtonProps) {
     return (
-        <Hint title={t('Close')}>
-            <IconButton
-                aria-label={t('Close')}
-                {...props}
-                sx={[
-                    {
-                        width: 34,
-                        height: 34,
-                        bgcolor: 'var(--popup-ghost)',
-                        color: 'var(--popup-muted)',
-                        '&:hover': { bgcolor: 'var(--popup-ghost-hover)' },
-                    },
-                    ...(Array.isArray(sx) ? sx : [sx]),
-                ]}
-            >
-                <CloseIcon fontSize="small" />
-            </IconButton>
-        </Hint>
+        <IconButton
+            aria-label={t('Close')}
+            {...props}
+            sx={[
+                {
+                    width: 34,
+                    height: 34,
+                    bgcolor: 'var(--popup-ghost)',
+                    color: 'var(--popup-muted)',
+                    '&:hover': { bgcolor: 'var(--popup-ghost-hover)' },
+                },
+                ...(Array.isArray(sx) ? sx : [sx]),
+            ]}
+        >
+            <CloseIcon fontSize="small" />
+        </IconButton>
     );
 }
 

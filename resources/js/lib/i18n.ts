@@ -8,9 +8,10 @@ export type Locale = 'mk' | 'en';
 
 /**
  * The app's language, chosen by the server for this page load (the MK / EN switch
- * in the header saves it and reloads the page).
+ * in the header saves it and reloads the page). Set from the page itself before
+ * it is drawn (see setLocale), so the server's pre-render and the browser agree.
  */
-export const locale: Locale =
+export let locale: Locale =
     typeof document !== 'undefined' && document.documentElement.lang === 'en'
         ? 'en'
         : 'mk';
@@ -30,11 +31,16 @@ dayjs.locale(
     true,
 );
 
-// Month and day names, and the first day of the week, in the app's language
-dayjs.locale(locale);
+let texts: Record<string, string> = {};
 
-const texts: Record<string, string> =
-    locale === 'mk' ? (mkTexts as Record<string, string>) : {};
+/** Switches the texts, and the month and day names, to a language. */
+export function setLocale(next: Locale) {
+    locale = next;
+    texts = next === 'mk' ? (mkTexts as Record<string, string>) : {};
+    // Month and day names, and the first day of the week, in the app's language
+    dayjs.locale(next);
+    Object.assign(pickerLocaleText, pickerTexts());
+}
 
 /** Puts the values into ":name" placeholders. */
 function fill(text: string, params?: Record<string, string | number>): string {
@@ -89,8 +95,7 @@ export function changeLocale(next: Locale) {
     window.location.reload();
 }
 
-/** Labels of the date pickers' buttons and titles, in the app's language. */
-export const pickerLocaleText = {
+const pickerTexts = () => ({
     cancelButtonLabel: t('Cancel'),
     okButtonLabel: t('OK'),
     clearButtonLabel: t('Clear'),
@@ -98,4 +103,9 @@ export const pickerLocaleText = {
     datePickerToolbarTitle: t('Select date'),
     previousMonth: t('Previous month'),
     nextMonth: t('Next month'),
-};
+});
+
+/** Labels of the date pickers' buttons and titles, in the app's language. */
+export const pickerLocaleText = pickerTexts();
+
+setLocale(locale);

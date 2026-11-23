@@ -16,7 +16,11 @@ import {
     POPUP_BG,
     popupFg,
 } from '@/components/mui-theme-provider';
-import { CloseButton, PopupHeader } from '@/components/popup-ui';
+import {
+    CloseButton,
+    PopupHeader,
+    ShowHistoryButton,
+} from '@/components/popup-ui';
 import { usePagePopup } from '@/hooks/use-page-popup';
 import { t, tc } from '@/lib/i18n';
 
@@ -258,6 +262,13 @@ export default function ProfitIndex({ profits }: Props) {
                                                 sx={chipSx}
                                             />
                                         </div>
+                                        {/* Says plainly that the whole history opens from here */}
+                                        <ShowHistoryButton
+                                            label={t('View full history')}
+                                            onClick={() =>
+                                                setShowHistoryModal(true)
+                                            }
+                                        />
                                     </ListItem>
                                 </List>
                             ) : (
@@ -346,6 +357,16 @@ export default function ProfitIndex({ profits }: Props) {
                                                 color="success"
                                                 size="small"
                                                 sx={chipSx}
+                                            />
+                                            {/* Says plainly that the whole history opens from here */}
+                                            <ShowHistoryButton
+                                                label={t('View months')}
+                                                onClick={() => {
+                                                    setSelectedYear(year);
+                                                    setShowYearDetailModal(
+                                                        true,
+                                                    );
+                                                }}
                                             />
                                         </ListItem>
                                     ))}

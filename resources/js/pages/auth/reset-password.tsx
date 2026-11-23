@@ -89,6 +89,6 @@ export default function ResetPassword({ token, email }: Props) {
 }
 
 ResetPassword.layout = {
-    title: t('Reset password'),
-    description: t('Please enter your new password below'),
+    title: 'Reset password',
+    description: 'Please enter your new password below',
 };

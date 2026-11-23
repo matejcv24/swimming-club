@@ -25,11 +25,6 @@ class MemberController extends Controller
         ]);
     }
 
-    public function create()
-    {
-        //
-    }
-
     public function store(Request $request)
     {
         $validated = $request->validate([
@@ -85,16 +80,6 @@ class MemberController extends Controller
         }
 
         return back()->with('success', 'Member added successfully!');
-    }
-
-    public function show(string $id)
-    {
-        //
-    }
-
-    public function edit(string $id)
-    {
-        //
     }
 
     public function update(Request $request, Member $member)

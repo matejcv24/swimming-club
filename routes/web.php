@@ -25,18 +25,19 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('/notifications/{notification}/read', [NotificationController::class, 'markAsRead'])->name('notifications.read');
 
     Route::middleware(['role:admin,coach'])->group(function () {
-        Route::resource('members', MemberController::class)->except(['destroy']);
+        // Only what the app uses: other URLs answer "not found", never an error
+        Route::resource('members', MemberController::class)->only(['index', 'store', 'update']);
         Route::post('/parents', [ClubParentController::class, 'store'])->name('parents.store');
         Route::get('/attendance', [AttendanceController::class, 'index'])->name('attendance.index');
         Route::get('/attendance/by-member/{member}', [AttendanceController::class, 'byMember'])->name('attendance.byMember');
 
         Route::get('/trainings/by-date', [TrainingController::class, 'getByDate'])->name('trainings.byDate');
         Route::get('/trainings/days', [TrainingController::class, 'recordedDays'])->name('trainings.days');
-        Route::resource('trainings', TrainingController::class);
+        Route::resource('trainings', TrainingController::class)->only(['index', 'store']);
 
         Route::get('/membership-fees/by-member/{member}', [MembershipFeeController::class, 'getByMember'])
             ->name('membership-fees.byMember');
-        Route::resource('membership-fees', MembershipFeeController::class)->except(['update']);
+        Route::resource('membership-fees', MembershipFeeController::class)->only(['index', 'store']);
 
         Route::get('/unpaid-fees', [UnpaidFeeController::class, 'index'])->name('unpaid-fees.index');
     });

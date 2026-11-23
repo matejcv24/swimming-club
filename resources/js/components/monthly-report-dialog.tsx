@@ -30,12 +30,14 @@ const MONTHS = [
     'December',
 ];
 
-// The months as shown in the app's language (the file name keeps English ones)
-const MONTH_NAMES = Array.from({ length: 12 }, (_, i) => {
-    const name = dayjs().month(i).format('MMMM');
+// The months as shown in the app's language (the file name keeps English ones),
+// worked out when shown so they follow the page's language
+const monthNames = () =>
+    Array.from({ length: 12 }, (_, i) => {
+        const name = dayjs().month(i).format('MMMM');
 
-    return name.charAt(0).toUpperCase() + name.slice(1);
-});
+        return name.charAt(0).toUpperCase() + name.slice(1);
+    });
 
 type Props = {
     open: boolean;
@@ -158,13 +160,13 @@ export default function MonthlyReportDialog({
                                     setMonth(Number(e.target.value))
                                 }
                             >
-                                {MONTH_NAMES.slice(0, lastSelectableMonth).map(
-                                    (name, i) => (
+                                {monthNames()
+                                    .slice(0, lastSelectableMonth)
+                                    .map((name, i) => (
                                         <MenuItem key={name} value={i + 1}>
                                             {name}
                                         </MenuItem>
-                                    ),
-                                )}
+                                    ))}
                             </Select>
                         </FormControl>
                     </div>

@@ -108,6 +108,6 @@ export default function Login({ status, canResetPassword }: Props) {
 }
 
 Login.layout = {
-    title: t('Welcome back'),
-    description: t('Log in to SC Hydra'),
+    title: 'Welcome back',
+    description: 'Log in to SC Hydra',
 };

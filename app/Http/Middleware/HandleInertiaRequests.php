@@ -57,6 +57,8 @@ class HandleInertiaRequests extends Middleware
     {
         return [
             ...parent::share($request),
+            // The app's language (mk / en), so the pages are drawn in it everywhere
+            'locale' => app()->getLocale(),
             'auth' => [
                 'user' => $request->user(),
             ],

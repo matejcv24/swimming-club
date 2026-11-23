@@ -13,6 +13,7 @@ import TrendingDownIcon from '@mui/icons-material/TrendingDown';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import WarningIcon from '@mui/icons-material/Warning';
 import WorkspacesIcon from '@mui/icons-material/Workspaces';
+import { useEffect } from 'react';
 import type { ReactNode } from 'react';
 import { IconBadge } from '@/components/popup-ui';
 import { useGroups } from '@/lib/groups';
@@ -38,14 +39,16 @@ const formatCurrency = (value: number): string =>
         maximumFractionDigits: 2,
     }).format(value);
 
-// Sections open inside the app (no full page reload) and start loading as soon as the
-// pointer is over a card. Loaded pages are kept only briefly so numbers are never stale.
-const PREFETCH_FOR = '5s';
+// Sections open inside the app (no full page reload) and are loaded in the
+// background as soon as the dashboard shows (phones have no hover), so a tap opens
+// them at once. A loaded copy is used for 30 seconds; after that it still opens at
+// once and is refreshed right behind it. Saving anything clears the copies (app.tsx).
+const PREFETCH_FOR: ['30s', '10m'] = ['30s', '10m'];
 const prefetchOnHover = (href: string) => () =>
     router.prefetch(href, { method: 'get' }, { cacheFor: PREFETCH_FOR });
 
 const card =
-    'rounded-2xl border border-border bg-card text-left shadow-sm transition duration-200 ease-in-out hover:-translate-y-0.5 hover:shadow-lg cursor-pointer';
+    'rounded-2xl border border-border bg-card text-left shadow-sm transition duration-200 ease-in-out hover:-translate-y-0.5 hover:shadow-lg active:scale-[0.98] active:duration-75 cursor-pointer';
 
 // Icons and badges grow on computer screens, where the cards fill the screen
 const iconSx = { fontSize: { xs: 20, md: 28 } };
@@ -157,7 +160,7 @@ function NavCard({
     return (
         <Link
             href={href}
-            prefetch
+            prefetch={['mount', 'hover']}
             cacheFor={PREFETCH_FOR}
             preserveScroll
             className={`${card} flex min-h-0 items-center gap-3 p-5 md:gap-5 md:px-7 md:py-2 ${wide ? 'md:col-span-2' : ''} ${className}`}
@@ -203,6 +206,22 @@ export function DashboardCards({
                   .filter(Boolean)
                   .join(' · ');
     const profitDown = profitTotal < 0;
+
+    // The number cards open their pop-ups through a click, not a link: load
+    // those in the background too, so they open at once on phones as well
+    useEffect(() => {
+        const pages = isAdmin
+            ? ['/profit', '/invoices', '/unpaid-fees']
+            : ['/unpaid-fees'];
+
+        for (const href of pages) {
+            router.prefetch(
+                href,
+                { method: 'get' },
+                { cacheFor: PREFETCH_FOR },
+            );
+        }
+    }, [isAdmin]);
 
     return (
         // Phones: one column. Computers: two columns filling exactly the screen below

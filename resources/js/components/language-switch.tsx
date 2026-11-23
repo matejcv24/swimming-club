@@ -83,7 +83,7 @@ export function LanguageSwitch() {
                 <DropdownMenuTrigger asChild>
                     <button
                         type="button"
-                        className="flex h-9 items-center gap-1.5 rounded-md px-2 text-xs font-bold transition hover:bg-sidebar-accent"
+                        className="flex h-9 cursor-pointer items-center gap-1.5 rounded-md px-2 text-xs font-bold transition hover:bg-sidebar-accent"
                         aria-label={t('Language')}
                     >
                         <current.Flag className={flagClass} />
