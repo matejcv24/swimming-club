@@ -46,14 +46,12 @@ class MemberController extends Controller
                 Rule::exists('groups', 'id')->whereNull('deleted_at')->where('parent_id', (int) $request->input('group_id')),
             ],
             'status' => ['nullable', 'in:active,inactive'],
-            'parent_name' => ['required', 'string', 'max:255'],
-            'parent_phone' => ['required', 'string', 'max:20'],
+            // A parent's details are optional
+            'parent_name' => ['nullable', 'string', 'max:255'],
+            'parent_phone' => ['nullable', 'string', 'max:20'],
         ]);
 
-        $parent = ClubParent::create([
-            'name' => $validated['parent_name'],
-            'phone' => $validated['parent_phone'],
-        ]);
+        $parent = $this->newParent($validated);
 
         $member = Member::create([
             'name' => $validated['name'],
@@ -61,7 +59,7 @@ class MemberController extends Controller
             // A subgroup belongs to one group, so all groups means none
             'subgroup_id' => isset($validated['group_id']) ? ($validated['subgroup_id'] ?? null) : null,
             'status' => $validated['status'] ?? 'active',
-            'parent_id' => $parent->id,
+            'parent_id' => $parent?->id,
         ]);
 
         if (Auth::user()?->role === 'coach') {
@@ -105,8 +103,9 @@ class MemberController extends Controller
                 Rule::exists('groups', 'id')->whereNull('deleted_at')->where('parent_id', (int) $request->input('group_id')),
             ],
             'status' => ['required', 'in:active,inactive'],
-            'parent_name' => ['required', 'string', 'max:255'],
-            'parent_phone' => ['required', 'string', 'max:20'],
+            // A parent's details are optional
+            'parent_name' => ['nullable', 'string', 'max:255'],
+            'parent_phone' => ['nullable', 'string', 'max:20'],
         ]);
 
         $changes = [];
@@ -127,11 +126,11 @@ class MemberController extends Controller
             $changes[] = 'status';
         }
 
-        if (($member->parent?->name ?? '') !== $validated['parent_name']) {
+        if (($member->parent?->name ?? '') !== ($validated['parent_name'] ?? '')) {
             $changes[] = 'parent name';
         }
 
-        if (($member->parent?->phone ?? '') !== $validated['parent_phone']) {
+        if (($member->parent?->phone ?? '') !== ($validated['parent_phone'] ?? '')) {
             $changes[] = 'parent phone';
         }
 
@@ -145,9 +144,12 @@ class MemberController extends Controller
 
         if ($member->parent) {
             $member->parent->update([
-                'name' => $validated['parent_name'],
-                'phone' => $validated['parent_phone'],
+                'name' => $validated['parent_name'] ?? '',
+                'phone' => $validated['parent_phone'] ?? null,
             ]);
+        } elseif ($parent = $this->newParent($validated)) {
+            // Parent details added later
+            $member->update(['parent_id' => $parent->id]);
         }
 
         if (Auth::user()?->role === 'coach' && count($changes) > 0) {
@@ -197,5 +199,22 @@ class MemberController extends Controller
         });
 
         return back()->with('success', 'Member deleted!');
+    }
+
+    /**
+     * A parent record for the given details, or none when both are left empty.
+     *
+     * @param  array<string, mixed>  $validated
+     */
+    private function newParent(array $validated): ?ClubParent
+    {
+        if (blank($validated['parent_name'] ?? null) && blank($validated['parent_phone'] ?? null)) {
+            return null;
+        }
+
+        return ClubParent::create([
+            'name' => $validated['parent_name'] ?? '',
+            'phone' => $validated['parent_phone'] ?? null,
+        ]);
     }
 }

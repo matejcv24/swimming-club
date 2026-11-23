@@ -114,7 +114,7 @@ export function MemberDetailsDialog({
                                 {t('Parent')}
                             </Typography>
                             <Typography variant="body1" fontWeight="bold">
-                                {member.parent?.name ?? '—'}
+                                {member.parent?.name || '—'}
                             </Typography>
                         </div>
                         <div>
