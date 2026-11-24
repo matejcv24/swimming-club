@@ -17,6 +17,9 @@ createInertiaApp({
                 return AuthLayout;
             case name.startsWith('settings/'):
                 return [AppLayout, SettingsLayout];
+            // Pages for people without an account (a parent's view): their own look
+            case name.startsWith('public/'):
+                return null;
             default:
                 return AppLayout;
         }

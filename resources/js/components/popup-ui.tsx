@@ -11,6 +11,7 @@ import Tabs from '@mui/material/Tabs';
 import Tooltip from '@mui/material/Tooltip';
 import { useEffect, useRef, useState } from 'react';
 import type { ReactElement, ReactNode } from 'react';
+import { POPUP_FG, popupFg } from '@/components/mui-theme-provider';
 import { t } from '@/lib/i18n';
 import { clearOnClick } from '@/lib/search-field';
 
@@ -66,6 +67,16 @@ export function Hint({
         </Tooltip>
     );
 }
+
+/** Outlined text fields in the pop-up's colors, like the Group field. */
+export const FIELD_SX = {
+    '& .MuiOutlinedInput-root': {
+        color: POPUP_FG,
+        '& fieldset': { borderColor: popupFg(0.3) },
+        '&:hover fieldset': { borderColor: popupFg(0.6) },
+    },
+    '& .MuiInputLabel-root': { color: popupFg(0.5) },
+} as const;
 
 /** The "add" button of a pop-up's header: just its icon, explained by a hint. */
 export function AddButton({

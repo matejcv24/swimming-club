@@ -2,10 +2,12 @@
 
 namespace Tests\Feature;
 
+use App\Models\Invitation;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Mail;
 use Tests\TestCase;
 
 class StaffTest extends TestCase
@@ -25,20 +27,29 @@ class StaffTest extends TestCase
         $this->assertDatabaseMissing('users', ['email' => 'someone@example.com']);
     }
 
-    public function test_admin_can_create_coach_who_can_log_in()
+    public function test_an_invited_coach_sets_a_password_and_can_log_in()
     {
+        Mail::fake();
         $admin = User::factory()->create(['role' => 'admin']);
 
-        $this->actingAs($admin)->post('/staff', [
+        $this->actingAs($admin)->post('/staff/invitations', [
             'name' => 'New Coach',
             'email' => 'coach@example.com',
-            'password' => 'secret-pass',
             'role' => 'coach',
             'all_groups' => true,
         ])->assertSessionHasNoErrors();
 
+        auth()->logout();
+        $token = Invitation::firstOrFail()->token;
+
+        $this->post("/invitation/{$token}", [
+            'password' => 'secret-pass',
+            'password_confirmation' => 'secret-pass',
+        ])->assertRedirect('/dashboard');
+
         $coach = User::where('email', 'coach@example.com')->firstOrFail();
         $this->assertSame('coach', $coach->role);
+        $this->assertAuthenticatedAs($coach);
 
         auth()->logout();
 
@@ -46,30 +57,35 @@ class StaffTest extends TestCase
             'email' => 'coach@example.com',
             'password' => 'secret-pass',
         ])->assertRedirect(route('dashboard', absolute: false));
-
-        $this->assertAuthenticatedAs($coach);
     }
 
-    public function test_coach_password_must_be_at_least_8_characters()
+    public function test_an_invited_persons_password_must_be_at_least_8_characters()
     {
+        Mail::fake();
         $admin = User::factory()->create(['role' => 'admin']);
+        $this->actingAs($admin)->post('/staff/invitations', ['name' => 'Coach', 'email' => 'coach@example.com', 'role' => 'admin']);
+        auth()->logout();
 
-        $this->actingAs($admin)->post('/staff', [
-            'name' => 'New Coach',
-            'email' => 'coach@example.com',
+        $this->post('/invitation/'.Invitation::firstOrFail()->token, [
             'password' => 'short',
+            'password_confirmation' => 'short',
         ])->assertSessionHasErrors('password');
+
+        $this->assertDatabaseMissing('users', ['email' => 'coach@example.com']);
     }
 
-    public function test_coach_cannot_create_staff()
+    public function test_coach_cannot_invite_staff()
     {
         $coach = User::factory()->create(['role' => 'coach']);
 
-        $this->actingAs($coach)->post('/staff', [
+        $this->actingAs($coach)->post('/staff/invitations', [
             'name' => 'Another Coach',
             'email' => 'another@example.com',
-            'password' => 'secret-pass',
+            'role' => 'coach',
+            'all_groups' => true,
         ])->assertForbidden();
+
+        $this->assertSame(0, Invitation::count());
     }
 
     public function test_admin_can_update_coach_name_and_email_without_changing_password()
@@ -160,17 +176,24 @@ class StaffTest extends TestCase
         ])->assertForbidden();
     }
 
-    public function test_a_new_staff_member_needs_a_role_and_admins_need_no_groups()
+    public function test_an_invitation_needs_a_role_and_admins_need_no_groups()
     {
+        Mail::fake();
         $admin = User::factory()->create(['role' => 'admin']);
-        $data = ['name' => 'Ana', 'email' => 'ana@example.com', 'password' => 'secret-pass'];
+        $data = ['name' => 'Ana', 'email' => 'ana@example.com'];
 
-        $this->actingAs($admin)->post('/staff', $data)->assertSessionHasErrors('role');
-        $this->actingAs($admin)->post('/staff', [...$data, 'role' => 'owner'])->assertSessionHasErrors('role');
+        $this->actingAs($admin)->post('/staff/invitations', $data)->assertSessionHasErrors('role');
+        $this->actingAs($admin)->post('/staff/invitations', [...$data, 'role' => 'owner'])->assertSessionHasErrors('role');
 
         // A coach still needs groups; an admin doesn't
-        $this->actingAs($admin)->post('/staff', [...$data, 'role' => 'coach'])->assertSessionHasErrors('all_groups');
-        $this->actingAs($admin)->post('/staff', [...$data, 'role' => 'admin'])->assertSessionHasNoErrors();
+        $this->actingAs($admin)->post('/staff/invitations', [...$data, 'role' => 'coach'])->assertSessionHasErrors('all_groups');
+        $this->actingAs($admin)->post('/staff/invitations', [...$data, 'role' => 'admin'])->assertSessionHasNoErrors();
+
+        auth()->logout();
+        $this->post('/invitation/'.Invitation::firstOrFail()->token, [
+            'password' => 'secret-pass',
+            'password_confirmation' => 'secret-pass',
+        ]);
 
         $ana = User::where('email', 'ana@example.com')->firstOrFail();
         $this->assertSame('admin', $ana->role);

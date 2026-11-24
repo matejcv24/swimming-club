@@ -239,11 +239,6 @@ export default function AttendanceIndex({ members }: Props) {
                         subtitle={`${activeFilter === 'all' ? t('All groups') : groupNameOf(groups, activeFilter)} · ${tc(':count member|:count members', filteredMembers.length)}`}
                         onClose={popup.close}
                     />
-                    <PillSearchField
-                        value={attendanceSearch}
-                        onChange={setAttendanceSearch}
-                        placeholder={t('Search member...')}
-                    />
                     {groups.length > 0 && (
                         <div className="px-[18px] pt-4 pb-3">
                             <FormControl fullWidth size="small">
@@ -294,6 +289,11 @@ export default function AttendanceIndex({ members }: Props) {
                             </FormControl>
                         </div>
                     )}
+                    <PillSearchField
+                        value={attendanceSearch}
+                        onChange={setAttendanceSearch}
+                        placeholder={t('Search member...')}
+                    />
                 </DialogTitle>
 
                 <DialogContent sx={{ p: 0, overflowY: 'auto', flex: 1 }}>

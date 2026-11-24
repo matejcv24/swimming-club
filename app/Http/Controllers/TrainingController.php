@@ -36,7 +36,12 @@ class TrainingController extends Controller
     {
         $validated = $request->validate([
             'date' => ['required', 'date'],
-            'group_id' => ['required', Rule::exists('groups', 'id')->whereNull('parent_id')],
+            // A club without groups records attendance for everyone ("All groups")
+            'group_id' => [
+                Rule::requiredIf(fn () => self::clubHasGroups()),
+                'nullable',
+                Rule::exists('groups', 'id')->whereNull('parent_id'),
+            ],
             // Optional: a training of one subgroup (e.g. "18:00") instead of the whole group
             'subgroup_id' => ['nullable', Rule::exists('groups', 'id')->where('parent_id', (int) $request->input('group_id'))],
             // Present but may be empty: unticking everyone clears the day's attendance
@@ -47,8 +52,12 @@ class TrainingController extends Controller
         // Coaches record attendance only for their groups and their members. Members
         // already recorded on that day may stay, even if they have since moved to a
         // group the coach doesn't have (past attendance belongs to the day).
-        abort_unless(Auth::user()->canSeeGroup($validated['group_id']), 403);
-        $alreadyRecorded = $this->recordedOn($validated['date'], $validated['group_id'], $validated['subgroup_id'] ?? null);
+        $groupId = $validated['group_id'] ?? null;
+        abort_unless(
+            $groupId === null ? Auth::user()->visibleGroupIds() === null : Auth::user()->canSeeGroup($groupId),
+            403,
+        );
+        $alreadyRecorded = $this->recordedOn($validated['date'], $groupId, $validated['subgroup_id'] ?? null);
         abort_if(
             Auth::user()->visibleGroupIds() !== null
                 && Member::whereIn('id', $validated['member_ids'])
@@ -63,7 +72,7 @@ class TrainingController extends Controller
         $subgroupId = $validated['subgroup_id'] ?? null;
 
         if (empty($validated['member_ids'])) {
-            $existing = $this->trainingOn($validated['date'], $validated['group_id'], $subgroupId);
+            $existing = $this->trainingOn($validated['date'], $groupId, $subgroupId);
 
             if ($existing) {
                 Attendance::where('training_id', $existing->id)->delete();
@@ -75,10 +84,10 @@ class TrainingController extends Controller
         $training = null;
 
         if (! empty($validated['member_ids'])) {
-            $training = $this->trainingOn($validated['date'], $validated['group_id'], $subgroupId)
+            $training = $this->trainingOn($validated['date'], $groupId, $subgroupId)
                 ?? Training::create([
                     'date' => $validated['date'],
-                    'group_id' => $validated['group_id'],
+                    'group_id' => $groupId,
                     'subgroup_id' => $subgroupId,
                     'coach_id' => Auth::id(),
                 ]);
@@ -101,7 +110,7 @@ class TrainingController extends Controller
         if (Auth::user()?->role === 'coach') {
             $admins = User::where('role', 'admin')->active()->get();
             $formattedDate = Carbon::parse($validated['date'])->format('d.m.Y');
-            $groupName = Group::withTrashed()->find($validated['group_id'])?->name ?? 'group';
+            $groupName = $groupId ? (Group::withTrashed()->find($groupId)?->name ?? 'group') : 'All groups';
 
             if ($subgroupId) {
                 $groupName .= ' · '.Group::withTrashed()->find($subgroupId)?->name;
@@ -110,7 +119,7 @@ class TrainingController extends Controller
             foreach ($admins as $admin) {
                 $admin->notify(new TrainingAttendanceNotification(
                     Auth::user()->name.' updated training attendance for '.$formattedDate.' ('.$groupName.')',
-                    '/trainings?date='.$validated['date'].'&group='.$validated['group_id']
+                    '/trainings?date='.$validated['date'].($groupId ? '&group='.$groupId : '')
                         .($subgroupId ? '&subgroup='.$subgroupId : '').'&attendance=1',
                     NotificationText::make(':user updated training attendance for :date (:group)', [
                         'user' => Auth::user()->name,
@@ -129,7 +138,7 @@ class TrainingController extends Controller
         $validated = $request->validate([
             'date' => ['required', 'date'],
             // Without a group, the overview of every group ("All")
-            'group_id' => [Rule::requiredIf(! $request->boolean('summary')), 'nullable', 'integer'],
+            'group_id' => [Rule::requiredIf(! $request->boolean('summary') && self::clubHasGroups()), 'nullable', 'integer'],
             'subgroup_id' => ['nullable', 'integer'],
             'summary' => ['nullable', 'boolean'],
         ]);
@@ -146,7 +155,7 @@ class TrainingController extends Controller
             return response()->json(['sections' => $this->daySummary($validated['date'], $groupId)]);
         }
 
-        $training = $this->trainingOn($validated['date'], $validated['group_id'], $validated['subgroup_id'] ?? null);
+        $training = $this->trainingOn($validated['date'], $groupId, $validated['subgroup_id'] ?? null);
 
         if (! $training) {
             return response()->json(['member_ids' => [], 'attended' => []]);
@@ -175,6 +184,8 @@ class TrainingController extends Controller
             'month' => ['required', 'date_format:Y-m'],
             'group_id' => ['nullable', 'integer'],
             'subgroup_id' => ['nullable', 'integer'],
+            // A club without groups: only attendance recorded for everyone
+            'no_group' => ['nullable', 'boolean'],
         ]);
 
         $groupId = isset($validated['group_id']) ? (int) $validated['group_id'] : null;
@@ -187,7 +198,7 @@ class TrainingController extends Controller
         $month = Carbon::createFromFormat('Y-m', $validated['month'])->startOfMonth();
 
         $days = Training::whereBetween('date', [$month->toDateString(), $month->copy()->endOfMonth()->toDateString()])
-            ->whereNotNull('group_id')
+            ->when($request->boolean('no_group'), fn ($query) => $query->whereNull('group_id'))
             ->when($groupId !== null, fn ($query) => $query->where('group_id', $groupId))
             ->when($validated['subgroup_id'] ?? null, fn ($query, $subgroupId) => $query->where('subgroup_id', $subgroupId))
             ->whereHas('attendances')
@@ -205,7 +216,7 @@ class TrainingController extends Controller
      *
      * @return list<int>
      */
-    private function recordedOn(string $date, int|string $groupId, int|string|null $subgroupId): array
+    private function recordedOn(string $date, int|string|null $groupId, int|string|null $subgroupId): array
     {
         $training = $this->trainingOn($date, $groupId, $subgroupId);
 
@@ -225,7 +236,6 @@ class TrainingController extends Controller
     {
         return Training::whereDate('date', $date)
             ->when($groupId !== null, fn ($query) => $query->where('group_id', $groupId))
-            ->whereNotNull('group_id')
             ->with(['group', 'subgroup', 'attendances.member.parent'])
             ->get()
             ->sortBy(fn (Training $training) => [
@@ -237,7 +247,8 @@ class TrainingController extends Controller
             ])
             ->map(fn (Training $training) => [
                 'group_id' => $training->group_id,
-                'group_name' => $training->group?->name,
+                // Recorded for every member (a club without groups)
+                'group_name' => $training->group_id ? $training->group?->name : __('All groups'),
                 'subgroup_id' => $training->subgroup_id,
                 'name' => $training->subgroup?->name,
                 'members' => $training->attendances
@@ -263,7 +274,7 @@ class TrainingController extends Controller
     }
 
     /** The training of a group (or one of its subgroups) on a day, if recorded. */
-    private function trainingOn(string $date, int|string $groupId, int|string|null $subgroupId): ?Training
+    private function trainingOn(string $date, int|string|null $groupId, int|string|null $subgroupId): ?Training
     {
         return Training::whereDate('date', $date)
             ->where('group_id', $groupId)
@@ -273,5 +284,11 @@ class TrainingController extends Controller
                 fn ($query) => $query->whereNull('subgroup_id'),
             )
             ->first();
+    }
+
+    /** Whether the club has any (main) groups yet. */
+    private static function clubHasGroups(): bool
+    {
+        return Group::whereNull('parent_id')->exists();
     }
 }

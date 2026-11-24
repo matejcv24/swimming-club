@@ -27,7 +27,7 @@ class Member extends Model
         return $this->group_id === null;
     }
 
-    protected $fillable = ['name', 'date_of_birth', 'pool', 'group_id', 'subgroup_id', 'status', 'parent_id'];
+    protected $fillable = ['name', 'phone', 'email', 'date_of_birth', 'pool', 'group_id', 'subgroup_id', 'status', 'parent_id'];
 
     public function parent(): BelongsTo
     {

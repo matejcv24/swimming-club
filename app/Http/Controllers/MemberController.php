@@ -46,15 +46,20 @@ class MemberController extends Controller
                 Rule::exists('groups', 'id')->whereNull('deleted_at')->where('parent_id', (int) $request->input('group_id')),
             ],
             'status' => ['nullable', 'in:active,inactive'],
-            // A parent's details are optional
+            // The member's own contact details and a parent's are all optional
+            'phone' => ['nullable', 'string', 'max:20'],
+            'email' => ['nullable', 'email', 'max:255'],
             'parent_name' => ['nullable', 'string', 'max:255'],
             'parent_phone' => ['nullable', 'string', 'max:20'],
+            'parent_email' => ['nullable', 'email', 'max:255'],
         ]);
 
         $parent = $this->newParent($validated);
 
         $member = Member::create([
             'name' => $validated['name'],
+            'phone' => $validated['phone'] ?? null,
+            'email' => $validated['email'] ?? null,
             'group_id' => $validated['group_id'] ?? null,
             // A subgroup belongs to one group, so all groups means none
             'subgroup_id' => isset($validated['group_id']) ? ($validated['subgroup_id'] ?? null) : null,
@@ -103,15 +108,26 @@ class MemberController extends Controller
                 Rule::exists('groups', 'id')->whereNull('deleted_at')->where('parent_id', (int) $request->input('group_id')),
             ],
             'status' => ['required', 'in:active,inactive'],
-            // A parent's details are optional
+            // The member's own contact details and a parent's are all optional
+            'phone' => ['nullable', 'string', 'max:20'],
+            'email' => ['nullable', 'email', 'max:255'],
             'parent_name' => ['nullable', 'string', 'max:255'],
             'parent_phone' => ['nullable', 'string', 'max:20'],
+            'parent_email' => ['nullable', 'email', 'max:255'],
         ]);
 
         $changes = [];
 
         if ($member->name !== $validated['name']) {
             $changes[] = 'name';
+        }
+
+        if (($member->phone ?? '') !== ($validated['phone'] ?? '')) {
+            $changes[] = 'phone';
+        }
+
+        if (($member->email ?? '') !== ($validated['email'] ?? '')) {
+            $changes[] = 'email';
         }
 
         if ((int) $member->group_id !== (int) ($validated['group_id'] ?? 0)) {
@@ -134,8 +150,14 @@ class MemberController extends Controller
             $changes[] = 'parent phone';
         }
 
+        if (($member->parent?->email ?? '') !== ($validated['parent_email'] ?? '')) {
+            $changes[] = 'parent email';
+        }
+
         $member->update([
             'name' => $validated['name'],
+            'phone' => $validated['phone'] ?? null,
+            'email' => $validated['email'] ?? null,
             'group_id' => $validated['group_id'] ?? null,
             // A subgroup belongs to one group, so all groups means none
             'subgroup_id' => isset($validated['group_id']) ? ($validated['subgroup_id'] ?? null) : null,
@@ -146,6 +168,7 @@ class MemberController extends Controller
             $member->parent->update([
                 'name' => $validated['parent_name'] ?? '',
                 'phone' => $validated['parent_phone'] ?? null,
+                'email' => $validated['parent_email'] ?? null,
             ]);
         } elseif ($parent = $this->newParent($validated)) {
             // Parent details added later
@@ -208,13 +231,14 @@ class MemberController extends Controller
      */
     private function newParent(array $validated): ?ClubParent
     {
-        if (blank($validated['parent_name'] ?? null) && blank($validated['parent_phone'] ?? null)) {
+        if (blank($validated['parent_name'] ?? null) && blank($validated['parent_phone'] ?? null) && blank($validated['parent_email'] ?? null)) {
             return null;
         }
 
         return ClubParent::create([
             'name' => $validated['parent_name'] ?? '',
             'phone' => $validated['parent_phone'] ?? null,
+            'email' => $validated['parent_email'] ?? null,
         ]);
     }
 }

@@ -65,7 +65,8 @@ interface Member {
 
 /** Who came to one subgroup's (or the whole group's) training on a day. */
 interface DaySection {
-    group_id: number;
+    /** None: recorded for every member (a club without groups) */
+    group_id: number | null;
     group_name: string | null;
     subgroup_id: number | null;
     name: string | null;
@@ -133,7 +134,7 @@ const getInitials = (name: string) =>
 
 /** One card of the day overview: a group and its subgroups' trainings. */
 interface DayGroupCard {
-    groupId: number;
+    groupId: number | null;
     name: string;
     total: number;
     sections: DaySection[];
@@ -296,6 +297,21 @@ export default function TrainingsIndex({
     );
     // Adding attendance on a group's overview: a subgroup must be picked first
     const [showPickSubgroup, setShowPickSubgroup] = useState(false);
+    // Editing from the "All" overview: a group (or subgroup) is picked first
+    const [showPickTarget, setShowPickTarget] = useState(false);
+    // The group (or subgroup) picked on an overview to edit. The chosen view
+    // ("All", or a group) stays as it is, and so do the calendar's dots.
+    const [editTarget, setEditTarget] = useState<{
+        groupId: number;
+        subgroupId: number | null;
+    } | null>(null);
+    // The overview that editing was started from (its group: none for "All"),
+    // and the group or subgroup that was open there: Cancel and Save go back to it
+    const [returnTo, setReturnTo] = useState<{
+        overviewGroupId: number | null;
+        overview: DaySection[];
+        openSection: DaySection | null;
+    } | null>(null);
     // The calendar's month, and its days with recorded attendance (the dots)
     const [viewMonth, setViewMonth] = useState(() => dayjs().format('YYYY-MM'));
     const [recordedDays, setRecordedDays] = useState<Set<string>>(
@@ -306,6 +322,8 @@ export default function TrainingsIndex({
 
     // A deleted group or subgroup falls back to the default choice
     const showAll = choice === 'all' && canSeeAllGroups;
+    // A club without groups: attendance is recorded for everyone, on "All groups"
+    const noGroups = groups.length === 0 && canSeeAllGroups;
     const resolved = showAll
         ? null
         : (resolveChoice(groups, choice) ??
@@ -326,6 +344,12 @@ export default function TrainingsIndex({
 
         const params = new URLSearchParams({ month: viewMonth });
 
+        // No groups: only the days with attendance recorded for everyone, so a dot
+        // always opens a day with names in it
+        if (noGroups) {
+            params.set('no_group', '1');
+        }
+
         if (activeGroupId !== null) {
             params.set('group_id', String(activeGroupId));
         }
@@ -343,14 +367,26 @@ export default function TrainingsIndex({
             .catch(() => {});
 
         return () => request.abort();
-    }, [showAll, activeGroupId, activeSubgroupId, viewMonth, daysVersion]);
+    }, [
+        showAll,
+        noGroups,
+        activeGroupId,
+        activeSubgroupId,
+        viewMonth,
+        daysVersion,
+    ]);
     const subgroups = subgroupsOf(groups, activeGroupId);
     // A subgroup is optional for members, so every subgroup's training lists
     // all members of its main group
     // Members of all groups (no single group) train in every group
-    const groupMembers = members.filter(
-        (m) => m.group_id === activeGroupId || m.group_id === null,
-    );
+    // The group whose day is open: the one picked to edit, else the chosen one
+    const dayGroupId = editTarget?.groupId ?? activeGroupId;
+    const daySubgroupId = editTarget ? editTarget.subgroupId : activeSubgroupId;
+    const groupMembers = noGroups
+        ? members
+        : members.filter(
+              (m) => m.group_id === dayGroupId || m.group_id === null,
+          );
     // Who came on the open day, as recorded (also members who have moved since)
     const [attended, setAttended] = useState<Member[]>([]);
 
@@ -370,6 +406,9 @@ export default function TrainingsIndex({
             // No group: the overview of every group ("All")
             const day = `date=${date.format('YYYY-MM-DD')}${group === null ? '' : `&group_id=${group}`}`;
 
+            // The overview's sections (an overview only)
+            let sections: DaySection[] = [];
+
             // Fetch existing attendance for this date and group
             try {
                 if (asOverview) {
@@ -377,7 +416,8 @@ export default function TrainingsIndex({
                         `/trainings/by-date?${day}&summary=1`,
                     );
                     const data = await response.json();
-                    setOverview(data.sections ?? []);
+                    sections = data.sections ?? [];
+                    setOverview(sections);
                 } else {
                     const response = await fetch(
                         `/trainings/by-date?${day}${subgroup ? `&subgroup_id=${subgroup}` : ''}`,
@@ -396,12 +436,24 @@ export default function TrainingsIndex({
             }
 
             setLoading(false);
+
+            return sections;
         },
         [],
     );
 
     const handleDateClick = async (date: Dayjs | null) => {
         if (!date) {
+            return;
+        }
+
+        setEditTarget(null);
+        setReturnTo(null);
+
+        // No groups: a day is everyone's attendance, like one group's
+        if (noGroups) {
+            await loadAttendance(date, null, null, false);
+
             return;
         }
 
@@ -434,7 +486,22 @@ export default function TrainingsIndex({
             ? groups.find((g) => g.id === Number(groupParam))
             : groups.find((g) => g.name.toLowerCase() === legacyPool);
 
-        if (!date || !group || !shouldOpenAttendance) {
+        if (!date || !shouldOpenAttendance) {
+            return;
+        }
+
+        // A club without groups: everyone's attendance of that day
+        if (!group) {
+            if (noGroups) {
+                queueMicrotask(async () => {
+                    await loadAttendance(dayjs(date), null, null, false);
+
+                    if (openedToAdd) {
+                        setEditMode(true);
+                    }
+                });
+            }
+
             return;
         }
 
@@ -472,20 +539,22 @@ export default function TrainingsIndex({
     };
 
     const handleSave = () => {
-        if (!selectedDate || activeGroupId === null) {
+        if (!selectedDate || (dayGroupId === null && !noGroups)) {
             return;
         }
+
+        const date = selectedDate;
 
         router.post(
             '/trainings',
             {
                 date: selectedDate.format('YYYY-MM-DD'),
-                group_id: activeGroupId,
-                subgroup_id: activeSubgroupId,
+                group_id: dayGroupId,
+                subgroup_id: daySubgroupId,
                 member_ids: checkedIds,
             },
             {
-                onSuccess: () => {
+                onSuccess: async () => {
                     if (openedToAdd) {
                         backToDashboard();
 
@@ -493,14 +562,126 @@ export default function TrainingsIndex({
                     }
 
                     setDaysVersion((version) => version + 1);
-                    setShowAttendanceModal(false);
-                    setCheckedIds([]);
-                    setSavedIds([]);
-                    setEditMode(false);
                     setAttendanceSearch('');
+
+                    const saved = {
+                        groupId: dayGroupId,
+                        subgroupId: daySubgroupId,
+                    };
+
+                    // From an overview: back to it, with the saved group open
+                    if (returnTo) {
+                        const sections = await loadAttendance(
+                            date,
+                            returnTo.overviewGroupId,
+                            null,
+                            true,
+                        );
+                        setOpenSection(
+                            sections.find(
+                                (section) =>
+                                    section.group_id === saved.groupId &&
+                                    section.subgroup_id === saved.subgroupId,
+                            ) ?? null,
+                        );
+                        setEditTarget(null);
+                        setReturnTo(null);
+
+                        return;
+                    }
+
+                    // One group (or everyone): its day, as now saved
+                    await loadAttendance(
+                        date,
+                        saved.groupId,
+                        saved.subgroupId,
+                        false,
+                    );
                 },
             },
         );
+    };
+
+    // The overview's edit button: that group's (or subgroup's) day, ready to tick
+    // What attendance is recorded for: each group without subgroups, and each
+    // subgroup of the others
+    const editTargets = groups.flatMap((group) =>
+        group.subgroups.length === 0
+            ? [
+                  {
+                      key: `g${group.id}`,
+                      label: group.name,
+                      groupId: group.id,
+                      subgroupId: null as number | null,
+                  },
+              ]
+            : group.subgroups.map((subgroup) => ({
+                  key: `s${subgroup.id}`,
+                  label: `${group.name} · ${subgroup.name}`,
+                  groupId: group.id,
+                  subgroupId: subgroup.id as number | null,
+              })),
+    );
+
+    // How many came to a target's training on the open day (from the overview)
+    const recordedCount = (groupId: number, subgroupId: number | null) =>
+        overview?.find(
+            (section) =>
+                section.group_id === groupId &&
+                section.subgroup_id === subgroupId,
+        )?.members.length ?? 0;
+
+    // From the "All" overview's edit button: that group's day, ready to tick
+    const pickTargetAndEdit = async (
+        groupId: number,
+        subgroupId: number | null,
+    ) => {
+        if (!selectedDate) {
+            return;
+        }
+
+        setShowPickTarget(false);
+        setReturnTo(
+            overview
+                ? {
+                      overviewGroupId: showAll ? null : activeGroupId,
+                      overview,
+                      openSection,
+                  }
+                : null,
+        );
+        setEditTarget({ groupId, subgroupId });
+        await loadAttendance(selectedDate, groupId, subgroupId, false);
+        setEditMode(true);
+    };
+
+    // The section's group (and subgroup) still exists: its attendance can change.
+    // A deleted group's past attendance can only be looked at.
+    const sectionExists = (section: DaySection) =>
+        section.group_id !== null &&
+        groups.some(
+            (g) =>
+                g.id === section.group_id &&
+                (section.subgroup_id === null ||
+                    g.subgroups.some((sub) => sub.id === section.subgroup_id)),
+        );
+    const groupExists = (groupId: number | null) =>
+        groupId !== null && groups.some((g) => g.id === groupId);
+
+    /**
+     * Edit (or add) attendance from an overview: inside an open group or subgroup,
+     * that one at once; otherwise first pick which one.
+     */
+    const startEditing = () => {
+        const open = openSection;
+
+        if (open && open.group_id !== null && sectionExists(open)) {
+            void pickTargetAndEdit(open.group_id, open.subgroup_id);
+        } else if (showAll) {
+            setShowPickTarget(true);
+        } else {
+            setShowPickSubgroup(true);
+        }
     };
 
     // From the "pick a subgroup" warning: open that subgroup's day, ready to tick
@@ -510,7 +691,16 @@ export default function TrainingsIndex({
         }
 
         setShowPickSubgroup(false);
-        setChoice(groupChoice(activeGroupId, subgroupId));
+        setReturnTo(
+            overview
+                ? {
+                      overviewGroupId: showAll ? null : activeGroupId,
+                      overview,
+                      openSection,
+                  }
+                : null,
+        );
+        setEditTarget({ groupId: activeGroupId, subgroupId });
         await loadAttendance(selectedDate, activeGroupId, subgroupId, false);
         setEditMode(true);
     };
@@ -520,6 +710,13 @@ export default function TrainingsIndex({
         setCheckedIds(savedIds);
         setEditMode(false);
         setAttendanceSearch('');
+
+        if (returnTo) {
+            setOverview(returnTo.overview);
+            setOpenSection(returnTo.openSection);
+            setEditTarget(null);
+            setReturnTo(null);
+        }
     };
 
     // Only the day was open (quick action): straight back to the dashboard
@@ -537,6 +734,8 @@ export default function TrainingsIndex({
         setOpenSection(null);
         setOverview(null);
         setEditMode(false);
+        setEditTarget(null);
+        setReturnTo(null);
         setAttendanceSearch('');
     };
 
@@ -544,9 +743,15 @@ export default function TrainingsIndex({
     const overviewCount =
         overview?.reduce((sum, section) => sum + section.members.length, 0) ??
         0;
-    const groupLabel = showAll
-        ? t('All groups')
-        : groupWithSubgroupName(groups, activeGroupId, activeSubgroupId);
+    const groupLabel = editTarget
+        ? groupWithSubgroupName(
+              groups,
+              editTarget.groupId,
+              editTarget.subgroupId,
+          )
+        : showAll
+          ? t('All groups')
+          : groupWithSubgroupName(groups, activeGroupId, activeSubgroupId);
     const sectionTitle = (section: DaySection) =>
         [section.group_name, section.name].filter(Boolean).join(' · ');
     // The day's list: the group's members today, plus anyone recorded that day who
@@ -798,15 +1003,20 @@ export default function TrainingsIndex({
                                     <p className="text-base font-bold text-[var(--popup-fg)]">
                                         {t('No recorded members for this date')}
                                     </p>
-                                    {/* "All" is read-only: nothing to add from here */}
-                                    {!showAll && (
-                                        <p className="text-sm text-[var(--popup-muted)]">
-                                            {t(
-                                                'Add the members who came to this training.',
-                                            )}
-                                        </p>
-                                    )}
+                                    <p className="text-sm text-[var(--popup-muted)]">
+                                        {t(
+                                            'Add the members who came to this training.',
+                                        )}
+                                    </p>
                                 </div>
+                                {/* First which group (or subgroup), then tick who came */}
+                                <Button
+                                    variant="contained"
+                                    startIcon={<PersonAddAlt1Icon />}
+                                    onClick={startEditing}
+                                >
+                                    {t('Add members')}
+                                </Button>
                             </div>
                         ) : (
                             // Read-only: one card per group (its subgroups as rows inside),
@@ -834,6 +1044,13 @@ export default function TrainingsIndex({
                                         />
                                         <span className="min-w-0 truncate text-base font-extrabold text-[var(--popup-fg)]">
                                             {sectionTitle(openSection)}
+                                            {openSection.group_id !== null &&
+                                                !sectionExists(openSection) && (
+                                                    <span className="font-normal text-[var(--popup-muted)]">
+                                                        {' '}
+                                                        ({t('deleted')})
+                                                    </span>
+                                                )}
                                         </span>
                                         <CountPill
                                             count={openSection.members.length}
@@ -902,47 +1119,66 @@ export default function TrainingsIndex({
 
                                         // A group trained as a whole: the card itself opens it
                                         return whole ? (
-                                            <ButtonBase
-                                                key={card.groupId}
-                                                onClick={() =>
-                                                    setOpenSection(
-                                                        card.sections[0],
-                                                    )
-                                                }
-                                                sx={{
-                                                    ...CARD_SX,
-                                                    flexDirection: 'column',
-                                                    alignItems: 'stretch',
-                                                    p: 1.5,
-                                                    bgcolor: popupFg(0.04),
-                                                    border: `1px solid ${popupFg(0.12)}`,
-                                                    '&:hover': {
-                                                        bgcolor: popupFg(0.08),
-                                                    },
-                                                }}
+                                            <div
+                                                key={card.groupId ?? 'all'}
+                                                className="relative"
                                             >
-                                                <span className="flex items-center justify-between gap-2">
-                                                    <span className="min-w-0 truncate text-base font-extrabold text-[var(--popup-fg)]">
-                                                        {card.name}
+                                                <ButtonBase
+                                                    onClick={() =>
+                                                        setOpenSection(
+                                                            card.sections[0],
+                                                        )
+                                                    }
+                                                    sx={{
+                                                        ...CARD_SX,
+                                                        flexDirection: 'column',
+                                                        alignItems: 'stretch',
+                                                        p: 1.5,
+                                                        bgcolor: popupFg(0.04),
+                                                        border: `1px solid ${popupFg(0.12)}`,
+                                                        '&:hover': {
+                                                            bgcolor:
+                                                                popupFg(0.08),
+                                                        },
+                                                    }}
+                                                >
+                                                    <span className="flex items-center justify-between gap-2">
+                                                        <span className="min-w-0 truncate text-base font-extrabold text-[var(--popup-fg)]">
+                                                            {card.name}
+                                                            {card.groupId !==
+                                                                null &&
+                                                                !groupExists(
+                                                                    card.groupId,
+                                                                ) && (
+                                                                    <span className="font-normal text-[var(--popup-muted)]">
+                                                                        {' '}
+                                                                        (
+                                                                        {t(
+                                                                            'deleted',
+                                                                        )}
+                                                                        )
+                                                                    </span>
+                                                                )}
+                                                        </span>
+                                                        <CountPill
+                                                            count={card.total}
+                                                        />
                                                     </span>
-                                                    <CountPill
-                                                        count={card.total}
-                                                    />
-                                                </span>
-                                                <span className="mt-2 flex items-center justify-between">
-                                                    <Faces
-                                                        members={
-                                                            card.sections[0]
-                                                                .members
-                                                        }
-                                                    />
-                                                    <ChevronRightIcon
-                                                        sx={{
-                                                            color: 'var(--popup-muted)',
-                                                        }}
-                                                    />
-                                                </span>
-                                            </ButtonBase>
+                                                    <span className="mt-2 flex items-center justify-between">
+                                                        <Faces
+                                                            members={
+                                                                card.sections[0]
+                                                                    .members
+                                                            }
+                                                        />
+                                                        <ChevronRightIcon
+                                                            sx={{
+                                                                color: 'var(--popup-muted)',
+                                                            }}
+                                                        />
+                                                    </span>
+                                                </ButtonBase>
+                                            </div>
                                         ) : (
                                             // A group with subgroups: one row per subgroup
                                             <div
@@ -956,6 +1192,20 @@ export default function TrainingsIndex({
                                                 <div className="mb-1 flex items-center justify-between gap-2">
                                                     <span className="min-w-0 truncate text-base font-extrabold text-[var(--popup-fg)]">
                                                         {card.name}
+                                                        {card.groupId !==
+                                                            null &&
+                                                            !groupExists(
+                                                                card.groupId,
+                                                            ) && (
+                                                                <span className="font-normal text-[var(--popup-muted)]">
+                                                                    {' '}
+                                                                    (
+                                                                    {t(
+                                                                        'deleted',
+                                                                    )}
+                                                                    )
+                                                                </span>
+                                                            )}
                                                     </span>
                                                     <CountPill
                                                         count={card.total}
@@ -963,59 +1213,64 @@ export default function TrainingsIndex({
                                                 </div>
                                                 {card.sections.map(
                                                     (section) => (
-                                                        <ButtonBase
+                                                        <div
                                                             key={sectionKey(
                                                                 section,
                                                             )}
-                                                            onClick={() =>
-                                                                setOpenSection(
-                                                                    section,
-                                                                )
-                                                            }
-                                                            sx={{
-                                                                ...CARD_SX,
-                                                                mt: 1,
-                                                                px: 1.25,
-                                                                py: 1,
-                                                                borderRadius:
-                                                                    '8px',
-                                                                bgcolor:
-                                                                    POPUP_BG,
-                                                                '&:hover': {
-                                                                    bgcolor:
-                                                                        popupFg(
-                                                                            0.06,
-                                                                        ),
-                                                                },
-                                                            }}
+                                                            className="mt-2 flex items-center gap-1.5"
                                                         >
-                                                            <span className="min-w-0 truncate text-sm font-bold text-[var(--popup-fg)]">
-                                                                {section.name ??
-                                                                    t(
-                                                                        'Whole group',
-                                                                    )}
-                                                                <span className="font-normal text-[var(--popup-muted)]">
-                                                                    {' · '}
-                                                                    {
-                                                                        section
-                                                                            .members
-                                                                            .length
-                                                                    }
+                                                            <ButtonBase
+                                                                onClick={() =>
+                                                                    setOpenSection(
+                                                                        section,
+                                                                    )
+                                                                }
+                                                                sx={{
+                                                                    ...CARD_SX,
+                                                                    flex: 1,
+                                                                    minWidth: 0,
+                                                                    px: 1.25,
+                                                                    py: 1,
+                                                                    borderRadius:
+                                                                        '8px',
+                                                                    bgcolor:
+                                                                        POPUP_BG,
+                                                                    '&:hover': {
+                                                                        bgcolor:
+                                                                            popupFg(
+                                                                                0.06,
+                                                                            ),
+                                                                    },
+                                                                }}
+                                                            >
+                                                                <span className="min-w-0 truncate text-sm font-bold text-[var(--popup-fg)]">
+                                                                    {section.name ??
+                                                                        t(
+                                                                            'Whole group',
+                                                                        )}
+                                                                    <span className="font-normal text-[var(--popup-muted)]">
+                                                                        {' · '}
+                                                                        {
+                                                                            section
+                                                                                .members
+                                                                                .length
+                                                                        }
+                                                                    </span>
                                                                 </span>
-                                                            </span>
-                                                            <span className="flex flex-none items-center gap-1">
-                                                                <Faces
-                                                                    members={
-                                                                        section.members
-                                                                    }
-                                                                />
-                                                                <ChevronRightIcon
-                                                                    sx={{
-                                                                        color: 'var(--popup-muted)',
-                                                                    }}
-                                                                />
-                                                            </span>
-                                                        </ButtonBase>
+                                                                <span className="flex flex-none items-center gap-1">
+                                                                    <Faces
+                                                                        members={
+                                                                            section.members
+                                                                        }
+                                                                    />
+                                                                    <ChevronRightIcon
+                                                                        sx={{
+                                                                            color: 'var(--popup-muted)',
+                                                                        }}
+                                                                    />
+                                                                </span>
+                                                            </ButtonBase>
+                                                        </div>
                                                     ),
                                                 )}
                                             </div>
@@ -1130,19 +1385,31 @@ export default function TrainingsIndex({
                     )}
                 </DialogContent>
 
-                {/* Footer: "All" is read-only; a group's overview asks for a subgroup to add */}
-                {overview && showAll ? null : overview ? (
-                    <div className="flex-shrink-0 p-4">
-                        <Button
-                            variant="outlined"
-                            fullWidth
-                            size="large"
-                            startIcon={<PersonAddAlt1Icon />}
-                            onClick={() => setShowPickSubgroup(true)}
-                        >
-                            {t('Add members')}
-                        </Button>
-                    </div>
+                {/* Footer: on an overview with records, one big edit button (an empty
+                    day has its "Add members" button in the middle instead) */}
+                {overview ? (
+                    overview.length > 0 &&
+                    (openSection &&
+                    openSection.group_id !== null &&
+                    !sectionExists(openSection) ? (
+                        <p className="flex-shrink-0 px-6 pt-2 pb-5 text-center text-sm text-[var(--popup-muted)]">
+                            {t(
+                                'This group was deleted: its attendance can only be viewed.',
+                            )}
+                        </p>
+                    ) : (
+                        <div className="flex-shrink-0 p-4">
+                            <Button
+                                variant="outlined"
+                                fullWidth
+                                size="large"
+                                startIcon={<EditIcon />}
+                                onClick={startEditing}
+                            >
+                                {t('Edit attendance')}
+                            </Button>
+                        </div>
+                    ))
                 ) : editMode ? (
                     <div className="flex flex-shrink-0 gap-3 p-4">
                         <Button
@@ -1228,6 +1495,65 @@ export default function TrainingsIndex({
                         variant="outlined"
                         fullWidth
                         onClick={() => setShowPickSubgroup(false)}
+                    >
+                        {t('Cancel')}
+                    </Button>
+                </div>
+            </Dialog>
+
+            {/* "All": which group's (or subgroup's) attendance to edit */}
+            <Dialog
+                open={showPickTarget}
+                onClose={() => setShowPickTarget(false)}
+                maxWidth="xs"
+                fullWidth
+                PaperProps={{ sx: { bgcolor: POPUP_BG } }}
+            >
+                <div className="flex flex-col gap-4 p-5">
+                    <div className="flex items-center gap-3">
+                        <IconBadge>
+                            <EditIcon fontSize="small" />
+                        </IconBadge>
+                        <div className="min-w-0 flex-1">
+                            <p className="text-base font-bold text-[var(--popup-fg)]">
+                                {t('Which group?')}
+                            </p>
+                            <p className="text-sm text-[var(--popup-muted)]">
+                                {selectedDate?.format('DD.MM.YYYY')}
+                            </p>
+                        </div>
+                    </div>
+                    <div className="flex flex-col gap-2">
+                        {editTargets.map((target) => {
+                            const count = recordedCount(
+                                target.groupId,
+                                target.subgroupId,
+                            );
+
+                            return (
+                                <button
+                                    key={target.key}
+                                    type="button"
+                                    onClick={() =>
+                                        void pickTargetAndEdit(
+                                            target.groupId,
+                                            target.subgroupId,
+                                        )
+                                    }
+                                    className="flex min-h-12 cursor-pointer items-center justify-between gap-3 rounded-xl border border-[var(--popup-border)] px-4 py-3 text-left font-semibold text-[var(--popup-fg)] transition hover:border-hydra-blue hover:bg-hydra-blue/10"
+                                >
+                                    <span className="min-w-0 truncate">
+                                        {target.label}
+                                    </span>
+                                    {count > 0 && <CountPill count={count} />}
+                                </button>
+                            );
+                        })}
+                    </div>
+                    <Button
+                        variant="outlined"
+                        fullWidth
+                        onClick={() => setShowPickTarget(false)}
                     >
                         {t('Cancel')}
                     </Button>

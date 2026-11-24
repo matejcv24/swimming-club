@@ -45,16 +45,22 @@ function useAttendanceTargets(): AttendanceTarget[] {
     );
 }
 
-/** Today's training of a group, opened ready to tick who came. */
-function openTodaysAttendance(target: AttendanceTarget) {
+/**
+ * Today's training of a group, opened ready to tick who came. No group (a club
+ * without groups): today's attendance of everyone.
+ */
+function openTodaysAttendance(target: AttendanceTarget | null) {
     const params = new URLSearchParams({
         date: dayjs().format('YYYY-MM-DD'),
-        group: String(target.groupId),
         attendance: '1',
         quick: '1',
     });
 
-    if (target.subgroupId !== null) {
+    if (target) {
+        params.set('group', String(target.groupId));
+    }
+
+    if (target && target.subgroupId !== null) {
         params.set('subgroup', String(target.subgroupId));
     }
 
@@ -67,10 +73,14 @@ function openTodaysAttendance(target: AttendanceTarget) {
  */
 function useQuickActions() {
     const targets = useAttendanceTargets();
+    const groups = useGroups();
     const [picking, setPicking] = useState(false);
 
     const addAttendance = () => {
-        if (targets.length === 1) {
+        // No groups at all: everyone's attendance, nothing to pick
+        if (groups.length === 0) {
+            openTodaysAttendance(null);
+        } else if (targets.length === 1) {
             openTodaysAttendance(targets[0]);
         } else {
             setPicking(true);

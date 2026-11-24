@@ -4,10 +4,12 @@ namespace Tests\Feature;
 
 use App\Models\ClubParent;
 use App\Models\Group;
+use App\Models\Invitation;
 use App\Models\Member;
 use App\Models\MembershipFee;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Mail;
 use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
 
@@ -31,18 +33,26 @@ class CoachGroupsTest extends TestCase
         return $coach;
     }
 
-    public function test_admin_creates_a_coach_with_groups_and_groups_are_required()
+    public function test_admin_invites_a_coach_with_groups_and_groups_are_required()
     {
+        Mail::fake();
         // Named to be listed after the coach (Staff lists admins too, by name)
         $admin = User::factory()->create(['role' => 'admin', 'name' => 'Zoran Admin']);
         $small = $this->group('Small pool');
         $big = $this->group('Big pool');
-        $data = ['name' => 'Coach', 'email' => 'coach@example.com', 'password' => 'secret-pass', 'role' => 'coach'];
+        $data = ['name' => 'Coach', 'email' => 'coach@example.com', 'role' => 'coach'];
 
-        $this->actingAs($admin)->post('/staff', $data)->assertSessionHasErrors('all_groups');
-        $this->actingAs($admin)->post('/staff', [...$data, 'all_groups' => false, 'group_ids' => []])->assertSessionHasErrors('group_ids');
+        $this->actingAs($admin)->post('/staff/invitations', $data)->assertSessionHasErrors('all_groups');
+        $this->actingAs($admin)->post('/staff/invitations', [...$data, 'all_groups' => false, 'group_ids' => []])->assertSessionHasErrors('group_ids');
 
-        $this->actingAs($admin)->post('/staff', [...$data, 'all_groups' => false, 'group_ids' => [$small, $big]])->assertSessionHasNoErrors();
+        $this->actingAs($admin)->post('/staff/invitations', [...$data, 'all_groups' => false, 'group_ids' => [$small, $big]])->assertSessionHasNoErrors();
+
+        auth()->logout();
+        $this->post('/invitation/'.Invitation::firstOrFail()->token, [
+            'password' => 'secret-pass',
+            'password_confirmation' => 'secret-pass',
+        ]);
+        auth()->logout();
 
         $coach = User::where('email', 'coach@example.com')->firstOrFail();
         $this->assertFalse($coach->all_groups);

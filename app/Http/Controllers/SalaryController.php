@@ -39,6 +39,30 @@ class SalaryController extends Controller
         return back()->with('success', 'Salary recorded!');
     }
 
+    /** Corrects a salary entered by mistake (amount or month). */
+    public function update(Request $request, Salary $salary)
+    {
+        $validated = $request->validate([
+            'amount' => ['required', 'numeric', 'min:0'],
+            'month' => ['required', 'date'],
+        ]);
+
+        $salary->update([
+            'amount' => $validated['amount'],
+            'month' => Carbon::parse($validated['month'])->startOfMonth()->toDateString(),
+        ]);
+
+        return back()->with('success', 'Salary updated!');
+    }
+
+    /** Removes a salary entered by mistake. */
+    public function destroy(Salary $salary)
+    {
+        $salary->delete();
+
+        return back()->with('success', 'Salary deleted!');
+    }
+
     public function getByCoach(User $coach)
     {
         $salaries = Salary::where('user_id', $coach->id)

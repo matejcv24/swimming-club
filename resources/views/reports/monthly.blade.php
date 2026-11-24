@@ -15,7 +15,7 @@
 <html lang="{{ app()->getLocale() }}">
 <head>
     <meta charset="utf-8">
-    <title>SC Hydra - Monthly report - {{ $monthName }}</title>
+    <title>{{ $clubName }} - Monthly report - {{ $monthName }}</title>
     <style>
         @page {
             margin: 36px 40px 56px;
@@ -244,7 +244,7 @@
 </head>
 <body>
     <div class="footer">
-        SC Hydra &middot; {{ __('Monthly report') }} {{ $monthName }} &middot; {{ __('Generated :date by :name', ['date' => $generatedAt->format('d.m.Y H:i'), 'name' => $generatedBy]) }}
+        {{ $clubName }} &middot; {{ __('Monthly report') }} {{ $monthName }} &middot; {{ __('Generated :date by :name', ['date' => $generatedAt->format('d.m.Y H:i'), 'name' => $generatedBy]) }}
     </div>
 
     <div class="header">

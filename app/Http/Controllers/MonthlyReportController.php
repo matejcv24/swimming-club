@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Club;
 use App\Support\MonthlyReport;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
@@ -23,6 +24,7 @@ class MonthlyReportController extends Controller
             'logo' => 'data:image/png;base64,'.base64_encode(file_get_contents(resource_path('images/report-logo.png'))),
             'generatedAt' => now('Europe/Skopje'),
             'generatedBy' => $request->user()->name,
+            'clubName' => Club::current()->name,
         ])->setPaper('a4')
             // Embed only the characters used instead of whole fonts (~900 KB -> tens of KB)
             ->setOption('isFontSubsettingEnabled', true);
