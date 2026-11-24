@@ -500,7 +500,7 @@
     "Failed": "Не успеа",
     "Membership fee reminder – :club": "Потсетник за членарина – :club",
     "Dear :name,": "Почитуван/а :name,",
-    "Dear Sir or Madam,": "Почитуван/а,",
+    "Dear Sir or Madam,": "Почитувани,",
     "from :date": "од :date",
     "no payment on record": "нема евидентирана уплата",
     "We remind you that your membership fee has not been paid since :date.": "Ве потсетуваме дека вашата членарина не е платена од :date.",
@@ -546,5 +546,13 @@
     "Edit attendance for :name": "Измени го присуството за :name",
     "Which group?": "Која група?",
     "deleted": "избришана",
-    "This group was deleted: its attendance can only be viewed.": "Оваа група е избришана: нејзиното присуство може само да се прегледа."
+    "This group was deleted: its attendance can only be viewed.": "Оваа група е избришана: нејзиното присуство може само да се прегледа.",
+    "expired on :date": "истечена на :date",
+    "We remind you that the membership fee for :member expired on :date.": "Ве потсетуваме дека членарината за :member е истечена на :date.",
+    "We remind you that there is no membership fee payment on record for :member.": "Ве потсетуваме дека за :member немаме евидентирана уплата на членарина.",
+    "We remind you that the membership fee has expired for:": "Ве потсетуваме дека членарината е истечена за:",
+    "We would be grateful if you could make the payment as soon as possible. If you have already paid, please ignore this message.": "Ќе Ви бидеме благодарни доколку уплатата ја реализирате во најскоро време. Ако веќе сте платиле, занемарете ја оваа порака.",
+    "The membership fee expired on :date": "Членарината е истечена на :date",
+    "Mon,Tue,Wed,Thu,Fri,Sat,Sun": "П,В,С,Ч,П,С,Н",
+    ":date: trained": ":date: тренинг"
 }

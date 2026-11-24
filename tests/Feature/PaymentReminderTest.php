@@ -67,7 +67,7 @@ class PaymentReminderTest extends TestCase
                 && $mail->hasReplyTo('club@example.com')
                 && str_contains($html, 'Marko Veleski')
                 && str_contains($html, 'Jana Veleska')
-                && str_contains($html, '01.11.2026');
+                && str_contains($html, '31.10.2026');
         });
 
         $this->assertSame(2, PaymentReminder::count());
@@ -89,7 +89,8 @@ class PaymentReminderTest extends TestCase
 
         $this->assertSame('member', $preview['source']);
         $this->assertSame('Elena Stojanova', $preview['recipient_name']);
-        $this->assertStringContainsString('01.10.2026', implode(' ', array_filter($preview['paragraphs'], 'is_string')));
+        $this->assertStringContainsString('Elena Stojanova', $preview['text']);
+        $this->assertStringContainsString('30.09.2026', implode(' ', array_filter($preview['paragraphs'], 'is_string')));
     }
 
     public function test_there_is_nothing_to_send_without_an_email_or_for_someone_who_paid()
@@ -149,7 +150,7 @@ class PaymentReminderTest extends TestCase
             return $mail->hasSubject('November fee')
                 && str_contains($html, 'Please pay at the club on Monday.')
                 && str_contains($html, '&lt;b&gt;Thanks&lt;/b&gt;')
-                && ! str_contains($html, 'If you have already paid');
+                && ! str_contains($html, 'as soon as possible');
         });
     }
 
