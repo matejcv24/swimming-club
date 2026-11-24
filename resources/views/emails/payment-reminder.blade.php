@@ -45,11 +45,11 @@
                             {{-- A "bulletproof" button: a table cell, so every email app draws it the same --}}
                             <table role="presentation" cellpadding="0" cellspacing="0" style="border-collapse:separate;">
                                 <tr>
-                                    <td bgcolor="#0b2545" style="background:#0b2545;border-radius:8px;">
-                                        <a href="{{ $familyLink }}" style="display:inline-block;padding:11px 20px;font-family:Arial,Helvetica,sans-serif;font-size:14px;font-weight:bold;line-height:18px;color:#ffffff;text-decoration:none;white-space:nowrap;letter-spacing:0.2px;">
+                                    <td bgcolor="#0f2b5b" style="background-color:#0f2b5b;border-radius:8px;">
+                                        <a href="{{ $familyLink }}" style="display:inline-block;padding:11px 20px;background-color:#0f2b5b;border-radius:8px;font-family:Arial,Helvetica,sans-serif;font-size:14px;font-weight:bold;line-height:18px;color:#ffffff;text-decoration:none;white-space:nowrap;letter-spacing:0.2px;">
                                             @if (isset($message) && is_file($iconPath))
                                                 <img src="{{ $message->embed($iconPath) }}" alt="" width="18" height="18" style="display:inline-block;width:18px;height:18px;vertical-align:-3px;margin-right:8px;border:0;">
-                                            @endif{{ __('Open the page') }}
+                                            @endif<span style="color:#ffffff;text-decoration:none;">{{ __('Open the page') }}</span>
                                         </a>
                                     </td>
                                 </tr>

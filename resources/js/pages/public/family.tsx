@@ -281,12 +281,13 @@ function PaymentsBrowser({ fees }: { fees: FamilyMember['fees'] }) {
             </ul>
             {pages > 1 && (
                 <Pager
-                    // Page 1 is the newest; ">" goes to older payments
-                    label={`${page + 1} / ${pages}`}
-                    canNewer={page > 0}
-                    canOlder={page < pages - 1}
-                    onNewer={() => setPage(page - 1)}
-                    onOlder={() => setPage(page + 1)}
+                    // Like the calendar: "‹" older payments, "›" newer; the newest
+                    // page is the last number (e.g. 3 / 3)
+                    label={`${pages - page} / ${pages}`}
+                    leftEnabled={page < pages - 1}
+                    rightEnabled={page > 0}
+                    onLeft={() => setPage(page + 1)}
+                    onRight={() => setPage(page - 1)}
                 />
             )}
         </div>
@@ -345,32 +346,30 @@ function AttendanceBrowser({
                         </span>
                     </>
                 }
-                canNewer={back > 0}
-                canOlder={back < count - 1}
-                onNewer={() => setBack(back - 1)}
-                onOlder={() => setBack(back + 1)}
+                // Months: "‹" the month before, "›" the month after
+                leftEnabled={back < count - 1}
+                rightEnabled={back > 0}
+                onLeft={() => setBack(back + 1)}
+                onRight={() => setBack(back - 1)}
             />
             <MonthCalendar month={month} dates={dates} />
         </div>
     );
 }
 
-/**
- * ‹ label ›: "›" goes back in time (older), "‹" comes forward (newer); an arrow
- * is greyed out when there's nothing further that way.
- */
+/** ‹ label ›: round arrow buttons, greyed out when there's nothing further. */
 function Pager({
     label,
-    canNewer,
-    canOlder,
-    onNewer,
-    onOlder,
+    leftEnabled,
+    rightEnabled,
+    onLeft,
+    onRight,
 }: {
     label: ReactNode;
-    canNewer: boolean;
-    canOlder: boolean;
-    onNewer: () => void;
-    onOlder: () => void;
+    leftEnabled: boolean;
+    rightEnabled: boolean;
+    onLeft: () => void;
+    onRight: () => void;
 }) {
     const arrow =
         'flex size-[min(2.5rem,5svh)] min-h-9 min-w-9 cursor-pointer items-center justify-center rounded-full border border-[#c5dceb] text-hydra-blue transition hover:bg-[#e6f1f8] disabled:cursor-default disabled:opacity-35 disabled:hover:bg-transparent';
@@ -379,9 +378,9 @@ function Pager({
         <div className="mt-1 flex items-center justify-between gap-2">
             <button
                 type="button"
-                onClick={onNewer}
-                disabled={!canNewer}
-                aria-label={t('Newer')}
+                onClick={onLeft}
+                disabled={!leftEnabled}
+                aria-label={t('Previous')}
                 className={arrow}
             >
                 <ChevronIcon direction="left" />
@@ -391,9 +390,9 @@ function Pager({
             </span>
             <button
                 type="button"
-                onClick={onOlder}
-                disabled={!canOlder}
-                aria-label={t('Older')}
+                onClick={onRight}
+                disabled={!rightEnabled}
+                aria-label={t('Next')}
                 className={arrow}
             >
                 <ChevronIcon direction="right" />
