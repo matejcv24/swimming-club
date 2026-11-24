@@ -554,5 +554,12 @@
     "We would be grateful if you could make the payment as soon as possible. If you have already paid, please ignore this message.": "Ќе Ви бидеме благодарни доколку уплатата ја реализирате во најскоро време. Ако веќе сте платиле, занемарете ја оваа порака.",
     "The membership fee expired on :date": "Членарината е истечена на :date",
     "Mon,Tue,Wed,Thu,Fri,Sat,Sun": "П,В,С,Ч,П,С,Н",
-    ":date: trained": ":date: тренинг"
+    ":date: trained": ":date: тренинг",
+    "Membership fee reminder – :club – :date": "Потсетник за членарина – :club – :date",
+    "See all payments and training attendance": "Погледнете ги сите уплати и присуство на тренинзи",
+    "Open the page": "Отвори ја страницата",
+    "Payments appear here once the club records them.": "Уплатите ќе се појават тука штом клубот ги внесе.",
+    "Previous": "Претходно",
+    "Next": "Следно",
+    "No trainings yet.": "Сè уште нема тренинзи."
 }

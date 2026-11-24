@@ -1,6 +1,7 @@
 import { Head, usePage } from '@inertiajs/react';
 import dayjs from 'dayjs';
 import { useState } from 'react';
+import type { ReactNode } from 'react';
 import { HuddleMark } from '@/components/huddle-mark';
 import { LanguageSwitch } from '@/components/language-switch';
 import { t, tc } from '@/lib/i18n';
@@ -136,45 +137,9 @@ function MemberCard({ member }: { member: FamilyMember }) {
 
             <div className="mt-3">
                 {tab === 'payments' ? (
-                    member.fees.length === 0 ? (
-                        <p className="py-4 text-center text-sm text-slate-500">
-                            {t('No payments yet.')}
-                        </p>
-                    ) : (
-                        <ul className="divide-y divide-slate-100">
-                            {member.fees.map((fee, i) => (
-                                <li
-                                    key={`${fee.start_date}-${i}`}
-                                    className="flex items-center justify-between gap-3 py-2.5 text-sm"
-                                >
-                                    <span>
-                                        {date(fee.start_date)} –{' '}
-                                        {date(fee.end_date)}
-                                    </span>
-                                    <span className="flex-none rounded-full bg-green-500/10 px-2.5 py-0.5 font-bold text-green-700">
-                                        {money(fee.amount)} MKD
-                                    </span>
-                                </li>
-                            ))}
-                        </ul>
-                    )
-                ) : member.attendance.length === 0 ? (
-                    <p className="py-4 text-center text-sm text-slate-500">
-                        {t('No attendance in the last 12 months.')}
-                    </p>
+                    <PaymentsBrowser fees={member.fees} />
                 ) : (
-                    <div className="flex flex-col gap-5">
-                        <p className="text-xs text-slate-500">
-                            {t('Last 12 months')}
-                        </p>
-                        {member.attendance.map((month) => (
-                            <MonthCalendar
-                                key={month.month}
-                                month={month.month}
-                                dates={month.dates}
-                            />
-                        ))}
-                    </div>
+                    <AttendanceBrowser attendance={member.attendance} />
                 )}
             </div>
         </section>
@@ -198,12 +163,6 @@ function MonthCalendar({ month, dates }: { month: string; dates: string[] }) {
 
     return (
         <div>
-            <p className="mb-2 flex items-center justify-between text-sm font-bold">
-                <span className="capitalize">{first.format('MMMM YYYY')}</span>
-                <span className="rounded-full bg-hydra-blue/10 px-2.5 py-0.5 text-xs font-bold text-hydra-blue">
-                    {tc(':count training|:count trainings', dates.length)}
-                </span>
-            </p>
             <div className="grid grid-cols-7 gap-1 text-center">
                 {weekdays.map((day, i) => (
                     <span
@@ -240,5 +199,224 @@ function MonthCalendar({ month, dates }: { month: string; dates: string[] }) {
                 )}
             </div>
         </div>
+    );
+}
+
+/** How many payments show at once. */
+const PAYMENTS_PER_PAGE = 3;
+
+/** The payments, newest first, three at a time with ‹ › to move through them. */
+function PaymentsBrowser({ fees }: { fees: FamilyMember['fees'] }) {
+    const [page, setPage] = useState(0);
+    const pages = Math.max(1, Math.ceil(fees.length / PAYMENTS_PER_PAGE));
+
+    if (fees.length === 0) {
+        return (
+            <div className="flex flex-col items-center gap-2 py-6 text-center">
+                <span className="flex size-10 items-center justify-center rounded-full bg-[#e6f1f8] text-hydra-blue">
+                    <ReceiptIcon />
+                </span>
+                <p className="text-sm font-bold">{t('No payments yet.')}</p>
+                <p className="text-xs text-slate-500">
+                    {t('Payments appear here once the club records them.')}
+                </p>
+            </div>
+        );
+    }
+
+    const shown = fees.slice(
+        page * PAYMENTS_PER_PAGE,
+        (page + 1) * PAYMENTS_PER_PAGE,
+    );
+
+    return (
+        <div>
+            <ul className="divide-y divide-slate-100">
+                {shown.map((fee, i) => (
+                    <li
+                        key={`${fee.start_date}-${i}`}
+                        className="flex items-center gap-3 py-2.5"
+                    >
+                        <span className="flex size-8 flex-none items-center justify-center rounded-full bg-green-500/15 text-green-700">
+                            <CheckIcon />
+                        </span>
+                        <span className="min-w-0 flex-1">
+                            <span className="block text-sm font-bold capitalize">
+                                {dayjs(fee.start_date).format('MMMM YYYY')}
+                            </span>
+                            <span className="block text-xs text-slate-500">
+                                {dayjs(fee.start_date).format('DD.MM')} –{' '}
+                                {date(fee.end_date)}
+                            </span>
+                        </span>
+                        <span className="flex-none text-sm font-bold text-green-700">
+                            {money(fee.amount)} MKD
+                        </span>
+                    </li>
+                ))}
+            </ul>
+            {pages > 1 && (
+                <Pager
+                    // Page 1 is the newest; "‹" goes back in time
+                    label={`${page + 1} / ${pages}`}
+                    canBack={page < pages - 1}
+                    canForward={page > 0}
+                    onBack={() => setPage(page + 1)}
+                    onForward={() => setPage(page - 1)}
+                />
+            )}
+        </div>
+    );
+}
+
+/**
+ * Attendance one month at a time, newest first: ‹ Month · N trainings › moves
+ * through every month since the first training (up to 12), also those without.
+ */
+function AttendanceBrowser({
+    attendance,
+}: {
+    attendance: FamilyMember['attendance'];
+}) {
+    const current = dayjs().startOf('month');
+    const oldest = attendance.reduce(
+        (first, month) =>
+            dayjs(`${month.month}-01`).isBefore(first)
+                ? dayjs(`${month.month}-01`)
+                : first,
+        current,
+    );
+    const count = Math.min(12, current.diff(oldest, 'month') + 1);
+    // 0 = this month, 1 = the month before, ...
+    const [back, setBack] = useState(0);
+
+    if (attendance.length === 0) {
+        return (
+            <div className="flex flex-col items-center gap-2 py-6 text-center">
+                <span className="flex size-10 items-center justify-center rounded-full bg-[#e6f1f8] text-hydra-blue">
+                    <CalendarIcon />
+                </span>
+                <p className="text-sm font-bold">{t('No trainings yet.')}</p>
+            </div>
+        );
+    }
+
+    const month = current.subtract(back, 'month').format('YYYY-MM');
+    const dates = attendance.find((m) => m.month === month)?.dates ?? [];
+
+    return (
+        <div className="flex flex-col gap-3">
+            <Pager
+                label={
+                    <>
+                        <span className="capitalize">
+                            {dayjs(`${month}-01`).format('MMMM YYYY')}
+                        </span>
+                        <span className="font-semibold text-hydra-blue">
+                            {' · '}
+                            {tc(
+                                ':count training|:count trainings',
+                                dates.length,
+                            )}
+                        </span>
+                    </>
+                }
+                canBack={back < count - 1}
+                canForward={back > 0}
+                onBack={() => setBack(back + 1)}
+                onForward={() => setBack(back - 1)}
+            />
+            <MonthCalendar month={month} dates={dates} />
+        </div>
+    );
+}
+
+/** ‹ label ›: round arrow buttons, greyed out when there's nothing further. */
+function Pager({
+    label,
+    canBack,
+    canForward,
+    onBack,
+    onForward,
+}: {
+    label: ReactNode;
+    canBack: boolean;
+    canForward: boolean;
+    onBack: () => void;
+    onForward: () => void;
+}) {
+    const arrow =
+        'flex size-10 cursor-pointer items-center justify-center rounded-full border border-[#c5dceb] text-hydra-blue transition hover:bg-[#e6f1f8] disabled:cursor-default disabled:opacity-35 disabled:hover:bg-transparent';
+
+    return (
+        <div className="mt-1 flex items-center justify-between gap-2">
+            <button
+                type="button"
+                onClick={onBack}
+                disabled={!canBack}
+                aria-label={t('Previous')}
+                className={arrow}
+            >
+                <ChevronIcon direction="left" />
+            </button>
+            <span className="min-w-0 text-center text-sm font-bold">
+                {label}
+            </span>
+            <button
+                type="button"
+                onClick={onForward}
+                disabled={!canForward}
+                aria-label={t('Next')}
+                className={arrow}
+            >
+                <ChevronIcon direction="right" />
+            </button>
+        </div>
+    );
+}
+
+const iconProps = {
+    width: 18,
+    height: 18,
+    viewBox: '0 0 24 24',
+    fill: 'none',
+    stroke: 'currentColor',
+    strokeWidth: 2.2,
+    strokeLinecap: 'round' as const,
+    strokeLinejoin: 'round' as const,
+    'aria-hidden': true,
+};
+
+function ChevronIcon({ direction }: { direction: 'left' | 'right' }) {
+    return (
+        <svg {...iconProps}>
+            <path
+                d={direction === 'left' ? 'M15 6l-6 6 6 6' : 'M9 6l6 6-6 6'}
+            />
+        </svg>
+    );
+}
+
+function CheckIcon() {
+    return (
+        <svg {...iconProps} width={16} height={16}>
+            <path d="M5 12l5 5L20 7" />
+        </svg>
+    );
+}
+
+function ReceiptIcon() {
+    return (
+        <svg {...iconProps}>
+            <path d="M6 3h12v18l-3-2-3 2-3-2-3 2zM9 8h6M9 12h6" />
+        </svg>
+    );
+}
+
+function CalendarIcon() {
+    return (
+        <svg {...iconProps}>
+            <path d="M4 6h16v14H4zM4 10h16M8 3v4M16 3v4" />
+        </svg>
     );
 }
