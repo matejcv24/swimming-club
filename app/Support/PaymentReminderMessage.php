@@ -148,6 +148,33 @@ class PaymentReminderMessage
             ->implode("\n\n");
     }
 
+    /**
+     * A piece of the text as safe HTML, with the members' names and their expiry
+     * dates in bold (also in a text the admin edited, wherever they still appear).
+     */
+    public function emphasize(string $text): string
+    {
+        $html = e($text);
+
+        $parts = $this->members
+            ->flatMap(fn (Member $member) => [$member->name, self::expiredOn($member)?->format('d.m.Y')])
+            ->filter()
+            ->unique()
+            // Longer first, so "Ana Petrova" is bolded whole before "Ana"
+            ->sortByDesc(fn (string $part) => mb_strlen($part));
+
+        foreach ($parts as $part) {
+            $escaped = e($part);
+            $html = preg_replace(
+                '/(?<!<strong>)'.preg_quote($escaped, '/').'/u',
+                '<strong>'.$escaped.'</strong>',
+                $html,
+            );
+        }
+
+        return nl2br($html);
+    }
+
     /** For the preview pop-up. */
     public function toArray(Club $club): array
     {

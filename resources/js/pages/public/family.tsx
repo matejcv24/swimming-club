@@ -19,7 +19,6 @@ interface FamilyMember {
 
 interface Props {
     members: FamilyMember[];
-    expiresAt: string;
 }
 
 const date = (value: string) => dayjs(value).format('DD.MM.YYYY');
@@ -30,46 +29,71 @@ const money = (value: number) =>
  * What a parent (or an adult member) sees from the link in a payment reminder:
  * each member's payments and attendance. Read only, no login.
  */
-export default function Family({ members, expiresAt }: Props) {
+export default function Family({ members }: Props) {
     const { club } = usePage().props as { club?: ClubSharedData | null };
+    // Brothers and sisters: one at a time, so the page fits the screen
+    const [shownId, setShownId] = useState(members[0]?.id);
+    const shown = members.find((m) => m.id === shownId) ?? members[0];
 
     return (
-        <div className="light min-h-svh bg-hydra-navy px-4 py-6 text-hydra-navy">
+        // Fills the screen exactly; everything inside is sized to fit it
+        <div className="light flex min-h-svh flex-col items-center bg-hydra-navy px-4 py-[min(1.25rem,2.5svh)] text-hydra-navy">
             <Head title={t('Attendance and payments')}>
                 <meta name="robots" content="noindex, nofollow" />
             </Head>
 
-            <div className="mx-auto flex max-w-lg flex-col gap-5">
-                <div className="flex justify-end text-white">
+            <div className="relative flex w-full max-w-md flex-1 flex-col justify-center gap-[min(1rem,2svh)]">
+                <div className="absolute top-0 right-0 text-white">
                     <LanguageSwitch />
                 </div>
 
                 {/* The club's logo and name; without a logo, the app's own mark */}
-                <div className="flex flex-col items-center gap-2">
+                <div className="flex flex-col items-center gap-[min(0.4rem,1svh)]">
                     {club?.logo_url ? (
                         <img
                             src={club.logo_url}
                             alt=""
-                            className="size-20 rounded-full object-cover shadow-[0_0_0_3px_rgb(255_255_255/0.18)]"
+                            className="size-[min(4rem,9svh)] rounded-full object-cover shadow-[0_0_0_3px_rgb(255_255_255/0.18)]"
                         />
                     ) : (
-                        <HuddleMark onDark className="size-20" />
+                        <HuddleMark onDark className="size-[min(4rem,9svh)]" />
                     )}
-                    <p className="text-lg font-bold text-white">{club?.name}</p>
-                    <h1 className="text-sm text-sky-200">
-                        {t('Attendance and payments')}
-                    </h1>
+                    <p className="text-base font-bold text-white">
+                        {club?.name}
+                    </p>
                 </div>
 
-                {members.map((member) => (
-                    <MemberCard key={member.id} member={member} />
-                ))}
+                {members.length > 1 && (
+                    <div
+                        role="tablist"
+                        aria-label={t('Members')}
+                        className="flex flex-wrap justify-center gap-2"
+                    >
+                        {members.map((member) => (
+                            <button
+                                key={member.id}
+                                type="button"
+                                role="tab"
+                                aria-selected={member.id === shown?.id}
+                                onClick={() => setShownId(member.id)}
+                                className={`min-h-9 cursor-pointer rounded-full px-4 text-sm font-bold transition ${
+                                    member.id === shown?.id
+                                        ? 'bg-white text-hydra-navy'
+                                        : 'bg-white/10 text-white hover:bg-white/20'
+                                }`}
+                            >
+                                {member.name.split(' ')[0]}
+                            </button>
+                        ))}
+                    </div>
+                )}
+
+                {shown && <MemberCard key={shown.id} member={shown} />}
 
                 <p className="text-center text-xs text-sky-200/80">
-                    {t('This page works until :date.', {
-                        date: date(expiresAt),
-                    })}{' '}
-                    {t("Questions? Reply to the club's email.")}
+                    {t(
+                        'If you have any questions, contact someone from the club.',
+                    )}
                 </p>
             </div>
         </div>
@@ -81,7 +105,7 @@ function MemberCard({ member }: { member: FamilyMember }) {
     const [tab, setTab] = useState<'payments' | 'attendance'>('payments');
 
     return (
-        <section className="rounded-2xl bg-white p-5 shadow-2xl shadow-black/30">
+        <section className="rounded-2xl bg-white p-[min(1.25rem,2.5svh)] shadow-2xl shadow-black/30">
             <h2 className="text-lg leading-snug font-bold break-words">
                 {member.name}
             </h2>
@@ -91,7 +115,7 @@ function MemberCard({ member }: { member: FamilyMember }) {
 
             {/* Paid or not, as one full line: never squeezed next to the name */}
             <p
-                className={`mt-3 flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-semibold ${
+                className={`mt-[min(0.75rem,1.5svh)] flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-semibold ${
                     member.late
                         ? 'bg-red-500/10 text-red-700'
                         : 'bg-green-500/10 text-green-800'
@@ -115,7 +139,7 @@ function MemberCard({ member }: { member: FamilyMember }) {
             {/* Payments | Attendance */}
             <div
                 role="tablist"
-                className="mt-4 flex gap-1 rounded-full bg-[#e6f1f8] p-1"
+                className="mt-[min(1rem,2svh)] flex gap-1 rounded-full bg-[#e6f1f8] p-1"
             >
                 {(['payments', 'attendance'] as const).map((key) => (
                     <button
@@ -124,7 +148,7 @@ function MemberCard({ member }: { member: FamilyMember }) {
                         role="tab"
                         aria-selected={tab === key}
                         onClick={() => setTab(key)}
-                        className={`min-h-10 flex-1 cursor-pointer rounded-full text-sm font-bold transition ${
+                        className={`min-h-[min(2.5rem,5svh)] flex-1 cursor-pointer rounded-full text-sm font-bold transition ${
                             tab === key
                                 ? 'bg-white text-hydra-navy shadow-[0_1px_4px_rgba(0,16,49,0.18)]'
                                 : 'text-slate-500'
@@ -163,11 +187,11 @@ function MonthCalendar({ month, dates }: { month: string; dates: string[] }) {
 
     return (
         <div>
-            <div className="grid grid-cols-7 gap-1 text-center">
+            <div className="grid grid-cols-7 gap-[min(0.25rem,0.5svh)] text-center">
                 {weekdays.map((day, i) => (
                     <span
                         key={`${day}-${i}`}
-                        className="pb-1 text-[11px] font-semibold text-slate-400"
+                        className="text-[11px] font-semibold text-slate-400"
                     >
                         {day}
                     </span>
@@ -187,7 +211,7 @@ function MonthCalendar({ month, dates }: { month: string; dates: string[] }) {
                                       })
                                     : undefined
                             }
-                            className={`mx-auto flex size-8 items-center justify-center rounded-full text-xs ${
+                            className={`mx-auto flex size-[min(2rem,4.2svh)] items-center justify-center rounded-full text-xs ${
                                 trained.has(day)
                                     ? 'bg-hydra-blue font-bold text-white shadow-[0_2px_6px_rgba(22,144,200,0.35)]'
                                     : 'text-slate-400'
@@ -235,7 +259,7 @@ function PaymentsBrowser({ fees }: { fees: FamilyMember['fees'] }) {
                 {shown.map((fee, i) => (
                     <li
                         key={`${fee.start_date}-${i}`}
-                        className="flex items-center gap-3 py-2.5"
+                        className="flex items-center gap-3 py-[min(0.6rem,1.2svh)]"
                     >
                         <span className="flex size-8 flex-none items-center justify-center rounded-full bg-green-500/15 text-green-700">
                             <CheckIcon />
@@ -257,12 +281,12 @@ function PaymentsBrowser({ fees }: { fees: FamilyMember['fees'] }) {
             </ul>
             {pages > 1 && (
                 <Pager
-                    // Page 1 is the newest; "‹" goes back in time
+                    // Page 1 is the newest; ">" goes to older payments
                     label={`${page + 1} / ${pages}`}
-                    canBack={page < pages - 1}
-                    canForward={page > 0}
-                    onBack={() => setPage(page + 1)}
-                    onForward={() => setPage(page - 1)}
+                    canNewer={page > 0}
+                    canOlder={page < pages - 1}
+                    onNewer={() => setPage(page - 1)}
+                    onOlder={() => setPage(page + 1)}
                 />
             )}
         </div>
@@ -321,40 +345,43 @@ function AttendanceBrowser({
                         </span>
                     </>
                 }
-                canBack={back < count - 1}
-                canForward={back > 0}
-                onBack={() => setBack(back + 1)}
-                onForward={() => setBack(back - 1)}
+                canNewer={back > 0}
+                canOlder={back < count - 1}
+                onNewer={() => setBack(back - 1)}
+                onOlder={() => setBack(back + 1)}
             />
             <MonthCalendar month={month} dates={dates} />
         </div>
     );
 }
 
-/** ‹ label ›: round arrow buttons, greyed out when there's nothing further. */
+/**
+ * ‹ label ›: "›" goes back in time (older), "‹" comes forward (newer); an arrow
+ * is greyed out when there's nothing further that way.
+ */
 function Pager({
     label,
-    canBack,
-    canForward,
-    onBack,
-    onForward,
+    canNewer,
+    canOlder,
+    onNewer,
+    onOlder,
 }: {
     label: ReactNode;
-    canBack: boolean;
-    canForward: boolean;
-    onBack: () => void;
-    onForward: () => void;
+    canNewer: boolean;
+    canOlder: boolean;
+    onNewer: () => void;
+    onOlder: () => void;
 }) {
     const arrow =
-        'flex size-10 cursor-pointer items-center justify-center rounded-full border border-[#c5dceb] text-hydra-blue transition hover:bg-[#e6f1f8] disabled:cursor-default disabled:opacity-35 disabled:hover:bg-transparent';
+        'flex size-[min(2.5rem,5svh)] min-h-9 min-w-9 cursor-pointer items-center justify-center rounded-full border border-[#c5dceb] text-hydra-blue transition hover:bg-[#e6f1f8] disabled:cursor-default disabled:opacity-35 disabled:hover:bg-transparent';
 
     return (
         <div className="mt-1 flex items-center justify-between gap-2">
             <button
                 type="button"
-                onClick={onBack}
-                disabled={!canBack}
-                aria-label={t('Previous')}
+                onClick={onNewer}
+                disabled={!canNewer}
+                aria-label={t('Newer')}
                 className={arrow}
             >
                 <ChevronIcon direction="left" />
@@ -364,9 +391,9 @@ function Pager({
             </span>
             <button
                 type="button"
-                onClick={onForward}
-                disabled={!canForward}
-                aria-label={t('Next')}
+                onClick={onOlder}
+                disabled={!canOlder}
+                aria-label={t('Older')}
                 className={arrow}
             >
                 <ChevronIcon direction="right" />
