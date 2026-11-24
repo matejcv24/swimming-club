@@ -149,7 +149,6 @@ export function ClubSettingsDialog({ onClose }: { onClose: () => void }) {
                             helperText={form.errors.name}
                             required
                             fullWidth
-                            autoFocus
                             slotProps={{ htmlInput: { maxLength: 120 } }}
                             sx={FIELD_SX}
                         />

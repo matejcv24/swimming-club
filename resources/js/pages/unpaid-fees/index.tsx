@@ -56,7 +56,12 @@ interface ReminderPreview {
     email: string;
     recipient_name: string | null;
     source: 'parent' | 'member';
-    members: { id: number; name: string; unpaid_from: string | null }[];
+    members: {
+        id: number;
+        name: string;
+        unpaid_from: string | null;
+        expired_on: string | null;
+    }[];
     subject: string;
     /** A list paragraph is an array of lines */
     paragraphs: (string | string[])[];
@@ -487,10 +492,10 @@ export default function UnpaidFeesIndex({ unpaidMembers }: Props) {
                                             className="rounded-full bg-red-500/10 px-2.5 py-1 text-xs font-semibold text-red-600 dark:text-red-300"
                                         >
                                             {late.name} ·{' '}
-                                            {late.unpaid_from
-                                                ? t('from :date', {
+                                            {late.expired_on
+                                                ? t('expired on :date', {
                                                       date: date(
-                                                          late.unpaid_from,
+                                                          late.expired_on,
                                                       ),
                                                   })
                                                 : t('no payment on record')}

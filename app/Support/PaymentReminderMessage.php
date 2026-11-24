@@ -81,6 +81,14 @@ class PaymentReminderMessage
         return new self($email, $recipientName, $source, $members, $lastSentAt ? Carbon::parse($lastSentAt) : null);
     }
 
+    /** The last day of a member's last paid period (null: never paid). */
+    public static function expiredOn(Member $member): ?Carbon
+    {
+        $end = $member->membership_fees_max_end_date ?? null;
+
+        return $end ? Carbon::parse($end) : null;
+    }
+
     /** The day after a member's last paid period ended (null: never paid). */
     public static function unpaidFrom(Member $member): ?Carbon
     {
@@ -101,37 +109,28 @@ class PaymentReminderMessage
      */
     public function paragraphs(Club $club): array
     {
-        $greeting = $this->recipientName
-            ? __('Dear :name,', ['name' => $this->recipientName])
-            : __('Dear Sir or Madam,');
-
-        $since = fn (Member $member) => ($from = self::unpaidFrom($member))
-            ? __('from :date', ['date' => $from->format('d.m.Y')])
+        $expired = fn (Member $member) => ($end = self::expiredOn($member))
+            ? __('expired on :date', ['date' => $end->format('d.m.Y')])
             : __('no payment on record');
 
         if ($this->members->count() === 1) {
             $member = $this->members->first();
-            $from = self::unpaidFrom($member);
+            $end = self::expiredOn($member);
 
-            $reminder = match (true) {
-                $this->source === 'member' && $from !== null => __('We remind you that your membership fee has not been paid since :date.', ['date' => $from->format('d.m.Y')]),
-                $this->source === 'member' => __('We remind you that we have no payment of your membership fee on record.'),
-                $from !== null => __('We remind you that the membership fee for :member has not been paid since :date.', ['member' => $member->name, 'date' => $from->format('d.m.Y')]),
-                default => __('We remind you that we have no membership fee payment on record for :member.', ['member' => $member->name]),
-            };
-
-            $body = [$reminder];
+            $body = [$end
+                ? __('We remind you that the membership fee for :member expired on :date.', ['member' => $member->name, 'date' => $end->format('d.m.Y')])
+                : __('We remind you that there is no membership fee payment on record for :member.', ['member' => $member->name])];
         } else {
             $body = [
-                __('We remind you that the membership fee has not been paid for:'),
-                $this->members->map(fn (Member $member) => $member->name.' – '.$since($member))->all(),
+                __('We remind you that the membership fee has expired for:'),
+                $this->members->map(fn (Member $member) => $member->name.' – '.$expired($member))->all(),
             ];
         }
 
         return [
-            $greeting,
+            __('Dear Sir or Madam,'),
             ...$body,
-            __('Please make the payment as soon as possible. If you have already paid, please ignore this message.'),
+            __('We would be grateful if you could make the payment as soon as possible. If you have already paid, please ignore this message.'),
             __('Kind regards,')."\n".$club->name,
         ];
     }
@@ -160,6 +159,7 @@ class PaymentReminderMessage
                 'id' => $member->id,
                 'name' => $member->name,
                 'unpaid_from' => self::unpaidFrom($member)?->toDateString(),
+                'expired_on' => self::expiredOn($member)?->toDateString(),
             ])->values(),
             'subject' => $this->subject($club),
             'paragraphs' => $this->paragraphs($club),
