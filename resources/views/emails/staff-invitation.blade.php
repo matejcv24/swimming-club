@@ -23,6 +23,7 @@
                     {{ __("If the button doesn't work, copy this address into your browser:") }}
                 </p>
                 <p style="margin:0 0 24px;font-size:12px;word-break:break-all;color:#0c76a8;">{{ $link }}</p>
+                @include('emails.partials.unique-ending')
             </td>
         </tr>
     </table>

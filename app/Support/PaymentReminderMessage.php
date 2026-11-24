@@ -99,7 +99,7 @@ class PaymentReminderMessage
 
     public function subject(Club $club): string
     {
-        return __('Membership fee reminder – :club', ['club' => $club->name]);
+        return __('Membership fee reminder – :club – :date', ['club' => $club->name, 'date' => now()->format('d.m.Y')]);
     }
 
     /**
