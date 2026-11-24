@@ -46,6 +46,8 @@ class PaymentReminderMail extends Mailable
                 'paragraphs' => $this->reminder->paragraphs($this->club),
                 'customText' => $this->customText,
                 'familyLink' => FamilyController::link($this->reminder->members->pluck('id')->all()),
+                'reminder' => $this->reminder,
+                'iconPath' => resource_path('images/email-calendar.png'),
                 'linkDays' => FamilyController::VALID_DAYS,
             ],
         );

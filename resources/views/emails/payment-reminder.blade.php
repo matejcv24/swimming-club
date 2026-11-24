@@ -20,30 +20,41 @@
                 @if ($customText !== null)
                     {{-- The text as the admin edited it: plain text, paragraph by paragraph --}}
                     @foreach (preg_split('/\R{2,}/', trim($customText)) as $paragraph)
-                        <p style="margin:0 0 14px;font-size:15px;line-height:1.6;">{!! nl2br(e($paragraph)) !!}</p>
+                        <p style="margin:0 0 14px;font-size:15px;line-height:1.6;">{!! $reminder->emphasize($paragraph) !!}</p>
                     @endforeach
                 @else
                     @foreach ($body as $paragraph)
                         @if (is_array($paragraph))
                             <ul style="margin:0 0 14px;padding-left:20px;font-size:15px;line-height:1.6;">
                                 @foreach ($paragraph as $line)
-                                    <li>{{ $line }}</li>
+                                    <li>{!! $reminder->emphasize($line) !!}</li>
                                 @endforeach
                             </ul>
                         @else
-                            <p style="margin:0 0 14px;font-size:15px;line-height:1.6;">{!! nl2br(e($paragraph)) !!}</p>
+                            <p style="margin:0 0 14px;font-size:15px;line-height:1.6;">{!! $reminder->emphasize($paragraph) !!}</p>
                         @endif
                     @endforeach
                 @endif
 
-                {{-- The attendance and payments page, in its own highlighted box --}}
-                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:8px 0 18px;background:#eef6fb;border:2px solid #c5dceb;border-radius:14px;">
+                {{-- The attendance and payments page, in its own box --}}
+                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:8px 0 18px;background:#f5f8fb;border:1px solid #dbe5ee;border-radius:12px;">
                     <tr>
                         <td style="padding:16px 18px;">
-                            <p style="margin:0 0 4px;font-size:15px;font-weight:bold;color:#001031;">{{ __('Attendance and payments') }}</p>
+                            <p style="margin:0 0 4px;font-size:15px;font-weight:bold;color:#0b2545;">{{ __('Attendance and payments') }}</p>
                             <p style="margin:0 0 14px;font-size:14px;line-height:1.5;color:#3b4a60;">{{ __('See all payments and training attendance') }}</p>
-                            <a href="{{ $familyLink }}" style="display:block;background:#0c76a8;color:#ffffff;text-decoration:none;font-weight:bold;font-size:15px;text-align:center;padding:13px 18px;border-radius:999px;">{{ __('Open the page') }} &rarr;</a>
-                            <p style="margin:10px 0 0;font-size:12px;line-height:1.5;color:#5b6b82;text-align:center;">
+                            {{-- A "bulletproof" button: a table cell, so every email app draws it the same --}}
+                            <table role="presentation" cellpadding="0" cellspacing="0" style="border-collapse:separate;">
+                                <tr>
+                                    <td bgcolor="#0b2545" style="background:#0b2545;border-radius:8px;">
+                                        <a href="{{ $familyLink }}" style="display:inline-block;padding:11px 20px;font-family:Arial,Helvetica,sans-serif;font-size:14px;font-weight:bold;line-height:18px;color:#ffffff;text-decoration:none;white-space:nowrap;letter-spacing:0.2px;">
+                                            @if (isset($message) && is_file($iconPath))
+                                                <img src="{{ $message->embed($iconPath) }}" alt="" width="18" height="18" style="display:inline-block;width:18px;height:18px;vertical-align:-3px;margin-right:8px;border:0;">
+                                            @endif{{ __('Open the page') }}
+                                        </a>
+                                    </td>
+                                </tr>
+                            </table>
+                            <p style="margin:10px 0 0;font-size:12px;line-height:1.5;color:#6b7a90;">
                                 {{ trans_choice('The link works for :count day.|The link works for :count days.', $linkDays, ['count' => $linkDays]) }}
                             </p>
                         </td>
