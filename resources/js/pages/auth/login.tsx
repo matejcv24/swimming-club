@@ -109,5 +109,6 @@ export default function Login({ status, canResetPassword }: Props) {
 
 Login.layout = {
     title: 'Welcome back',
-    description: 'Log in to SC Hydra',
+    // The club's name is shown above the card
+    description: 'Log in to your club',
 };

@@ -94,8 +94,11 @@ class GroupController extends Controller
         );
         $hasMembers = $members->clone()->exists();
 
+        // 'all': into all groups (no single group), so even the last group can go
+        $toAllGroups = $request->input('move_to_group_id') === 'all';
+
         $validated = $request->validate([
-            'move_to_group_id' => [
+            'move_to_group_id' => $toAllGroups ? ['required'] : [
                 Rule::requiredIf($hasMembers),
                 'nullable',
                 Rule::exists('groups', 'id')->whereNull('deleted_at'),
@@ -107,8 +110,10 @@ class GroupController extends Controller
             throw ValidationException::withMessages(['move_to_group_id' => __('Choose where its members go.')]);
         }
 
-        DB::transaction(function () use ($validated, $hasMembers, $members, $removedIds) {
-            if ($hasMembers) {
+        DB::transaction(function () use ($validated, $hasMembers, $members, $removedIds, $toAllGroups) {
+            if ($hasMembers && $toAllGroups) {
+                $members->update(['group_id' => null, 'subgroup_id' => null]);
+            } elseif ($hasMembers) {
                 $target = Group::findOrFail($validated['move_to_group_id']);
 
                 // Moving into a subgroup also puts them in its main group

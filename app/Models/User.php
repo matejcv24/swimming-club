@@ -40,6 +40,12 @@ class User extends Authenticatable
         ];
     }
 
+    /** The club's owner: an admin other admins can't deactivate or change. */
+    public function isOwner(): bool
+    {
+        return $this->id !== null && Club::current()->owner_id === $this->id;
+    }
+
     /** A deactivated account can't log in until an admin activates it again. */
     public function isActive(): bool
     {

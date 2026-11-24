@@ -52,7 +52,8 @@ const membersLabel = (count: number) =>
 type Deleting = { item: ClubSubgroup; parent: ClubGroup | null };
 
 /** A destination for the members of a deleted group or subgroup. */
-type Destination = { id: number; label: string };
+/** Where members go: a group, a subgroup, or 'all' (all groups: no single group). */
+type Destination = { id: number | 'all'; label: string };
 
 /**
  * Admins create, rename and delete the club's groups (e.g. "Big pool") and their
@@ -89,7 +90,7 @@ export function ManageGroupsDialog({
     const [addingTo, setAddingTo] = useState<number | null>(null);
     const [newSubgroupName, setNewSubgroupName] = useState('');
     const [deleting, setDeleting] = useState<Deleting | null>(null);
-    const [moveTo, setMoveTo] = useState<number | ''>('');
+    const [moveTo, setMoveTo] = useState<number | 'all' | ''>('');
     const [error, setError] = useState<string | null>(null);
     const [deleteError, setDeleteError] = useState<string | null>(null);
     const [busy, setBusy] = useState(false);
@@ -184,9 +185,13 @@ export function ManageGroupsDialog({
         );
     };
 
-    /** Where the members of what is being deleted can go. */
-    const destinationsFor = (target: Deleting): Destination[] =>
-        groups.flatMap((group) => {
+    /**
+     * Where the members of what is being deleted can go: all groups (always there,
+     * so even the last group can be deleted), or another group or subgroup.
+     */
+    const destinationsFor = (target: Deleting): Destination[] => [
+        { id: 'all', label: t('All groups') },
+        ...groups.flatMap((group) => {
             // A deleted group takes its subgroups with it
             if (target.parent === null && group.id === target.item.id) {
                 return [];
@@ -201,14 +206,20 @@ export function ManageGroupsDialog({
                         label: `${group.name} · ${s.name}`,
                     })),
             ];
-        });
+        }),
+    ];
 
     const startDelete = (item: ClubSubgroup, parent: ClubGroup | null) => {
         const target = { item, parent };
 
         setDeleting(target);
-        // A subgroup's members go back to its group unless chosen otherwise
-        setMoveTo(parent?.id ?? destinationsFor(target)[0]?.id ?? '');
+        // A subgroup's members go back to its group, a group's to the next group,
+        // unless chosen otherwise; the last group's to all groups
+        setMoveTo(
+            parent?.id ??
+                destinationsFor(target).find((d) => d.id !== 'all')?.id ??
+                'all',
+        );
         setDeleteError(null);
     };
 
@@ -643,7 +654,11 @@ export function ManageGroupsDialog({
                                             value={moveTo}
                                             onChange={(e) =>
                                                 setMoveTo(
-                                                    Number(e.target.value),
+                                                    e.target.value === 'all'
+                                                        ? 'all'
+                                                        : Number(
+                                                              e.target.value,
+                                                          ),
                                                 )
                                             }
                                         >

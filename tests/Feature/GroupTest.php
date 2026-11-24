@@ -154,4 +154,21 @@ class GroupTest extends TestCase
             ->assertJsonPath('total', 19000)
             ->assertJsonCount(2, 'invoices');
     }
+
+    public function test_even_the_last_group_can_be_deleted_its_members_going_to_all_groups()
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        Group::query()->delete();
+        $last = Group::create(['name' => 'Only group']);
+        $evening = Group::create(['name' => '18:00', 'parent_id' => $last->id]);
+        $member = Member::create(['name' => 'Ana', 'status' => 'active', 'group_id' => $last->id, 'subgroup_id' => $evening->id]);
+
+        $this->actingAs($admin)->delete("/groups/{$last->id}", ['move_to_group_id' => 'all'])->assertSessionHasNoErrors();
+
+        $this->assertSoftDeleted($last);
+        $this->assertSoftDeleted($evening);
+        $member->refresh();
+        $this->assertNull($member->group_id);
+        $this->assertNull($member->subgroup_id);
+    }
 }

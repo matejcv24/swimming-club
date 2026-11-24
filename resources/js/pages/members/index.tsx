@@ -1,6 +1,8 @@
 import { Head, Link, router } from '@inertiajs/react';
+import AddIcon from '@mui/icons-material/Add';
 import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
+import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 import GroupsIcon from '@mui/icons-material/Groups';
 import PersonAddAlt1Icon from '@mui/icons-material/PersonAddAlt1';
 import Avatar from '@mui/material/Avatar';
@@ -37,6 +39,7 @@ import {
     AddButton,
     avatarSx,
     CloseButton,
+    FIELD_SX,
     Hint,
     PillSearchField,
     GroupChip,
@@ -51,6 +54,8 @@ import { t } from '@/lib/i18n';
 interface Member {
     id: number;
     name: string;
+    phone: string | null;
+    email: string | null;
     group_id: number | null;
     subgroup_id: number | null;
     status: 'active' | 'inactive';
@@ -58,6 +63,7 @@ interface Member {
         id: number;
         name: string;
         phone: string;
+        email: string | null;
     };
 }
 
@@ -91,6 +97,11 @@ export default function MembersIndex({ members, userRole }: Props) {
     const [editMember, setEditMember] = useState<Member | null>(null);
     const [search, setSearch] = useState('');
     const [memberStatusTab, setMemberStatusTab] = useState(0);
+    // The optional blocks of the forms: closed until asked for
+    const [showContact, setShowContact] = useState(false);
+    const [showParent, setShowParent] = useState(false);
+    const [editShowContact, setEditShowContact] = useState(false);
+    const [editShowParent, setEditShowParent] = useState(false);
     const [form, setForm] = useState({
         name: '',
         // '' = all groups: the member trains in every group
@@ -98,8 +109,11 @@ export default function MembersIndex({ members, userRole }: Props) {
         // '' = no subgroup
         subgroup_id: '' as number | '',
         status: 'active' as 'active' | 'inactive',
+        phone: '',
+        email: '',
         parent_name: '',
         parent_phone: '',
+        parent_email: '',
     });
 
     const [editForm, setEditForm] = useState({
@@ -109,8 +123,11 @@ export default function MembersIndex({ members, userRole }: Props) {
         // '' = no subgroup
         subgroup_id: '' as number | '',
         status: 'active' as 'active' | 'inactive',
+        phone: '',
+        email: '',
         parent_name: '',
         parent_phone: '',
+        parent_email: '',
     });
 
     useEffect(() => {
@@ -150,7 +167,10 @@ export default function MembersIndex({ members, userRole }: Props) {
             editForm.subgroup_id !== (editMember.subgroup_id ?? '') ||
             editForm.status !== editMember.status ||
             editForm.parent_name !== (editMember.parent?.name ?? '') ||
-            editForm.parent_phone !== (editMember.parent?.phone ?? ''));
+            editForm.parent_phone !== (editMember.parent?.phone ?? '') ||
+            editForm.parent_email !== (editMember.parent?.email ?? '') ||
+            editForm.phone !== (editMember.phone ?? '') ||
+            editForm.email !== (editMember.email ?? ''));
 
     const getInitials = (name: string) =>
         name
@@ -170,9 +190,14 @@ export default function MembersIndex({ members, userRole }: Props) {
                     group_id: '',
                     subgroup_id: '',
                     status: 'active',
+                    phone: '',
+                    email: '',
                     parent_name: '',
                     parent_phone: '',
+                    parent_email: '',
                 });
+                setShowContact(false);
+                setShowParent(false);
             },
         });
     };
@@ -204,9 +229,21 @@ export default function MembersIndex({ members, userRole }: Props) {
             group_id: member.group_id ?? '',
             subgroup_id: member.subgroup_id ?? '',
             status: member.status ?? 'active',
+            phone: member.phone ?? '',
+            email: member.email ?? '',
             parent_name: member.parent?.name ?? '',
             parent_phone: member.parent?.phone ?? '',
+            parent_email: member.parent?.email ?? '',
         });
+        // Open the blocks that already hold something
+        setEditShowContact(!!(member.phone || member.email));
+        setEditShowParent(
+            !!(
+                member.parent?.name ||
+                member.parent?.phone ||
+                member.parent?.email
+            ),
+        );
     };
 
     const handleEditSubmit = (e: React.FormEvent) => {
@@ -264,11 +301,6 @@ export default function MembersIndex({ members, userRole }: Props) {
                         }
                         onClose={popup.close}
                     />
-                    <PillSearchField
-                        value={search}
-                        onChange={setSearch}
-                        placeholder={t('Search members...')}
-                    />
                     <Tabs
                         value={memberStatusTab}
                         onChange={(_, newValue) => setMemberStatusTab(newValue)}
@@ -287,6 +319,11 @@ export default function MembersIndex({ members, userRole }: Props) {
                             })}
                         />
                     </Tabs>
+                    <PillSearchField
+                        value={search}
+                        onChange={setSearch}
+                        placeholder={t('Search members...')}
+                    />
                 </DialogTitle>
 
                 {/* Members List */}
@@ -494,6 +531,43 @@ export default function MembersIndex({ members, userRole }: Props) {
                             sx={FIELD_SX}
                         />
 
+                        <OptionalSection
+                            label={t('Contact details')}
+                            hint={t('phone, email')}
+                            open={editShowContact}
+                            filled={!!(editForm.phone || editForm.email)}
+                            onToggle={() =>
+                                setEditShowContact(!editShowContact)
+                            }
+                        >
+                            <TextField
+                                label={t('Phone')}
+                                type="tel"
+                                value={editForm.phone}
+                                onChange={(e) =>
+                                    setEditForm({
+                                        ...editForm,
+                                        phone: e.target.value,
+                                    })
+                                }
+                                fullWidth
+                                sx={FIELD_SX}
+                            />
+                            <TextField
+                                label={t('Email')}
+                                type="email"
+                                value={editForm.email}
+                                onChange={(e) =>
+                                    setEditForm({
+                                        ...editForm,
+                                        email: e.target.value,
+                                    })
+                                }
+                                fullWidth
+                                sx={FIELD_SX}
+                            />
+                        </OptionalSection>
+
                         <FormControl fullWidth>
                             <InputLabel
                                 id="edit-pool-label"
@@ -553,33 +627,58 @@ export default function MembersIndex({ members, userRole }: Props) {
                             }
                         />
 
-                        <SectionLabel>{t('Parent Info')}</SectionLabel>
-
-                        <TextField
-                            label={t('Parent full name')}
-                            value={editForm.parent_name}
-                            onChange={(e) =>
-                                setEditForm({
-                                    ...editForm,
-                                    parent_name: e.target.value,
-                                })
+                        <OptionalSection
+                            label={t('Parent Info')}
+                            hint={t('name, phone, email')}
+                            open={editShowParent}
+                            filled={
+                                !!(
+                                    editForm.parent_name ||
+                                    editForm.parent_phone ||
+                                    editForm.parent_email
+                                )
                             }
-                            fullWidth
-                            sx={FIELD_SX}
-                        />
-                        <TextField
-                            label={t('Parent phone')}
-                            type="tel"
-                            value={editForm.parent_phone}
-                            onChange={(e) =>
-                                setEditForm({
-                                    ...editForm,
-                                    parent_phone: e.target.value,
-                                })
-                            }
-                            fullWidth
-                            sx={FIELD_SX}
-                        />
+                            onToggle={() => setEditShowParent(!editShowParent)}
+                        >
+                            <TextField
+                                label={t('Parent full name')}
+                                value={editForm.parent_name}
+                                onChange={(e) =>
+                                    setEditForm({
+                                        ...editForm,
+                                        parent_name: e.target.value,
+                                    })
+                                }
+                                fullWidth
+                                sx={FIELD_SX}
+                            />
+                            <TextField
+                                label={t('Parent phone')}
+                                type="tel"
+                                value={editForm.parent_phone}
+                                onChange={(e) =>
+                                    setEditForm({
+                                        ...editForm,
+                                        parent_phone: e.target.value,
+                                    })
+                                }
+                                fullWidth
+                                sx={FIELD_SX}
+                            />
+                            <TextField
+                                label={t('Parent email')}
+                                type="email"
+                                value={editForm.parent_email}
+                                onChange={(e) =>
+                                    setEditForm({
+                                        ...editForm,
+                                        parent_email: e.target.value,
+                                    })
+                                }
+                                fullWidth
+                                sx={FIELD_SX}
+                            />
+                        </OptionalSection>
 
                         <div className="flex gap-3">
                             <Button
@@ -641,6 +740,41 @@ export default function MembersIndex({ members, userRole }: Props) {
                                 fullWidth
                                 sx={FIELD_SX}
                             />
+
+                            <OptionalSection
+                                label={t('Contact details')}
+                                hint={t('phone, email')}
+                                open={showContact}
+                                filled={!!(form.phone || form.email)}
+                                onToggle={() => setShowContact(!showContact)}
+                            >
+                                <TextField
+                                    label={t('Phone')}
+                                    type="tel"
+                                    value={form.phone}
+                                    onChange={(e) =>
+                                        setForm({
+                                            ...form,
+                                            phone: e.target.value,
+                                        })
+                                    }
+                                    fullWidth
+                                    sx={FIELD_SX}
+                                />
+                                <TextField
+                                    label={t('Email')}
+                                    type="email"
+                                    value={form.email}
+                                    onChange={(e) =>
+                                        setForm({
+                                            ...form,
+                                            email: e.target.value,
+                                        })
+                                    }
+                                    fullWidth
+                                    sx={FIELD_SX}
+                                />
+                            </OptionalSection>
 
                             {/* Members need a group: point to where groups are made */}
                             {groups.length === 0 && (
@@ -723,33 +857,58 @@ export default function MembersIndex({ members, userRole }: Props) {
                                 }
                             />
 
-                            <SectionLabel>{t('Parent Info')}</SectionLabel>
-
-                            <TextField
-                                label={t('Parent full name')}
-                                value={form.parent_name}
-                                onChange={(e) =>
-                                    setForm({
-                                        ...form,
-                                        parent_name: e.target.value,
-                                    })
+                            <OptionalSection
+                                label={t('Parent Info')}
+                                hint={t('name, phone, email')}
+                                open={showParent}
+                                filled={
+                                    !!(
+                                        form.parent_name ||
+                                        form.parent_phone ||
+                                        form.parent_email
+                                    )
                                 }
-                                fullWidth
-                                sx={FIELD_SX}
-                            />
-                            <TextField
-                                label={t('Parent phone')}
-                                type="tel"
-                                value={form.parent_phone}
-                                onChange={(e) =>
-                                    setForm({
-                                        ...form,
-                                        parent_phone: e.target.value,
-                                    })
-                                }
-                                fullWidth
-                                sx={FIELD_SX}
-                            />
+                                onToggle={() => setShowParent(!showParent)}
+                            >
+                                <TextField
+                                    label={t('Parent full name')}
+                                    value={form.parent_name}
+                                    onChange={(e) =>
+                                        setForm({
+                                            ...form,
+                                            parent_name: e.target.value,
+                                        })
+                                    }
+                                    fullWidth
+                                    sx={FIELD_SX}
+                                />
+                                <TextField
+                                    label={t('Parent phone')}
+                                    type="tel"
+                                    value={form.parent_phone}
+                                    onChange={(e) =>
+                                        setForm({
+                                            ...form,
+                                            parent_phone: e.target.value,
+                                        })
+                                    }
+                                    fullWidth
+                                    sx={FIELD_SX}
+                                />
+                                <TextField
+                                    label={t('Parent email')}
+                                    type="email"
+                                    value={form.parent_email}
+                                    onChange={(e) =>
+                                        setForm({
+                                            ...form,
+                                            parent_email: e.target.value,
+                                        })
+                                    }
+                                    fullWidth
+                                    sx={FIELD_SX}
+                                />
+                            </OptionalSection>
 
                             <div className="flex gap-3">
                                 <Button
@@ -778,17 +937,6 @@ export default function MembersIndex({ members, userRole }: Props) {
     );
 }
 
-/** Optional subgroup of the chosen group; hidden when the group has none. */
-/** Outlined text fields in the pop-up's colors, like the Group field. */
-const FIELD_SX = {
-    '& .MuiOutlinedInput-root': {
-        color: POPUP_FG,
-        '& fieldset': { borderColor: popupFg(0.3) },
-        '&:hover fieldset': { borderColor: popupFg(0.6) },
-    },
-    '& .MuiInputLabel-root': { color: popupFg(0.5) },
-} as const;
-
 const SELECT_SX = {
     color: POPUP_FG,
     '& .MuiOutlinedInput-notchedOutline': { borderColor: popupFg(0.3) },
@@ -805,6 +953,63 @@ function SectionLabel({ children }: { children: ReactNode }) {
         >
             {children}
         </Typography>
+    );
+}
+
+/**
+ * An optional part of a form: a dashed "+ add" button that opens its fields, so
+ * clubs that don't need it never see the empty fields.
+ */
+function OptionalSection({
+    label,
+    hint,
+    open,
+    filled,
+    onToggle,
+    children,
+}: {
+    label: string;
+    hint: string;
+    open: boolean;
+    /** Something is typed in it (shown while it's closed). */
+    filled: boolean;
+    onToggle: () => void;
+    children: ReactNode;
+}) {
+    if (!open) {
+        return (
+            <button
+                type="button"
+                onClick={onToggle}
+                aria-expanded={false}
+                className="flex min-h-11 w-full cursor-pointer items-center gap-2 rounded-xl border border-dashed border-[var(--popup-border)] px-3.5 py-2.5 text-left text-sm text-hydra-blue transition hover:bg-hydra-blue/10 dark:text-sky-300"
+            >
+                <AddIcon fontSize="small" />
+                <span>
+                    <span className="font-semibold">{label}</span>{' '}
+                    <span className="text-[var(--popup-muted)]">
+                        ({filled ? t('filled in') : hint})
+                    </span>
+                </span>
+            </button>
+        );
+    }
+
+    // Open: the heading closes it again (what was typed is kept)
+    return (
+        <>
+            <button
+                type="button"
+                onClick={onToggle}
+                aria-expanded
+                aria-label={t('Hide :name', { name: label })}
+                className="-mb-1.5 flex min-h-8 w-full cursor-pointer items-center justify-between text-left text-xs tracking-wider text-[var(--popup-muted)] uppercase"
+            >
+                {label}
+                <ExpandLessIcon fontSize="small" />
+            </button>
+            {children}
+        </>
     );
 }
 

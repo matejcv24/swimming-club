@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Models\Club;
 use App\Models\Group;
 use App\Models\Member;
 use App\Support\DashboardSummary;
@@ -62,6 +63,17 @@ class HandleInertiaRequests extends Middleware
             'auth' => [
                 'user' => $request->user(),
             ],
+            // The club's name and logo (top bar, and the login and invitation pages);
+            // its email only for people logged in
+            'club' => function () use ($request) {
+                $club = Club::current();
+
+                return [
+                    'name' => $club->name,
+                    'email' => $request->user() ? $club->email : null,
+                    'logo_url' => $club->logoUrl(),
+                ];
+            },
             // The club's groups (in their order) and their subgroups, with how many
             // members each has
             'groups' => fn () => $request->user()

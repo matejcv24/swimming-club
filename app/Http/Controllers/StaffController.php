@@ -2,6 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Club;
+use App\Models\Invitation;
+use App\Models\Salary;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -11,10 +14,18 @@ use Illuminate\Validation\Rule;
 
 class StaffController extends Controller
 {
-    private const ROLES = ['admin', 'coach'];
+    public const ROLES = ['admin', 'coach'];
 
     public function index()
     {
+        $ownerId = Club::current()->owner_id;
+
+        // The months each person has a salary for (YYYY-MM)
+        $salaryMonths = Salary::get(['user_id', 'month'])
+            ->groupBy('user_id')
+            ->map(fn ($salaries) => $salaries->map(fn (Salary $salary) => $salary->month->format('Y-m'))->unique()->values());
+        $thisMonth = now()->format('Y-m');
+
         // Active staff first, then deactivated; each by name
         $staff = User::whereIn('role', self::ROLES)
             ->with('coachGroups:id')
@@ -29,44 +40,38 @@ class StaffController extends Controller
                 'active' => $user->isActive(),
                 'deactivated_at' => $user->deactivated_at?->toDateString(),
                 'is_self' => $user->is(Auth::user()),
+                'is_owner' => $user->id === $ownerId,
                 'all_groups' => $user->all_groups,
                 'group_ids' => $user->coachGroups->pluck('id')->values(),
+                'salary_this_month' => $salaryMonths->get($user->id)?->contains($thisMonth) ?? false,
+                'salary_months' => $salaryMonths->get($user->id) ?? [],
             ]);
+
+        // Invitations not accepted yet, newest first
+        $invitations = Invitation::pending()->latest()->get()->map(fn (Invitation $invitation) => [
+            'id' => $invitation->id,
+            'name' => $invitation->name,
+            'email' => $invitation->email,
+            'role' => $invitation->role,
+            'all_groups' => $invitation->all_groups,
+            'group_ids' => $invitation->group_ids ?? [],
+            'invited_at' => $invitation->created_at?->toIso8601String(),
+            'expired' => $invitation->isExpired(),
+            'email_failed' => $invitation->email_failed_at !== null,
+            'link' => $invitation->link(),
+        ]);
 
         return inertia('staff/index', [
             'staff' => $staff,
+            'invitations' => $invitations,
         ]);
-    }
-
-    public function store(Request $request)
-    {
-        $validated = $request->validate([
-            'name' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'email', 'unique:users,email'],
-            'password' => ['required', 'string', 'min:8'],
-            'role' => ['required', Rule::in(self::ROLES)],
-            ...$this->groupRules($request->input('role') === 'coach'),
-        ]);
-
-        $user = User::create([
-            'name' => $validated['name'],
-            'email' => $validated['email'],
-            'password' => $validated['password'],
-            'role' => $validated['role'],
-            // Admins see every group anyway
-            'all_groups' => $validated['role'] === 'admin' || (bool) $validated['all_groups'],
-        ]);
-
-        $this->assignGroups($user, $validated);
-
-        $user->forceFill(['email_verified_at' => now()])->save();
-
-        return back()->with('success', 'Staff member created successfully!');
     }
 
     public function update(Request $request, User $coach)
     {
         abort_unless(in_array($coach->role, self::ROLES, true), 404);
+        // Only the owner changes the owner's details
+        abort_if($coach->isOwner() && ! $coach->is(Auth::user()), 403);
 
         $isCoach = $coach->role === 'coach';
 
@@ -74,7 +79,7 @@ class StaffController extends Controller
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'email', Rule::unique('users', 'email')->ignore($coach->id)],
             'password' => ['nullable', 'string', 'min:8'],
-            ...$this->groupRules($isCoach),
+            ...self::groupRules($isCoach),
         ]);
 
         $coach->fill([
@@ -97,12 +102,13 @@ class StaffController extends Controller
 
     /**
      * Deactivate a staff account (it can no longer log in, and is logged out
-     * everywhere) or activate it again. Nobody can deactivate themselves.
+     * everywhere) or activate it again. Nobody can deactivate themselves or the
+     * club's owner.
      */
     public function setActive(Request $request, User $coach)
     {
         abort_unless(in_array($coach->role, self::ROLES, true), 404);
-        abort_if($coach->is(Auth::user()), 403);
+        abort_if($coach->is(Auth::user()) || $coach->isOwner(), 403);
 
         $validated = $request->validate(['active' => ['required', 'boolean']]);
 
@@ -132,7 +138,7 @@ class StaffController extends Controller
      *
      * @return array<string, array<int, mixed>>
      */
-    private function groupRules(bool $isCoach): array
+    public static function groupRules(bool $isCoach): array
     {
         if (! $isCoach) {
             return [];
