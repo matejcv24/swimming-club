@@ -12,6 +12,7 @@ use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\Log;
 use Minishlink\WebPush\Subscription;
 use Minishlink\WebPush\WebPush;
+use Psr\Http\Client\ClientInterface;
 use Throwable;
 
 /**
@@ -21,6 +22,9 @@ use Throwable;
  */
 class WebPushChannel
 {
+    /** Tests replace the connection to the push services with a fake one. */
+    public static ?ClientInterface $httpClient = null;
+
     public function send(object $notifiable, Notification $notification): void
     {
         if (! self::configured() || ! method_exists($notification, 'toPush') || ! method_exists($notifiable, 'pushSubscriptions')) {
@@ -36,7 +40,7 @@ class WebPushChannel
         }
 
         try {
-            $results = self::deliver($subscriptions, fn (PushSubscription $subscription) => App::withLocale(
+            $results = self::deliver($subscriptions, fn (PushSubscription $subscription) => self::inLocale(
                 $subscription->locale,
                 fn () => $notification->toPush($notifiable),
             ), self::unreadCount($notifiable));
@@ -49,6 +53,27 @@ class WebPushChannel
         } catch (Throwable $e) {
             self::log('error', 'Push failed: '.$e::class.': '.$e->getMessage());
             report($e);
+        }
+    }
+
+    /**
+     * Runs the callback in a language (each device gets its own), then puts the
+     * app's language back.
+     *
+     * @template T
+     *
+     * @param  callable(): T  $callback
+     * @return T
+     */
+    private static function inLocale(string $locale, callable $callback): mixed
+    {
+        $previous = App::getLocale();
+        App::setLocale($locale);
+
+        try {
+            return $callback();
+        } finally {
+            App::setLocale($previous);
         }
     }
 
@@ -80,7 +105,7 @@ class WebPushChannel
                 'privateKey' => config('services.webpush.private_key'),
             ]],
             ['TTL' => 60 * 60 * 24, 'urgency' => 'high'],
-            new Client(['timeout' => 5, 'connect_timeout' => 3]),
+            self::$httpClient ?? new Client(['timeout' => 5, 'connect_timeout' => 3]),
             $factory,
             $factory,
         );

@@ -8,10 +8,18 @@ use App\Models\PushSubscription;
 use App\Models\User;
 use App\Notifications\Channels\WebPushChannel;
 use App\Notifications\StaffJoinedNotification;
+use App\Support\NotificationText;
+use ArrayObject;
+use GuzzleHttp\Client;
+use GuzzleHttp\Handler\MockHandler;
+use GuzzleHttp\HandlerStack;
+use GuzzleHttp\Middleware;
+use GuzzleHttp\Psr7\Response;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Notification;
 use Inertia\Testing\AssertableInertia as Assert;
+use Minishlink\WebPush\VAPID;
 use Tests\TestCase;
 
 class StaffJoinedAndPushTest extends TestCase
@@ -142,6 +150,80 @@ class StaffJoinedAndPushTest extends TestCase
 
         $other = User::factory()->create(['role' => 'admin']);
         $this->actingAs($other)->get("/notifications/{$notification->id}/open")->assertForbidden();
+    }
+
+    /**
+     * A device with real keys, push keys on the server, and a fake push service
+     * that answers "201 Created". Returns the requests the fake service got.
+     */
+    private function fakePushService(User $user, string $locale = 'mk'): ArrayObject
+    {
+        $key = openssl_pkey_new(['curve_name' => 'prime256v1', 'private_key_type' => OPENSSL_KEYTYPE_EC]);
+
+        if ($key === false) {
+            $this->markTestSkipped('This PHP cannot make EC keys (on Windows set OPENSSL_CONF).');
+        }
+
+        $vapid = VAPID::createVapidKeys();
+        config([
+            'services.webpush.public_key' => $vapid['publicKey'],
+            'services.webpush.private_key' => $vapid['privateKey'],
+            'services.webpush.subject' => 'https://hydraswimming.mk',
+        ]);
+
+        $details = openssl_pkey_get_details($key)['ec'];
+        $b64 = fn (string $bytes) => rtrim(strtr(base64_encode($bytes), '+/', '-_'), '=');
+        $endpoint = 'https://fcm.googleapis.com/fcm/send/device-1';
+        PushSubscription::create([
+            'user_id' => $user->id,
+            'endpoint' => $endpoint,
+            'endpoint_hash' => PushSubscription::hash($endpoint),
+            'public_key' => $b64("\x04".str_pad($details['x'], 32, "\0", STR_PAD_LEFT).str_pad($details['y'], 32, "\0", STR_PAD_LEFT)),
+            'auth_token' => $b64(random_bytes(16)),
+            'locale' => $locale,
+        ]);
+
+        $requests = new ArrayObject;
+        $stack = HandlerStack::create(new MockHandler(array_fill(0, 5, new Response(201))));
+        $stack->push(Middleware::history($requests));
+        WebPushChannel::$httpClient = new Client(['handler' => $stack]);
+
+        return $requests;
+    }
+
+    protected function tearDown(): void
+    {
+        WebPushChannel::$httpClient = null;
+        parent::tearDown();
+    }
+
+    public function test_a_notification_really_goes_out_as_a_push_to_the_device()
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $requests = $this->fakePushService($admin, 'mk');
+        app()->setLocale('en');
+
+        $admin->notify(new StaffJoinedNotification('Marko joined', '/staff', NotificationText::make(
+            ':name accepted the invitation and joined the team as :role.', ['name' => 'Marko', 'role' => 'coach'],
+        )));
+
+        $this->assertCount(1, $requests);
+        $request = $requests[0]['request'];
+        $this->assertSame('https://fcm.googleapis.com/fcm/send/device-1', (string) $request->getUri());
+        $this->assertSame('aes128gcm', $request->getHeaderLine('Content-Encoding'));
+        $this->assertStringStartsWith('vapid ', $request->getHeaderLine('Authorization'));
+        // The app's own language is back after wording the push in Macedonian
+        $this->assertSame('en', app()->getLocale());
+    }
+
+    public function test_the_test_button_sends_a_push_to_this_device()
+    {
+        $user = User::factory()->create(['role' => 'coach']);
+        $requests = $this->fakePushService($user);
+
+        $this->actingAs($user)->postJson('/push-subscriptions/test', ['endpoint' => 'https://fcm.googleapis.com/fcm/send/device-1'])
+            ->assertOk()->assertJson(['sent' => true]);
+        $this->assertCount(1, $requests);
     }
 
     public function test_the_test_button_explains_why_a_push_cannot_go_out()
