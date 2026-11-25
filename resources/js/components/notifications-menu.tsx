@@ -2,7 +2,7 @@ import { router, usePage } from '@inertiajs/react';
 import NotificationsIcon from '@mui/icons-material/Notifications';
 import dayjs from 'dayjs';
 import { Bell, X } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { NotificationIcon } from '@/components/notification-icon';
 import { IconBadge } from '@/components/popup-ui';
 import {
@@ -11,6 +11,7 @@ import {
     DropdownMenuItem,
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { setIconBadge } from '@/lib/device';
 import { t, tc } from '@/lib/i18n';
 import type { NotificationSharedData } from '@/types';
 
@@ -29,6 +30,9 @@ export function NotificationsMenu() {
     };
     const unreadCount = notifications?.unread_count ?? 0;
     const unreadNotifications = notifications?.unread ?? [];
+
+    // The installed app's icon shows the same number as the bell
+    useEffect(() => setIconBadge(unreadCount), [unreadCount]);
 
     // Marks only the clicked notification as read, then redirects to its page.
     const openNotification = (id: string) => {

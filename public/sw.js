@@ -89,12 +89,23 @@ self.addEventListener('push', (event) => {
         data = { body: event.data ? event.data.text() : '' };
     }
 
+    // The number on the app's icon (iPhone home-screen app, installed app on a
+    // computer; Android shows a dot by itself while a notification is waiting)
+    const badge = Number(data.badge) || 0;
+    const setBadge =
+        'setAppBadge' in self.navigator
+            ? (badge > 0 ? self.navigator.setAppBadge(badge) : self.navigator.clearAppBadge()).catch(() => {})
+            : Promise.resolve();
+
     event.waitUntil(
-        self.registration.showNotification(data.title || 'SC Hydra', {
-            body: data.body || '',
-            icon: '/icons/icon-192.png',
-            data: { url: data.url || '/dashboard' },
-        }),
+        Promise.all([
+            setBadge,
+            self.registration.showNotification(data.title || 'SC Hydra', {
+                body: data.body || '',
+                icon: '/icons/icon-192.png',
+                data: { url: data.url || '/dashboard' },
+            }),
+        ]),
     );
 });
 

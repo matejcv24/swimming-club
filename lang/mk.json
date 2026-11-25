@@ -613,5 +613,10 @@
     "They are removed from the team list. Their trainings, attendance and salaries stay in the history and the finances, unchanged.": "Се отстранува од листата на тимот. Неговите тренинзи, присуства и плати остануваат во историјата и во финансиите, непроменети.",
     "Deactivate the account first.": "Прво деактивирај ја сметката.",
     "Account deleted.": "Сметката е избришана.",
-    "Employee": "Вработен"
+    "Employee": "Вработен",
+    "Send a test notification": "Испрати пробно известување",
+    "Sent. It should appear in a few seconds.": "Испратено. Треба да се појави за неколку секунди.",
+    "Not delivered": "Не е доставено",
+    "no connection": "нема врска",
+    "Notifications work on this device.": "Известувањата работат на овој уред."
 }
