@@ -65,6 +65,15 @@ return [
             'replace_placeholders' => true,
         ],
 
+        // Push notifications only: one short line per problem, easy to read
+        'push' => [
+            'driver' => 'daily',
+            'path' => storage_path('logs/push.log'),
+            'level' => 'debug',
+            'days' => 14,
+            'replace_placeholders' => true,
+        ],
+
         'daily' => [
             'driver' => 'daily',
             'path' => storage_path('logs/laravel.log'),

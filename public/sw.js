@@ -97,9 +97,15 @@ self.addEventListener('push', (event) => {
             ? (badge > 0 ? self.navigator.setAppBadge(badge) : self.navigator.clearAppBadge()).catch(() => {})
             : Promise.resolve();
 
+    // An open app updates its bell right away
+    const tellOpenApp = self.clients
+        .matchAll({ type: 'window', includeUncontrolled: true })
+        .then((windows) => windows.forEach((client) => client.postMessage({ type: 'notification' })));
+
     event.waitUntil(
         Promise.all([
             setBadge,
+            tellOpenApp,
             self.registration.showNotification(data.title || 'SC Hydra', {
                 body: data.body || '',
                 icon: '/icons/icon-192.png',

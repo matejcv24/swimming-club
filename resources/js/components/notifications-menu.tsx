@@ -34,6 +34,36 @@ export function NotificationsMenu() {
     // The installed app's icon shows the same number as the bell
     useEffect(() => setIconBadge(unreadCount), [unreadCount]);
 
+    // Live bell: new notifications appear without reopening the app. Asks the
+    // server for just the notifications every 20 seconds while the app is on
+    // screen, right away when it comes back on screen, and when a push arrives
+    useEffect(() => {
+        const refresh = () => {
+            if (document.visibilityState === 'visible') {
+                router.reload({
+                    only: ['notifications'],
+                    async: true,
+                    showProgress: false,
+                });
+            }
+        };
+        const onMessage = (event: MessageEvent) => {
+            if (event.data?.type === 'notification') {
+                refresh();
+            }
+        };
+
+        const timer = window.setInterval(refresh, 20000);
+        document.addEventListener('visibilitychange', refresh);
+        navigator.serviceWorker?.addEventListener('message', onMessage);
+
+        return () => {
+            window.clearInterval(timer);
+            document.removeEventListener('visibilitychange', refresh);
+            navigator.serviceWorker?.removeEventListener('message', onMessage);
+        };
+    }, []);
+
     // Marks only the clicked notification as read, then redirects to its page.
     const openNotification = (id: string) => {
         setOpen(false);
