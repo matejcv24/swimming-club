@@ -1,4 +1,5 @@
 import { Head, router } from '@inertiajs/react';
+import AssignmentIndIcon from '@mui/icons-material/AssignmentInd';
 import BlockIcon from '@mui/icons-material/Block';
 import CheckIcon from '@mui/icons-material/Check';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
@@ -250,6 +251,9 @@ export default function StaffIndex({ staff, invitations }: Props) {
 
     // Asking before deactivating someone
     const [deactivating, setDeactivating] = useState<Staff | null>(null);
+    // Asking before deleting a deactivated person (their data stays)
+    const [deleting, setDeleting] = useState<Staff | null>(null);
+    const [deleteBusy, setDeleteBusy] = useState(false);
 
     // "Enter salary": one person after another, this month by default
     const [salaryEntry, setSalaryEntry] = useState<{
@@ -385,6 +389,15 @@ export default function StaffIndex({ staff, invitations }: Props) {
                 onSuccess: () => setDeactivating(null),
             },
         );
+
+    const deleteAccount = (member: Staff) => {
+        setDeleteBusy(true);
+        router.delete(`/staff/${member.id}`, {
+            preserveScroll: true,
+            onSuccess: () => setDeleting(null),
+            onFinish: () => setDeleteBusy(false),
+        });
+    };
 
     const openInvite = () => {
         setInvite(EMPTY_INVITE);
@@ -1000,9 +1013,13 @@ export default function StaffIndex({ staff, invitations }: Props) {
                         fullWidth
                         startIcon={<PaymentsIcon />}
                         onClick={openSalaryEntry}
-                        sx={{ whiteSpace: 'nowrap', px: 1.5 }}
+                        sx={{ whiteSpace: 'nowrap', px: 1.5, lineHeight: 1.15 }}
                     >
-                        <span className="sm:hidden">{t('Salary')}</span>
+                        {/* Phones: "Add" over "Salary", next to the icon */}
+                        <span className="flex flex-col items-start text-left sm:hidden">
+                            <span>{t('Add')}</span>
+                            <span>{t('Salary')}</span>
+                        </span>
                         <span className="hidden sm:inline">
                             {t('Enter salary')}
                         </span>
@@ -1010,13 +1027,17 @@ export default function StaffIndex({ staff, invitations }: Props) {
                     <Button
                         variant="contained"
                         fullWidth
-                        startIcon={<MailOutlineIcon />}
+                        startIcon={<AssignmentIndIcon />}
                         onClick={openInvite}
-                        sx={{ whiteSpace: 'nowrap', px: 1.5 }}
+                        sx={{ whiteSpace: 'nowrap', px: 1.5, lineHeight: 1.15 }}
                     >
-                        <span className="sm:hidden">{t('Invite')}</span>
+                        {/* Phones: "Add" over "Employee", next to the icon */}
+                        <span className="flex flex-col items-start text-left sm:hidden">
+                            <span>{t('Add')}</span>
+                            <span>{t('Employee')}</span>
+                        </span>
                         <span className="hidden sm:inline">
-                            {t('Invite to the team')}
+                            {t('Add employee')}
                         </span>
                     </Button>
                 </div>
@@ -1117,18 +1138,32 @@ export default function StaffIndex({ staff, invitations }: Props) {
                                                 {t('Deactivate')}
                                             </Button>
                                         ) : (
-                                            <Button
-                                                variant="outlined"
-                                                color="success"
-                                                startIcon={<LockOpenIcon />}
-                                                onClick={() => {
-                                                    const member = person;
-                                                    setPerson(null);
-                                                    setActive(member, true);
-                                                }}
-                                            >
-                                                {t('Activate')}
-                                            </Button>
+                                            <>
+                                                <Button
+                                                    variant="outlined"
+                                                    color="success"
+                                                    startIcon={<LockOpenIcon />}
+                                                    onClick={() => {
+                                                        const member = person;
+                                                        setPerson(null);
+                                                        setActive(member, true);
+                                                    }}
+                                                >
+                                                    {t('Activate')}
+                                                </Button>
+                                                <Button
+                                                    variant="contained"
+                                                    color="error"
+                                                    startIcon={<DeleteIcon />}
+                                                    onClick={() => {
+                                                        const member = person;
+                                                        setPerson(null);
+                                                        setDeleting(member);
+                                                    }}
+                                                >
+                                                    {t('Delete account')}
+                                                </Button>
+                                            </>
                                         ))}
                                 </div>
                             </div>
@@ -1706,6 +1741,48 @@ export default function StaffIndex({ staff, invitations }: Props) {
                             }
                         >
                             {t('Deactivate')}
+                        </Button>
+                    </div>
+                </div>
+            </Dialog>
+
+            {/* Asks before deleting a deactivated account (only the account goes) */}
+            <Dialog
+                open={!!deleting}
+                onClose={() => !deleteBusy && setDeleting(null)}
+                maxWidth="xs"
+                fullWidth
+                PaperProps={{ sx: { bgcolor: POPUP_BG } }}
+            >
+                <div className="flex flex-col gap-4 p-6">
+                    <Typography variant="h6" fontWeight="bold">
+                        {t('Delete the account of :name?', {
+                            name: deleting?.name ?? '',
+                        })}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                        {t(
+                            'They are removed from the team list. Their trainings, attendance and salaries stay in the history and the finances, unchanged.',
+                        )}
+                    </Typography>
+                    <div className="flex gap-3">
+                        <Button
+                            variant="outlined"
+                            fullWidth
+                            disabled={deleteBusy}
+                            onClick={() => setDeleting(null)}
+                        >
+                            {t('Cancel')}
+                        </Button>
+                        <Button
+                            variant="contained"
+                            color="error"
+                            fullWidth
+                            startIcon={<DeleteIcon />}
+                            disabled={deleteBusy}
+                            onClick={() => deleting && deleteAccount(deleting)}
+                        >
+                            {t('Delete')}
                         </Button>
                     </div>
                 </div>

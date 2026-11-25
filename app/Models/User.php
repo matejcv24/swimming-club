@@ -10,16 +10,24 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Fortify\TwoFactorAuthenticatable;
+use LogicException;
 
 #[Fillable(['name', 'surname', 'phone', 'email', 'password', 'role', 'appearance', 'all_groups'])]
 #[Hidden(['password', 'two_factor_secret', 'two_factor_recovery_codes', 'remember_token'])]
 class User extends Authenticatable
 {
     /** @use HasFactory<UserFactory> */
-    use HasFactory, Notifiable, TwoFactorAuthenticatable;
+    use HasFactory, Notifiable, SoftDeletes, TwoFactorAuthenticatable;
+
+    /**
+     * The notifications an admin can turn off (each kind on by default). Coaches
+     * only get their own salary, which can't be turned off.
+     */
+    public const ADMIN_NOTIFICATIONS = ['member_changed', 'training_attendance', 'membership_payment', 'staff_joined'];
 
     /** Same default as the database: coaches see every group unless assigned some. */
     protected $attributes = ['all_groups' => true];
@@ -37,6 +45,7 @@ class User extends Authenticatable
             'two_factor_confirmed_at' => 'datetime',
             'all_groups' => 'boolean',
             'deactivated_at' => 'datetime',
+            'notification_settings' => 'array',
         ];
     }
 
@@ -44,6 +53,25 @@ class User extends Authenticatable
     public function isOwner(): bool
     {
         return $this->id !== null && Club::current()->owner_id === $this->id;
+    }
+
+    /** False only for a kind of notification this admin turned off. */
+    public function wantsNotification(string $type): bool
+    {
+        if ($this->role !== 'admin' || ! in_array($type, self::ADMIN_NOTIFICATIONS, true)) {
+            return true;
+        }
+
+        return ($this->notification_settings[$type] ?? true) !== false;
+    }
+
+    /**
+     * Never removed from the database: a deleted staff account is only hidden,
+     * because its trainings and salaries (the club's finances) depend on it.
+     */
+    public function forceDelete(): bool
+    {
+        throw new LogicException('Staff accounts are never removed from the database; delete() only hides them.');
     }
 
     /** A deactivated account can't log in until an admin activates it again. */
@@ -56,6 +84,12 @@ class User extends Authenticatable
     public function scopeActive(Builder $query): void
     {
         $query->whereNull('deactivated_at');
+    }
+
+    /** The devices where this person turned on push notifications. */
+    public function pushSubscriptions(): HasMany
+    {
+        return $this->hasMany(PushSubscription::class);
     }
 
     public function trainings(): HasMany

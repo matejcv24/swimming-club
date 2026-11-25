@@ -123,6 +123,26 @@ class StaffController extends Controller
         return back()->with('success', $validated['active'] ? 'Account activated.' : 'Account deactivated.');
     }
 
+    /**
+     * Removes a deactivated person from the team list. Only the account is
+     * hidden: the row stays in the database, so their trainings, attendance and
+     * salaries (and with them the club's finances) stay exactly as they are.
+     */
+    public function destroy(User $coach)
+    {
+        abort_unless(in_array($coach->role, self::ROLES, true), 404);
+        abort_if($coach->is(Auth::user()) || $coach->isOwner(), 403);
+        // Only someone already deactivated
+        abort_if($coach->isActive(), 422, __('Deactivate the account first.'));
+
+        $this->logOutEverywhere($coach);
+        $coach->save();
+        $coach->pushSubscriptions()->delete();
+        $coach->delete();
+
+        return back()->with('success', 'Account deleted.');
+    }
+
     private function logOutEverywhere(User $user): void
     {
         $user->setRememberToken(Str::random(60));

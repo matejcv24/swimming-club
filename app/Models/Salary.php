@@ -15,6 +15,7 @@ class Salary extends Model
 
     public function user(): BelongsTo
     {
-        return $this->belongsTo(User::class);
+        // Also a deleted (hidden) staff account: its salaries stay in the finances
+        return $this->belongsTo(User::class)->withTrashed();
     }
 }

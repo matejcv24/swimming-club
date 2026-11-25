@@ -7,6 +7,8 @@ use App\Models\Club;
 use App\Models\Group;
 use App\Models\Invitation;
 use App\Models\User;
+use App\Notifications\StaffJoinedNotification;
+use App\Support\NotificationText;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -27,7 +29,8 @@ class StaffInvitationController extends Controller
     {
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'email', 'max:255', Rule::unique('users', 'email')],
+            // A deleted (hidden) account's email can be invited again: they come back
+            'email' => ['required', 'email', 'max:255', Rule::unique('users', 'email')->whereNull('deleted_at')],
             'role' => ['required', Rule::in(StaffController::ROLES)],
             ...StaffController::groupRules($request->input('role') === 'coach'),
         ], [
@@ -118,13 +121,25 @@ class StaffInvitationController extends Controller
         }
 
         $user = DB::transaction(function () use ($invitation, $request) {
-            $user = User::create([
+            $details = [
                 'name' => $invitation->name,
                 'email' => $invitation->email,
                 'password' => $request->input('password'),
                 'role' => $invitation->role,
                 'all_groups' => $invitation->all_groups,
-            ]);
+            ];
+
+            // Someone whose account was deleted earlier comes back to the same
+            // account, so their old trainings and salaries are theirs again
+            $user = User::onlyTrashed()->where('email', $invitation->email)->first();
+
+            if ($user) {
+                $user->restore();
+                $user->fill($details)->forceFill(['deactivated_at' => null]);
+            } else {
+                $user = new User($details);
+            }
+
             $user->forceFill(['email_verified_at' => now()])->save();
 
             // Only groups that still exist
@@ -139,10 +154,37 @@ class StaffInvitationController extends Controller
             return $user;
         });
 
+        $this->notifyJoined($invitation, $user);
+
         Auth::login($user);
         $request->session()->regenerate();
 
         return redirect('/dashboard');
+    }
+
+    /**
+     * Tells the admin who sent the invitation and the club's owner (once, if
+     * that's the same person) that the new person is on the team.
+     */
+    private function notifyJoined(Invitation $invitation, User $user): void
+    {
+        $recipients = User::active()
+            ->whereKey(array_filter([$invitation->invited_by, Club::current()->owner_id]))
+            ->whereKeyNot($user->id)
+            ->get();
+
+        $text = NotificationText::make(':name accepted the invitation and joined the team as :role.', [
+            'name' => $user->name,
+            'role' => $user->role,
+        ]);
+
+        foreach ($recipients as $recipient) {
+            $recipient->notify(new StaffJoinedNotification(
+                "{$user->name} accepted the invitation and joined the team as {$user->role}.",
+                '/staff',
+                $text,
+            ));
+        }
     }
 
     /** True when the email went out; on failure the admin copies the link instead. */

@@ -5,6 +5,7 @@ namespace App\Http\Middleware;
 use App\Models\Club;
 use App\Models\Group;
 use App\Models\Member;
+use App\Notifications\Channels\WebPushChannel;
 use App\Support\DashboardSummary;
 use App\Support\NotificationText;
 use Illuminate\Http\Request;
@@ -63,6 +64,10 @@ class HandleInertiaRequests extends Middleware
             'auth' => [
                 'user' => $request->user(),
             ],
+            // The key a device needs to turn on push notifications (none: push is off)
+            'pushKey' => fn () => $request->user() && WebPushChannel::configured()
+                ? config('services.webpush.public_key')
+                : null,
             // The club's name and logo (top bar, and the login and invitation pages);
             // its email only for people logged in
             'club' => function () use ($request) {

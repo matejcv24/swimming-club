@@ -3,31 +3,35 @@
 namespace App\Http\Controllers\Settings;
 
 use App\Http\Controllers\Controller;
-use App\Http\Requests\Settings\ProfileDeleteRequest;
 use App\Http\Requests\Settings\ProfileUpdateRequest;
+use App\Models\User;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
 use Inertia\Response;
 
+/**
+ * Account settings: everyone changes their name, email and password here;
+ * admins also choose which notifications they get. Nobody deletes their own
+ * account (admins remove deactivated staff on the team page; the data stays).
+ */
 class ProfileController extends Controller
 {
-    /**
-     * Show the user's profile settings page.
-     */
     public function edit(Request $request): Response
     {
+        $user = $request->user();
+
         return Inertia::render('settings/profile', [
-            'mustVerifyEmail' => $request->user() instanceof MustVerifyEmail,
+            'mustVerifyEmail' => $user instanceof MustVerifyEmail,
             'status' => $request->session()->get('status'),
+            // Admins only: each kind of notification, on or off
+            'notificationSettings' => $user->role === 'admin'
+                ? collect(User::ADMIN_NOTIFICATIONS)->mapWithKeys(fn (string $type) => [$type => $user->wantsNotification($type)])
+                : null,
         ]);
     }
 
-    /**
-     * Update the user's profile information.
-     */
     public function update(ProfileUpdateRequest $request): RedirectResponse
     {
         $request->user()->fill($request->validated());
@@ -41,20 +45,19 @@ class ProfileController extends Controller
         return to_route('profile.edit');
     }
 
-    /**
-     * Delete the user's profile.
-     */
-    public function destroy(ProfileDeleteRequest $request): RedirectResponse
+    /** An admin turns kinds of notifications on or off (bell and push together). */
+    public function updateNotifications(Request $request): RedirectResponse
     {
-        $user = $request->user();
+        abort_unless($request->user()->role === 'admin', 403);
 
-        Auth::logout();
+        $validated = $request->validate(
+            collect(User::ADMIN_NOTIFICATIONS)->mapWithKeys(fn (string $type) => [$type => ['required', 'boolean']])->all(),
+        );
 
-        $user->delete();
+        $request->user()->forceFill([
+            'notification_settings' => collect($validated)->map(fn ($on) => (bool) $on)->all(),
+        ])->save();
 
-        $request->session()->invalidate();
-        $request->session()->regenerateToken();
-
-        return redirect('/');
+        return back();
     }
 }

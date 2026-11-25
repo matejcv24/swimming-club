@@ -35,6 +35,11 @@ class NotificationText
             $params['month'] = Str::ucfirst(Carbon::parse($params['month'])->locale(app()->getLocale())->translatedFormat('F Y'));
         }
 
+        // A staff role ("coach" / "admin"), in the reader's language and lower case
+        if (isset($params['role'])) {
+            $params['role'] = mb_strtolower(__(Str::ucfirst((string) $params['role'])));
+        }
+
         return __($text['key'], $params);
     }
 
