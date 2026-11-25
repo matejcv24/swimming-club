@@ -12,6 +12,7 @@ use App\Http\Controllers\MembershipFeeController;
 use App\Http\Controllers\MonthlyReportController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\ProfitController;
+use App\Http\Controllers\PushSubscriptionController;
 use App\Http\Controllers\SalaryController;
 use App\Http\Controllers\StaffController;
 use App\Http\Controllers\StaffInvitationController;
@@ -43,6 +44,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/dashboard', [AdminController::class, 'index'])->name('dashboard');
     Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications.index');
     Route::post('/notifications/{notification}/read', [NotificationController::class, 'markAsRead'])->name('notifications.read');
+    // A tapped push notification: marked as read, then its page
+    Route::get('/notifications/{notification}/open', [NotificationController::class, 'markAsRead'])->name('notifications.open');
+
+    // Push notifications on this device: on / off
+    Route::post('/push-subscriptions', [PushSubscriptionController::class, 'store'])->middleware('throttle:20,1')->name('push.store');
+    Route::delete('/push-subscriptions', [PushSubscriptionController::class, 'destroy'])->name('push.destroy');
 
     Route::middleware(['role:admin,coach'])->group(function () {
         // Only what the app uses: other URLs answer "not found", never an error
@@ -81,6 +88,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::delete('/staff/invitations/{invitation}', [StaffInvitationController::class, 'destroy'])->name('staff.invitations.destroy');
         Route::put('/staff/{coach}', [StaffController::class, 'update'])->name('staff.update');
         Route::put('/staff/{coach}/active', [StaffController::class, 'setActive'])->name('staff.active');
+        // Removes a deactivated person from the list (their data stays)
+        Route::delete('/staff/{coach}', [StaffController::class, 'destroy'])->name('staff.destroy');
 
         Route::put('/membership-fees/{membershipFee}', [MembershipFeeController::class, 'update'])->name('membership-fees.update');
         Route::delete('/members/{member}', [MemberController::class, 'destroy'])->name('members.destroy');

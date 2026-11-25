@@ -1,4 +1,5 @@
 import { Link, usePage } from '@inertiajs/react';
+import { Pencil } from 'lucide-react';
 import { useState } from 'react';
 import { AppHeaderActions } from '@/components/app-header-actions';
 import { Breadcrumbs } from '@/components/breadcrumbs';
@@ -49,9 +50,15 @@ export function AppSidebarHeader({
                             <button
                                 type="button"
                                 onClick={() => setSettingsOpen(true)}
-                                className="min-w-0 cursor-pointer truncate rounded-full border border-foreground/25 px-3.5 py-1.5 text-base font-bold tracking-wide transition hover:border-foreground/50 hover:bg-black/5 dark:border-white/25 dark:hover:border-white/50 dark:hover:bg-white/10"
+                                aria-label={`${name} – ${t('Club settings')}`}
+                                className="group flex min-w-0 cursor-pointer items-center gap-1.5 rounded-full border border-foreground/25 py-1.5 pr-2.5 pl-3.5 text-base font-bold tracking-wide transition hover:border-foreground/60 hover:bg-black/5 dark:border-white/25 dark:hover:border-white/60 dark:hover:bg-white/10"
                             >
-                                {name}
+                                <span className="min-w-0 truncate">{name}</span>
+                                {/* The pencil: this name can be edited */}
+                                <Pencil
+                                    aria-hidden="true"
+                                    className="size-3.5 flex-none opacity-70 transition group-hover:opacity-100"
+                                />
                             </button>
                         </Hint>
                     ) : (

@@ -1,7 +1,16 @@
 import { Link, router, usePage } from '@inertiajs/react';
 import { LogOut, Settings } from 'lucide-react';
+import { useState } from 'react';
+import { DeviceMenuItems } from '@/components/device-menu-items';
+import {
+    InstallAppDialog,
+    PushOffer,
+    stopInstallReminders,
+    useInstallReminder,
+} from '@/components/install-app-dialog';
 import { LanguageSwitch } from '@/components/language-switch';
 import { NotificationsMenu } from '@/components/notifications-menu';
+import { PhoneMenuSettings } from '@/components/phone-menu-settings';
 import { QuickActionsTopBar } from '@/components/quick-actions';
 import { forgetThemeUser, ThemeToggle } from '@/components/theme-toggle';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -13,6 +22,7 @@ import {
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { useInitials } from '@/hooks/use-initials';
+import { turnPushOff } from '@/lib/device';
 import { t } from '@/lib/i18n';
 import type { User } from '@/types';
 
@@ -21,9 +31,21 @@ export function AppHeaderActions() {
         auth?: { user?: User | null };
     };
     const getInitials = useInitials();
+    const [installOpen, setInstallOpen] = useState(false);
+    // On a phone, after the first login: "Add to home screen" by itself
+    const installDue = useInstallReminder(Boolean(auth?.user));
+    const [reminderClosed, setReminderClosed] = useState(false);
+    const showInstall = installOpen || (installDue && !reminderClosed);
+
+    const closeInstall = () => {
+        setInstallOpen(false);
+        setReminderClosed(true);
+    };
 
     const handleLogout = () => {
         forgetThemeUser();
+        // A logged-out device gets no more pushes for this person
+        turnPushOff().catch(() => {});
         router.flushAll();
     };
 
@@ -39,8 +61,11 @@ export function AppHeaderActions() {
     return (
         <div className="ml-auto flex max-w-full shrink-0 items-center gap-1">
             <QuickActionsTopBar />
-            <LanguageSwitch />
-            <ThemeToggle />
+            {/* Phones: these two are in the avatar menu (kept mounted for the theme sync) */}
+            <div className="hidden items-center gap-1 sm:flex">
+                <LanguageSwitch />
+                <ThemeToggle />
+            </div>
             <NotificationsMenu />
             <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -60,14 +85,20 @@ export function AppHeaderActions() {
                         </Avatar>
                     </button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-48">
+                <DropdownMenuContent
+                    align="end"
+                    className="w-64"
+                    onCloseAutoFocus={(event) => event.preventDefault()}
+                >
+                    <DeviceMenuItems onInstall={() => setInstallOpen(true)} />
+                    <PhoneMenuSettings />
                     <DropdownMenuItem asChild>
                         <Link
-                            href="/settings/security"
+                            href="/settings/profile"
                             className="flex w-full cursor-pointer items-center"
                         >
                             <Settings className="mr-2 size-4" />
-                            {t('Settings')}
+                            {t('Account settings')}
                         </Link>
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
@@ -85,6 +116,19 @@ export function AppHeaderActions() {
                     </DropdownMenuItem>
                 </DropdownMenuContent>
             </DropdownMenu>
+
+            {/* Drawn only while open, so it starts fresh each time */}
+            {showInstall && (
+                <InstallAppDialog
+                    open
+                    onClose={closeInstall}
+                    onDone={() => {
+                        stopInstallReminders();
+                        closeInstall();
+                    }}
+                />
+            )}
+            <PushOffer />
         </div>
     );
 }

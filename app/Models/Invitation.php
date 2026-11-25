@@ -35,7 +35,7 @@ class Invitation extends Model
 
     public function inviter(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'invited_by');
+        return $this->belongsTo(User::class, 'invited_by')->withTrashed();
     }
 
     /** Not accepted yet (expired ones included, so they can be sent again). */

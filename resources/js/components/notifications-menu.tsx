@@ -63,6 +63,8 @@ export function NotificationsMenu() {
                 side="bottom"
                 align="end"
                 sideOffset={8}
+                // No focus ring left on the bell after closing
+                onCloseAutoFocus={(event) => event.preventDefault()}
                 className="w-72 max-w-[calc(100vw-2rem)] rounded-2xl border-[var(--popup-border)] bg-[var(--popup-bg)] p-2 text-[var(--popup-fg)] shadow-xl sm:w-[22rem]"
             >
                 <div className="flex items-center gap-3 px-2 pt-1.5 pb-2.5">

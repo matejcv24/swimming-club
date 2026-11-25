@@ -12,7 +12,8 @@ class Training extends Model
 
     public function coach(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'coach_id');
+        // Also a deleted (hidden) staff account: its trainings stay
+        return $this->belongsTo(User::class, 'coach_id')->withTrashed();
     }
 
     public function attendances(): HasMany

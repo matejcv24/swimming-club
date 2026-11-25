@@ -1,3 +1,4 @@
+import AssignmentIndIcon from '@mui/icons-material/AssignmentInd';
 import AssignmentTurnedInIcon from '@mui/icons-material/AssignmentTurnedIn';
 import CreditCardIcon from '@mui/icons-material/CreditCard';
 import GroupsIcon from '@mui/icons-material/Groups';
@@ -15,6 +16,8 @@ export function NotificationIcon({ type }: { type: string }) {
             return <PaymentsIcon fontSize="small" />;
         case 'training_attendance':
             return <AssignmentTurnedInIcon fontSize="small" />;
+        case 'staff_joined':
+            return <AssignmentIndIcon fontSize="small" />;
         default:
             return <NotificationsIcon fontSize="small" />;
     }

@@ -235,9 +235,10 @@ export function PopupHeader({
         <div className="flex items-center gap-3 px-[18px] pt-[18px] pb-3.5">
             <IconBadge>{icon}</IconBadge>
             <div className="min-w-0">
-                <div className="truncate text-[17px] leading-tight font-extrabold text-[var(--popup-fg)]">
+                {/* A long title slides on phones instead of being cut off */}
+                <SlidingText className="text-[17px] leading-tight font-extrabold text-[var(--popup-fg)]">
                     {title}
-                </div>
+                </SlidingText>
                 {subtitle && (
                     <SlidingText className="mt-0.5 text-[12.5px] font-normal text-[var(--popup-muted)]">
                         {subtitle}

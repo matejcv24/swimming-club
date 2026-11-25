@@ -6,7 +6,8 @@
 //  2. keeps the app's built files (JavaScript, CSS, fonts under /build/assets/) on the
 //     device, so reopening the app does not download them again. Every release gives
 //     these files new names, so a stored file is never out of date,
-//  3. shows a friendly page when the phone is offline.
+//  3. shows a friendly page when the phone is offline,
+//  4. shows push notifications, and opens the right page when one is tapped.
 
 const OFFLINE_CACHE = 'sc-hydra-offline-v3';
 const ASSET_CACHE = 'sc-hydra-assets-v1';
@@ -76,4 +77,45 @@ self.addEventListener('fetch', (event) => {
     } else if (url.href === new URL('/icons/icon-192.png', self.location).href) {
         event.respondWith(fetch(request).catch(() => caches.match(request)));
     }
+});
+
+// A push notification arrived: show it (title = club name, body = what happened)
+self.addEventListener('push', (event) => {
+    let data = {};
+
+    try {
+        data = event.data ? event.data.json() : {};
+    } catch {
+        data = { body: event.data ? event.data.text() : '' };
+    }
+
+    event.waitUntil(
+        self.registration.showNotification(data.title || 'SC Hydra', {
+            body: data.body || '',
+            icon: '/icons/icon-192.png',
+            data: { url: data.url || '/dashboard' },
+        }),
+    );
+});
+
+// A push notification was tapped: bring the app forward on that page
+self.addEventListener('notificationclick', (event) => {
+    event.notification.close();
+
+    const url = new URL(event.notification.data?.url || '/dashboard', self.location.origin).href;
+
+    event.waitUntil(
+        self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windows) => {
+            const open = windows.find((client) => new URL(client.url).origin === self.location.origin);
+
+            if (open) {
+                return open
+                    .focus()
+                    .then((client) => (client || open).navigate(url))
+                    .catch(() => self.clients.openWindow(url));
+            }
+
+            return self.clients.openWindow(url);
+        }),
+    );
 });
