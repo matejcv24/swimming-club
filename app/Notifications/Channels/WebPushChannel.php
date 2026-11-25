@@ -9,6 +9,7 @@ use GuzzleHttp\Psr7\HttpFactory;
 use Illuminate\Notifications\Notification;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\App;
+use Illuminate\Support\Facades\Log;
 use Minishlink\WebPush\Subscription;
 use Minishlink\WebPush\WebPush;
 use Throwable;
@@ -29,16 +30,35 @@ class WebPushChannel
         $subscriptions = $notifiable->pushSubscriptions()->get();
 
         if ($subscriptions->isEmpty()) {
+            self::log('info', 'No devices with push on', ['user' => $notifiable->getKey()]);
+
             return;
         }
 
         try {
-            self::deliver($subscriptions, fn (PushSubscription $subscription) => App::withLocale(
+            $results = self::deliver($subscriptions, fn (PushSubscription $subscription) => App::withLocale(
                 $subscription->locale,
                 fn () => $notification->toPush($notifiable),
             ), self::unreadCount($notifiable));
+
+            self::log('info', 'Push sent', [
+                'user' => $notifiable->getKey(),
+                'devices' => count($results),
+                'delivered' => collect($results)->where('sent', true)->count(),
+            ]);
         } catch (Throwable $e) {
+            self::log('error', 'Push failed: '.$e::class.': '.$e->getMessage());
             report($e);
+        }
+    }
+
+    /** One short line in storage/logs/push-*.log (never stops anything). */
+    public static function log(string $level, string $message, array $context = []): void
+    {
+        try {
+            Log::channel('push')->log($level, $message, $context);
+        } catch (Throwable) {
+            // Logging must never break sending
         }
     }
 
@@ -95,7 +115,7 @@ class WebPushChannel
             }
 
             if (! $report->isSuccess()) {
-                logger()->warning('Push not delivered', [
+                self::log('warning', 'Push not delivered', [
                     'service' => parse_url($report->getEndpoint(), PHP_URL_HOST),
                     'reason' => $report->getReason(),
                 ]);

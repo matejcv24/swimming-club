@@ -81,8 +81,9 @@ class PushSubscriptionController extends Controller
                 $request->user()->unreadNotifications()->count(),
             )[0] ?? ['sent' => false, 'reason' => 'No answer from the push service.'];
         } catch (Throwable $e) {
+            WebPushChannel::log('error', 'Test push failed: '.$e::class.': '.$e->getMessage());
             report($e);
-            $result = ['sent' => false, 'reason' => $e->getMessage()];
+            $result = ['sent' => false, 'reason' => class_basename($e).': '.$e->getMessage()];
         }
 
         return response()->json($result);
