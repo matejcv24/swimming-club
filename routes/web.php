@@ -50,6 +50,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // Push notifications on this device: on / off
     Route::post('/push-subscriptions', [PushSubscriptionController::class, 'store'])->middleware('throttle:20,1')->name('push.store');
     Route::delete('/push-subscriptions', [PushSubscriptionController::class, 'destroy'])->name('push.destroy');
+    Route::post('/push-subscriptions/test', [PushSubscriptionController::class, 'test'])->middleware('throttle:10,1')->name('push.test');
 
     Route::middleware(['role:admin,coach'])->group(function () {
         // Only what the app uses: other URLs answer "not found", never an error

@@ -211,6 +211,45 @@ export async function turnPushOn(publicKey: string): Promise<PushState> {
     return 'on';
 }
 
+/** A test push to this device; the answer says whether it went through and why not. */
+export async function testPush(): Promise<{ sent: boolean; reason: string }> {
+    const subscription = pushSupported() ? await currentSubscription() : null;
+
+    if (!subscription) {
+        return { sent: false, reason: 'This device is not registered.' };
+    }
+
+    const xsrf = document.cookie
+        .split('; ')
+        .find((cookie) => cookie.startsWith('XSRF-TOKEN='))
+        ?.split('=')[1];
+    const response = await fetch('/push-subscriptions/test', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            Accept: 'application/json',
+            'X-XSRF-TOKEN': xsrf ? decodeURIComponent(xsrf) : '',
+        },
+        body: JSON.stringify({ endpoint: subscription.endpoint }),
+    });
+
+    return response.ok
+        ? response.json()
+        : { sent: false, reason: `HTTP ${response.status}` };
+}
+
+/** The number on the installed app's icon (where the device supports it). */
+export function setIconBadge(count: number) {
+    if (typeof navigator === 'undefined' || !('setAppBadge' in navigator)) {
+        return;
+    }
+
+    (count > 0
+        ? navigator.setAppBadge(count)
+        : navigator.clearAppBadge()
+    ).catch(() => {});
+}
+
 /** This device stops getting push notifications. */
 export async function turnPushOff(): Promise<PushState> {
     const subscription = pushSupported() ? await currentSubscription() : null;
