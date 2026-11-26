@@ -97,7 +97,7 @@ function StatCard({
                 </IconBadge>
                 <div className="min-w-0 text-center md:text-left">
                     {/* Same title and description sizes as the other cards */}
-                    <h2 className="text-[15px] font-bold md:text-xl">
+                    <h2 className="text-[17px] leading-snug font-bold md:text-[22px]">
                         {label}
                         {!periodBelow && (
                             <span className="text-[12.5px] font-normal text-muted-foreground md:hidden">
@@ -107,7 +107,7 @@ function StatCard({
                         )}
                     </h2>
                     <p
-                        className={`truncate text-[12.5px] text-muted-foreground md:block md:text-sm ${periodBelow ? '' : 'hidden'}`}
+                        className={`truncate text-[13.5px] text-muted-foreground md:block md:text-[15px] ${periodBelow ? '' : 'hidden'}`}
                     >
                         {period}
                     </p>
@@ -167,8 +167,10 @@ function NavCard({
         >
             <IconBadge className={badgeSize}>{icon}</IconBadge>
             <div className="min-w-0">
-                <h2 className="text-[15px] font-bold md:text-xl">{title}</h2>
-                <p className="truncate text-[12.5px] text-muted-foreground md:text-sm">
+                <h2 className="text-[17px] leading-snug font-bold md:text-[22px]">
+                    {title}
+                </h2>
+                <p className="truncate text-[13.5px] text-muted-foreground md:text-[15px]">
                     {description}
                 </p>
             </div>

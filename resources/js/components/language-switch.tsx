@@ -83,7 +83,7 @@ export function LanguageSwitch() {
                 <DropdownMenuTrigger asChild>
                     <button
                         type="button"
-                        className="flex h-9 cursor-pointer items-center gap-1.5 rounded-md px-2 text-xs font-bold transition hover:bg-sidebar-accent"
+                        className="flex h-9 cursor-pointer items-center gap-1.5 rounded-full px-3 text-xs font-bold transition hover:bg-hydra-blue/15 hover:text-hydra-blue data-[state=open]:bg-hydra-blue/15 data-[state=open]:text-hydra-blue"
                         aria-label={t('Language')}
                     >
                         <current.Flag className={flagClass} />
@@ -91,7 +91,11 @@ export function LanguageSwitch() {
                     </button>
                 </DropdownMenuTrigger>
             </Hint>
-            <DropdownMenuContent align="end" className="w-44">
+            <DropdownMenuContent
+                align="end"
+                className="w-44"
+                onCloseAutoFocus={(event) => event.preventDefault()}
+            >
                 {LANGUAGES.map(({ code, name, Flag }) => (
                     <DropdownMenuItem
                         key={code}

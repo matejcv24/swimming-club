@@ -378,8 +378,8 @@
     "Options": "Опции",
     "Options for :name": "Опции за :name",
     "Quick actions": "Брзи акции",
-    "Add attendance": "Додади присуство",
-    "Add payment": "Додади уплата",
+    "Add attendance": "Внеси присуство",
+    "Add payment": "Внеси уплата",
     "Which group is the attendance for?": "За која група е присуството?",
     "Change language": "Промени јазик",
     "A new member of the club": "Нов член на клубот",
@@ -618,5 +618,9 @@
     "Sent. It should appear in a few seconds.": "Испратено. Треба да се појави за неколку секунди.",
     "Not delivered": "Не е доставено",
     "no connection": "нема врска",
-    "Notifications work on this device.": "Известувањата работат на овој уред."
+    "Notifications work on this device.": "Известувањата работат на овој уред.",
+    "Record": "Внеси",
+    "attendance": "присуство",
+    "member": "член",
+    "payment": "уплата"
 }

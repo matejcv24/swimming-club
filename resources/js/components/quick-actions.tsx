@@ -90,9 +90,10 @@ function useQuickActions() {
     const actions: {
         key: string;
         icon: ReactNode;
+        /** What it does, e.g. "Add member" (the top bar on computers) */
         label: string;
-        /** Under the icon in the phone bar */
-        short: string;
+        /** Under the icon in the phone bar: the verb, then what */
+        lines: [string, string];
         /** The phone bar's colored circle: background and icon color */
         tint: string;
         href?: string;
@@ -102,7 +103,7 @@ function useQuickActions() {
             key: 'attendance',
             icon: <EventAvailableIcon fontSize="inherit" />,
             label: t('Add attendance'),
-            short: t('Attendance'),
+            lines: [t('Record'), t('attendance')],
             tint: 'bg-hydra-blue/15 text-hydra-blue dark:bg-sky-400/20 dark:text-sky-300',
             onClick: addAttendance,
         },
@@ -110,7 +111,7 @@ function useQuickActions() {
             key: 'member',
             icon: <PersonAddAlt1Icon fontSize="inherit" />,
             label: t('Add member'),
-            short: t('Member'),
+            lines: [t('Add'), t('member')],
             tint: 'bg-violet-500/15 text-violet-600 dark:bg-violet-400/20 dark:text-violet-300',
             href: '/members?add=1',
         },
@@ -118,7 +119,7 @@ function useQuickActions() {
             key: 'payment',
             icon: <AddCardIcon fontSize="inherit" />,
             label: t('Add payment'),
-            short: t('Payment'),
+            lines: [t('Record'), t('payment')],
             tint: 'bg-emerald-500/15 text-emerald-600 dark:bg-emerald-400/20 dark:text-emerald-300',
             href: '/membership-fees?add=1',
         },
@@ -248,7 +249,7 @@ export function QuickActionsTopBar() {
                     >
                         {action.icon}
                     </span>
-                    {action.short}
+                    {action.label}
                 </ActionButton>
             ))}
             {picker}
@@ -287,7 +288,8 @@ function useScrollingDown(): boolean {
 }
 
 /**
- * Phones and tablets: a floating bar fixed to the bottom of the dashboard, each
+ * Phones and tablets: a floating "liquid glass" bar fixed to the bottom of the
+ * dashboard (strong blur, a light sheen and a bright top edge), each
  * action a colored circle with its name under it. While scrolling down it gets
  * a little smaller (names hidden); scrolling up brings it back.
  */
@@ -298,7 +300,7 @@ export function QuickActionsBar() {
     return (
         <nav
             aria-label={t('Quick actions')}
-            className={`fixed bottom-[calc(0.75rem+env(safe-area-inset-bottom))] left-1/2 z-40 grid -translate-x-1/2 grid-cols-3 rounded-[22px] border border-white/70 bg-white/80 shadow-[0_8px_32px_rgba(0,16,49,0.18)] backdrop-blur-xl transition-all duration-300 ease-out lg:hidden dark:border-[#2a3a5c] dark:bg-[#16223f]/90 dark:shadow-[0_8px_32px_rgba(0,0,0,0.5)] ${
+            className={`fixed bottom-[calc(0.75rem+env(safe-area-inset-bottom))] left-1/2 z-40 grid -translate-x-1/2 grid-cols-3 rounded-[24px] border border-white/60 bg-gradient-to-b from-white/75 to-white/45 shadow-[inset_0_1px_0_rgba(255,255,255,0.9),inset_0_-1px_0_rgba(255,255,255,0.25),0_10px_36px_rgba(0,16,49,0.22)] backdrop-blur-2xl backdrop-saturate-[1.8] transition-all duration-300 ease-out lg:hidden dark:border-white/15 dark:from-[#22325a]/70 dark:to-[#101a33]/55 dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.18),inset_0_-1px_0_rgba(255,255,255,0.05),0_10px_36px_rgba(0,0,0,0.55)] ${
                 compact
                     ? 'w-[min(62%,16rem)] px-1 py-1.5'
                     : 'w-[min(88%,22rem)] px-1 pt-2 pb-1.5'
@@ -319,14 +321,16 @@ export function QuickActionsBar() {
                     >
                         {action.icon}
                     </span>
+                    {/* Two short lines: the verb, then what ("Add" / "member") */}
                     <span
-                        className={`overflow-hidden text-[11px] leading-tight font-semibold text-hydra-navy transition-all duration-300 ease-out dark:text-[#e8eefb] ${
+                        className={`flex flex-col items-center overflow-hidden text-center text-[11.5px] leading-tight font-semibold text-hydra-navy transition-all duration-300 ease-out dark:text-[#e8eefb] ${
                             compact
                                 ? 'max-h-0 opacity-0'
-                                : 'mt-1 max-h-5 opacity-100'
+                                : 'mt-1 max-h-9 opacity-100'
                         }`}
                     >
-                        {action.short}
+                        <span>{action.lines[0]}</span>
+                        <span>{action.lines[1]}</span>
                     </span>
                 </ActionButton>
             ))}
@@ -340,7 +344,7 @@ export function QuickActionsSpacer() {
     return (
         <div
             aria-hidden
-            className="h-[calc(5rem+env(safe-area-inset-bottom))] shrink-0 lg:hidden"
+            className="h-[calc(6rem+env(safe-area-inset-bottom))] shrink-0 lg:hidden"
         />
     );
 }

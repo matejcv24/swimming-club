@@ -71,7 +71,7 @@ export function AppHeaderActions() {
                 <DropdownMenuTrigger asChild>
                     <button
                         type="button"
-                        className="flex size-9 items-center justify-center rounded-md transition hover:bg-sidebar-accent"
+                        className="flex size-9 cursor-pointer items-center justify-center rounded-full transition hover:bg-hydra-blue/15 data-[state=open]:bg-hydra-blue/15"
                         aria-label={t('User menu')}
                     >
                         <Avatar className="size-8">
