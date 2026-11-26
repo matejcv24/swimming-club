@@ -1,4 +1,4 @@
-import { Head } from '@inertiajs/react';
+import { Head, router } from '@inertiajs/react';
 import Chip from '@mui/material/Chip';
 import Dialog from '@mui/material/Dialog';
 import DialogContent from '@mui/material/DialogContent';
@@ -9,7 +9,7 @@ import ListItem from '@mui/material/ListItem';
 import ListItemText from '@mui/material/ListItemText';
 import Typography from '@mui/material/Typography';
 import dayjs from 'dayjs';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { DashboardCards } from '@/components/dashboard-cards';
 import MonthlyReportDialog from '@/components/monthly-report-dialog';
 import {
@@ -70,12 +70,26 @@ export default function Dashboard({
     // Back where the user was after closing a pop-up
     useDashboardScroll();
     const [showReportModal, setShowReportModal] = useState(false);
-    const [showSalaryModal, setShowSalaryModal] = useState(
+    const [showSalaryModal, setShowSalaryModal] = useState(false);
+    // A coach's salary notification opens the salary history (?salary=1)
+    const salaryLink = (url: string) =>
         userRole === 'coach' &&
-            typeof window !== 'undefined' &&
-            new URLSearchParams(window.location.search).get('salary') === '1',
+        new URL(url, 'http://x').searchParams.get('salary') === '1';
+    const [showSalaryHistoryModal, setShowSalaryHistoryModal] = useState(
+        () => typeof window !== 'undefined' && salaryLink(window.location.href),
     );
-    const [showSalaryHistoryModal, setShowSalaryHistoryModal] = useState(false);
+
+    // Also when the dashboard is already open (tapping the notification there)
+    useEffect(
+        () =>
+            router.on('navigate', (event) => {
+                if (salaryLink(event.detail.page.url)) {
+                    setShowSalaryHistoryModal(true);
+                }
+            }),
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+        [userRole],
+    );
     const [showSalaryYearDetailModal, setShowSalaryYearDetailModal] =
         useState(false);
     const [selectedSalaryYear, setSelectedSalaryYear] = useState<string | null>(

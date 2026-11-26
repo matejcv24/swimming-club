@@ -562,7 +562,11 @@ export default function StaffIndex({ staff, invitations }: Props) {
         setEditingCoach(coach);
     };
 
-    const closeEdit = () => setEditingCoach(null);
+    // Closing the edit form goes back to that person's card, not the list
+    const closeEdit = () => {
+        setPerson(editingCoach);
+        setEditingCoach(null);
+    };
 
     const handleEditSubmit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -571,9 +575,16 @@ export default function StaffIndex({ staff, invitations }: Props) {
             return;
         }
 
+        const editedId = editingCoach.id;
+
         router.put(`/staff/${editingCoach.id}`, editForm, {
             preserveScroll: true,
-            onSuccess: () => {
+            onSuccess: (page) => {
+                // Back to their card, with the saved details
+                const updated = (page.props as unknown as Props).staff.find(
+                    (member) => member.id === editedId,
+                );
+                setPerson(updated ?? null);
                 setEditingCoach(null);
                 setEditForm({
                     name: '',

@@ -47,7 +47,8 @@ class PaymentReminderMail extends Mailable
                 'customText' => $this->customText,
                 'familyLink' => FamilyController::link($this->reminder->members->pluck('id')->all()),
                 'reminder' => $this->reminder,
-                'iconPath' => resource_path('images/email-calendar.png'),
+                // A normal web image: phone mail apps show it reliably
+                'iconUrl' => rtrim(config('app.url'), '/').'/images/email-calendar.png',
                 'linkDays' => FamilyController::VALID_DAYS,
             ],
         );
