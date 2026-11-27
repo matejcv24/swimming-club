@@ -8,6 +8,7 @@ use App\Models\Member;
 use App\Models\Training;
 use App\Models\User;
 use App\Notifications\TrainingAttendanceNotification;
+use App\Support\ClubRule;
 use App\Support\NotificationText;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -40,13 +41,13 @@ class TrainingController extends Controller
             'group_id' => [
                 Rule::requiredIf(fn () => self::clubHasGroups()),
                 'nullable',
-                Rule::exists('groups', 'id')->whereNull('parent_id'),
+                ClubRule::exists('groups')->whereNull('parent_id'),
             ],
             // Optional: a training of one subgroup (e.g. "18:00") instead of the whole group
-            'subgroup_id' => ['nullable', Rule::exists('groups', 'id')->where('parent_id', (int) $request->input('group_id'))],
+            'subgroup_id' => ['nullable', ClubRule::exists('groups')->where('parent_id', (int) $request->input('group_id'))],
             // Present but may be empty: unticking everyone clears the day's attendance
             'member_ids' => ['present', 'array'],
-            'member_ids.*' => ['exists:members,id'],
+            'member_ids.*' => [ClubRule::exists('members')],
         ]);
 
         // Coaches record attendance only for their groups and their members. Members
@@ -108,7 +109,7 @@ class TrainingController extends Controller
         }
 
         if (Auth::user()?->role === 'coach') {
-            $admins = User::where('role', 'admin')->active()->get();
+            $admins = User::inCurrentClub('admin')->active()->get();
             $formattedDate = Carbon::parse($validated['date'])->format('d.m.Y');
             $groupName = $groupId ? (Group::withTrashed()->find($groupId)?->name ?? 'group') : 'All groups';
 

@@ -2,11 +2,13 @@
 
 namespace App\Http\Middleware;
 
-use App\Models\Club;
 use App\Models\Group;
 use App\Models\Member;
 use App\Notifications\Channels\WebPushChannel;
+use App\Support\ClubAccess;
+use App\Support\CurrentClub;
 use App\Support\DashboardSummary;
+use App\Support\MyClubs;
 use App\Support\NotificationText;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
@@ -71,7 +73,12 @@ class HandleInertiaRequests extends Middleware
             // The club's name and logo (top bar, and the login and invitation pages);
             // its email only for people logged in
             'club' => function () use ($request) {
-                $club = Club::current();
+                $club = CurrentClub::get();
+
+                // An address of no club (the shared sign-in page later): the app's own name
+                if (! $club) {
+                    return ['name' => config('app.name'), 'email' => null, 'logo_url' => null];
+                }
 
                 return [
                     'name' => $club->name,
@@ -79,6 +86,12 @@ class HandleInertiaRequests extends Middleware
                     'logo_url' => $club->logoUrl(),
                 ];
             },
+            // "My clubs" in the avatar menu (empty: the person has one club)
+            'myClubs' => fn () => $request->user() ? MyClubs::for($request->user()) : [],
+            // The club just switched to, for the short message after switching
+            'clubSwitched' => fn () => $request->session()->get('club_switched'),
+            // The subscription banner (demo ending, grace, read-only); null: none
+            'clubAccess' => fn () => $request->user() ? ClubAccess::current()->banner() : null,
             // The club's groups (in their order) and their subgroups, with how many
             // members each has
             'groups' => fn () => $request->user()

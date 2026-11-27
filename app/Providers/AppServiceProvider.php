@@ -2,9 +2,13 @@
 
 namespace App\Providers;
 
+use App\Support\CurrentClub;
 use Carbon\CarbonImmutable;
+use Illuminate\Auth\Events\Login;
+use Illuminate\Auth\Events\Logout;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
@@ -16,7 +20,8 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        // Which club this request or job is for (one answer per request)
+        $this->app->scoped(CurrentClub::class);
     }
 
     /**
@@ -25,6 +30,9 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->configureDefaults();
+
+        // Signing in or out changes whose club it is
+        Event::listen([Login::class, Logout::class], fn () => CurrentClub::forget());
     }
 
     /**

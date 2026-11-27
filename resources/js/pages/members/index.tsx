@@ -5,6 +5,7 @@ import EditIcon from '@mui/icons-material/Edit';
 import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 import GroupsIcon from '@mui/icons-material/Groups';
 import PersonAddAlt1Icon from '@mui/icons-material/PersonAddAlt1';
+import WarningAmberIcon from '@mui/icons-material/WarningAmber';
 import Avatar from '@mui/material/Avatar';
 import Button from '@mui/material/Button';
 import Dialog from '@mui/material/Dialog';
@@ -70,6 +71,23 @@ interface Member {
 interface Props {
     members: Member[];
     userRole: 'admin' | 'coach';
+}
+
+/** A member that is almost certainly the one being saved (see DuplicateMembers). */
+interface DuplicateMatch {
+    id: number;
+    name: string;
+    group: string | null;
+    status: 'active' | 'inactive';
+    parent: string | null;
+    canOpen: boolean;
+}
+
+/** The duplicate warning: from adding or editing, and whether "add anyway" was pressed once. */
+interface DuplicateWarning {
+    kind: 'add' | 'edit';
+    matches: DuplicateMatch[];
+    confirming: boolean;
 }
 
 export default function MembersIndex({ members, userRole }: Props) {
@@ -180,26 +198,77 @@ export default function MembersIndex({ members, userRole }: Props) {
             .toUpperCase()
             .slice(0, 2);
 
+    // The server refused because the member seems to exist already
+    const [duplicate, setDuplicate] = useState<DuplicateWarning | null>(null);
+    // A member opened from the warning of the dashboard's "Add member" form
+    const [openedFromWarning, setOpenedFromWarning] = useState(false);
+    const readDuplicate = (
+        errors: Record<string, string>,
+        kind: DuplicateWarning['kind'],
+    ) => {
+        if (!errors.duplicate) {
+            return;
+        }
+
+        try {
+            setDuplicate({
+                kind,
+                matches: JSON.parse(errors.duplicate) as DuplicateMatch[],
+                confirming: false,
+            });
+        } catch {
+            // Not the expected list: nothing to show
+        }
+    };
+
+    const openExisting = (match: DuplicateMatch) => {
+        const existing = members.find((member) => member.id === match.id);
+
+        if (!existing || !duplicate) {
+            return;
+        }
+
+        if (duplicate.kind === 'add') {
+            setShowAddModal(false);
+            setOpenedFromWarning(openedToAdd);
+        } else {
+            setEditMember(null);
+        }
+
+        setDuplicate(null);
+        setSelectedMember(existing);
+    };
+
     const handleAddSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        router.post('/members', form, {
-            onSuccess: () => {
-                closeAdd();
-                setForm({
-                    name: '',
-                    group_id: '',
-                    subgroup_id: '',
-                    status: 'active',
-                    phone: '',
-                    email: '',
-                    parent_name: '',
-                    parent_phone: '',
-                    parent_email: '',
-                });
-                setShowContact(false);
-                setShowParent(false);
+        submitAdd(false);
+    };
+
+    const submitAdd = (confirmDuplicate: boolean) => {
+        router.post(
+            '/members',
+            { ...form, confirm_duplicate: confirmDuplicate },
+            {
+                onError: (errors) => readDuplicate(errors, 'add'),
+                onSuccess: () => {
+                    setDuplicate(null);
+                    closeAdd();
+                    setForm({
+                        name: '',
+                        group_id: '',
+                        subgroup_id: '',
+                        status: 'active',
+                        phone: '',
+                        email: '',
+                        parent_name: '',
+                        parent_phone: '',
+                        parent_email: '',
+                    });
+                    setShowContact(false);
+                    setShowParent(false);
+                },
             },
-        });
+        );
     };
 
     const handleDeleteConfirm = () => {
@@ -257,9 +326,25 @@ export default function MembersIndex({ members, userRole }: Props) {
             return;
         }
 
-        router.patch(`/members/${editMember.id}`, editForm, {
-            onSuccess: () => setEditMember(null),
-        });
+        submitEdit(false);
+    };
+
+    const submitEdit = (confirmDuplicate: boolean) => {
+        if (!editMember) {
+            return;
+        }
+
+        router.patch(
+            `/members/${editMember.id}`,
+            { ...editForm, confirm_duplicate: confirmDuplicate },
+            {
+                onError: (errors) => readDuplicate(errors, 'edit'),
+                onSuccess: () => {
+                    setDuplicate(null);
+                    setEditMember(null);
+                },
+            },
+        );
     };
 
     return (
@@ -489,7 +574,14 @@ export default function MembersIndex({ members, userRole }: Props) {
             {/* Member Detail Modal */}
             <MemberDetailsDialog
                 member={selectedMember}
-                onClose={() => setSelectedMember(null)}
+                onClose={() => {
+                    setSelectedMember(null);
+
+                    // Opened from the dashboard's "Add member": back to the dashboard
+                    if (openedFromWarning) {
+                        router.visit('/dashboard', { preserveScroll: true });
+                    }
+                }}
             />
 
             {/* Edit Member Modal */}
@@ -933,6 +1025,142 @@ export default function MembersIndex({ members, userRole }: Props) {
                     </DialogContent>
                 </Dialog>
             )}
+
+            {/* The same member seems to exist already: open it, or (asked twice) save anyway */}
+            <Dialog
+                open={!!duplicate}
+                onClose={() => setDuplicate(null)}
+                disableRestoreFocus
+                fullWidth
+                maxWidth="xs"
+                PaperProps={{ sx: { bgcolor: POPUP_BG } }}
+            >
+                <DialogTitle sx={{ p: 0 }}>
+                    <PopupHeader
+                        icon={<WarningAmberIcon fontSize="small" />}
+                        title={
+                            duplicate?.confirming
+                                ? duplicate.kind === 'add'
+                                    ? t('Add a new member anyway?')
+                                    : t('Save anyway?')
+                                : t('This member already exists')
+                        }
+                        onClose={() => setDuplicate(null)}
+                    />
+                </DialogTitle>
+                <DialogContent sx={{ px: 2.25, pt: 0.5 }}>
+                    {duplicate && !duplicate.confirming && (
+                        <div className="flex flex-col gap-4 pb-2">
+                            <Typography
+                                variant="body2"
+                                sx={{ color: popupFg(0.75) }}
+                            >
+                                {t(
+                                    'A member with the same name and the same phone, email or parent is already in the club:',
+                                )}
+                            </Typography>
+                            {duplicate.matches.map((match) => (
+                                <div
+                                    key={match.id}
+                                    className="flex flex-col gap-3 rounded-2xl border border-[var(--popup-border)] p-3"
+                                >
+                                    <div>
+                                        <Typography fontWeight="bold">
+                                            {match.name}
+                                            {match.status === 'inactive' &&
+                                                ` · ${t('Inactive')}`}
+                                        </Typography>
+                                        <Typography
+                                            variant="body2"
+                                            sx={{ color: popupFg(0.7) }}
+                                        >
+                                            {match.group ?? t('All groups')}
+                                            {match.parent &&
+                                                ` · ${t('Parent: :name', { name: match.parent })}`}
+                                        </Typography>
+                                    </div>
+                                    {match.canOpen ? (
+                                        <Button
+                                            variant="contained"
+                                            fullWidth
+                                            size="medium"
+                                            onClick={() => openExisting(match)}
+                                        >
+                                            {t('Open existing')}
+                                        </Button>
+                                    ) : (
+                                        <Typography
+                                            variant="body2"
+                                            sx={{ color: popupFg(0.7) }}
+                                        >
+                                            {t(
+                                                'This member is in a group you don’t see. Ask an admin.',
+                                            )}
+                                        </Typography>
+                                    )}
+                                </div>
+                            ))}
+                            <Button
+                                variant="text"
+                                fullWidth
+                                size="medium"
+                                onClick={() =>
+                                    setDuplicate({
+                                        ...duplicate,
+                                        confirming: true,
+                                    })
+                                }
+                            >
+                                {duplicate.kind === 'add'
+                                    ? t('It’s a different member, add anyway')
+                                    : t('It’s a different member, save anyway')}
+                            </Button>
+                        </div>
+                    )}
+                    {duplicate?.confirming && (
+                        <div className="flex flex-col gap-4 pb-2">
+                            <Typography
+                                variant="body2"
+                                sx={{ color: popupFg(0.75) }}
+                            >
+                                {t(
+                                    'The club will have two members with the same name and the same contact. Do this only if they really are two different people.',
+                                )}
+                            </Typography>
+                            <div className="flex gap-3">
+                                <Button
+                                    variant="outlined"
+                                    fullWidth
+                                    size="medium"
+                                    onClick={() =>
+                                        setDuplicate({
+                                            ...duplicate,
+                                            confirming: false,
+                                        })
+                                    }
+                                >
+                                    {t('Back')}
+                                </Button>
+                                <Button
+                                    variant="contained"
+                                    color="warning"
+                                    fullWidth
+                                    size="medium"
+                                    onClick={() =>
+                                        duplicate.kind === 'add'
+                                            ? submitAdd(true)
+                                            : submitEdit(true)
+                                    }
+                                >
+                                    {duplicate.kind === 'add'
+                                        ? t('Yes, add')
+                                        : t('Yes, save')}
+                                </Button>
+                            </div>
+                        </div>
+                    )}
+                </DialogContent>
+            </Dialog>
         </MuiThemeProvider>
     );
 }

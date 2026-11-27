@@ -2,16 +2,18 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\ClubNotification;
 use App\Models\ClubParent;
 use App\Models\Member;
 use App\Models\User;
 use App\Notifications\MemberChangedNotification;
+use App\Support\ClubRule;
+use App\Support\DuplicateMembers;
 use App\Support\NotificationText;
 use Illuminate\Http\Request;
-use Illuminate\Notifications\DatabaseNotification;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 
 class MemberController extends Controller
 {
@@ -32,7 +34,7 @@ class MemberController extends Controller
             // Empty: the member trains in all groups
             'group_id' => [
                 'nullable',
-                Rule::exists('groups', 'id')->whereNull('deleted_at')->whereNull('parent_id'),
+                ClubRule::exists('groups')->whereNull('deleted_at')->whereNull('parent_id'),
                 // Coaches add and move members only within their groups
                 function ($attribute, $value, $fail) {
                     if (! Auth::user()->canSeeGroup($value)) {
@@ -43,7 +45,7 @@ class MemberController extends Controller
             // Optional, and only a subgroup of the chosen group
             'subgroup_id' => [
                 'nullable',
-                Rule::exists('groups', 'id')->whereNull('deleted_at')->where('parent_id', (int) $request->input('group_id')),
+                ClubRule::exists('groups')->whereNull('deleted_at')->where('parent_id', (int) $request->input('group_id')),
             ],
             'status' => ['nullable', 'in:active,inactive'],
             // The member's own contact details and a parent's are all optional
@@ -52,7 +54,11 @@ class MemberController extends Controller
             'parent_name' => ['nullable', 'string', 'max:255'],
             'parent_phone' => ['nullable', 'string', 'max:20'],
             'parent_email' => ['nullable', 'email', 'max:255'],
+            // Saving although the same member seems to exist already (asked twice)
+            'confirm_duplicate' => ['sometimes', 'boolean'],
         ]);
+
+        $this->refuseDuplicate($request, $validated);
 
         $parent = $this->newParent($validated);
 
@@ -68,7 +74,7 @@ class MemberController extends Controller
         ]);
 
         if (Auth::user()?->role === 'coach') {
-            $admins = User::where('role', 'admin')->active()->get();
+            $admins = User::inCurrentClub('admin')->active()->get();
 
             foreach ($admins as $admin) {
                 $admin->notify(new MemberChangedNotification(
@@ -94,7 +100,7 @@ class MemberController extends Controller
             // Empty: the member trains in all groups
             'group_id' => [
                 'nullable',
-                Rule::exists('groups', 'id')->whereNull('deleted_at')->whereNull('parent_id'),
+                ClubRule::exists('groups')->whereNull('deleted_at')->whereNull('parent_id'),
                 // Coaches add and move members only within their groups
                 function ($attribute, $value, $fail) {
                     if (! Auth::user()->canSeeGroup($value)) {
@@ -105,7 +111,7 @@ class MemberController extends Controller
             // Optional, and only a subgroup of the chosen group
             'subgroup_id' => [
                 'nullable',
-                Rule::exists('groups', 'id')->whereNull('deleted_at')->where('parent_id', (int) $request->input('group_id')),
+                ClubRule::exists('groups')->whereNull('deleted_at')->where('parent_id', (int) $request->input('group_id')),
             ],
             'status' => ['required', 'in:active,inactive'],
             // The member's own contact details and a parent's are all optional
@@ -114,7 +120,20 @@ class MemberController extends Controller
             'parent_name' => ['nullable', 'string', 'max:255'],
             'parent_phone' => ['nullable', 'string', 'max:20'],
             'parent_email' => ['nullable', 'email', 'max:255'],
+            // Saving although the same member seems to exist already (asked twice)
+            'confirm_duplicate' => ['sometimes', 'boolean'],
         ]);
+
+        // Only a changed name or contact can make it match another member
+        $identityChanged = $member->name !== $validated['name']
+            || ($member->phone ?? '') !== ($validated['phone'] ?? '')
+            || ($member->email ?? '') !== ($validated['email'] ?? '')
+            || ($member->parent?->phone ?? '') !== ($validated['parent_phone'] ?? '')
+            || ($member->parent?->email ?? '') !== ($validated['parent_email'] ?? '');
+
+        if ($identityChanged) {
+            $this->refuseDuplicate($request, $validated, $member);
+        }
 
         $changes = [];
 
@@ -176,7 +195,7 @@ class MemberController extends Controller
         }
 
         if (Auth::user()?->role === 'coach' && count($changes) > 0) {
-            $admins = User::where('role', 'admin')->active()->get();
+            $admins = User::inCurrentClub('admin')->active()->get();
             $changeSummary = implode(', ', $changes);
 
             foreach ($admins as $admin) {
@@ -202,10 +221,10 @@ class MemberController extends Controller
             $member->membershipFees()->delete();
 
             // Remove notifications that link to this member, they would point to nothing
-            DatabaseNotification::query()
+            ClubNotification::query()
                 ->where('data', 'like', '%member='.$member->id.'%')
                 ->get()
-                ->filter(function (DatabaseNotification $notification) use ($member) {
+                ->filter(function (ClubNotification $notification) use ($member) {
                     parse_str((string) parse_url($notification->data['url'] ?? '', PHP_URL_QUERY), $query);
 
                     return (int) ($query['member'] ?? 0) === $member->id;
@@ -222,6 +241,28 @@ class MemberController extends Controller
         });
 
         return back()->with('success', 'Member deleted!');
+    }
+
+    /**
+     * Stops the save when the member almost certainly exists already (same name
+     * and the same phone or email, own or parent's), unless the person confirmed
+     * twice that it's a different member. The matches go back to the form.
+     *
+     * @param  array<string, mixed>  $validated
+     */
+    private function refuseDuplicate(Request $request, array $validated, ?Member $member = null): void
+    {
+        if ($request->boolean('confirm_duplicate')) {
+            return;
+        }
+
+        $matches = DuplicateMembers::find($validated, $member?->id);
+
+        if ($matches->isNotEmpty()) {
+            throw ValidationException::withMessages([
+                'duplicate' => json_encode(DuplicateMembers::forWarning($matches, Auth::user()), JSON_UNESCAPED_UNICODE),
+            ]);
+        }
     }
 
     /**

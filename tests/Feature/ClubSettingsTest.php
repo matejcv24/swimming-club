@@ -18,8 +18,8 @@ class ClubSettingsTest extends TestCase
         parent::setUp();
 
         Storage::fake('local');
-        Club::query()->delete();
-        Club::create(['name' => 'SC Hydra']);
+        // The club the migrations made, without the logo it copied
+        Club::query()->update(['name' => 'SC Hydra', 'email' => null, 'logo_path' => null]);
     }
 
     private function admin(): User

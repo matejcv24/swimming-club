@@ -202,7 +202,7 @@ class NotificationsTest extends TestCase
 
         $this->actingAs($this->admin)
             ->post("/notifications/{$coachNotification->id}/read")
-            ->assertForbidden();
+            ->assertNotFound();
 
         $this->assertNull($coachNotification->fresh()->read_at);
     }
@@ -224,7 +224,7 @@ class NotificationsTest extends TestCase
         $this->actingAs($this->admin)->get('/notifications')
             ->assertOk()
             ->assertInertia(fn ($page) => $page
-                ->has('unreadNotifications', 1)
-                ->where('unreadNotifications.0.type', 'training_attendance'));
+                ->has('items', 1)
+                ->where('items.0.type', 'training_attendance'));
     }
 }

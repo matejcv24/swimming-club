@@ -3,8 +3,10 @@
 namespace App\Http\Controllers;
 
 use App\Models\Attendance;
+use App\Models\Club;
 use App\Models\Member;
 use App\Models\MembershipFee;
+use App\Support\CurrentClub;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\URL;
@@ -28,12 +30,31 @@ class FamilyController extends Controller
         return URL::temporarySignedRoute(
             'family.show',
             now()->addDays(self::VALID_DAYS),
-            ['members' => implode(',', $memberIds)],
+            ['club' => CurrentClub::id(), 'members' => implode(',', $memberIds)],
         );
     }
 
+    /**
+     * The link names its club (signed, so it can't be changed); links sent before
+     * clubs were separated have none and use the club of this address.
+     */
     public function show(Request $request)
     {
+        if ($request->query('club') === null) {
+            return $this->showFor($request);
+        }
+
+        $club = Club::find((int) $request->query('club'));
+        abort_if($club === null, 404);
+
+        // Drawn inside, so everything on the page (the club's name too) is that club's
+        return CurrentClub::runFor($club, fn () => $this->showFor($request)->toResponse($request));
+    }
+
+    private function showFor(Request $request)
+    {
+        abort_if(CurrentClub::id() === null, 404);
+
         $ids = collect(explode(',', (string) $request->query('members')))
             ->map(fn ($id) => (int) $id)
             ->filter()

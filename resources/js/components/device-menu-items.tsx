@@ -1,5 +1,5 @@
 import { usePage } from '@inertiajs/react';
-import { Bell, CircleCheck, Loader2, Send, Smartphone } from 'lucide-react';
+import { Bell, CircleCheck, Loader2, Smartphone } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import {
     DropdownMenuItem,
@@ -12,7 +12,6 @@ import {
     isIphone,
     isPhone,
     pushState,
-    testPush,
     turnPushOff,
     turnPushOn,
 } from '@/lib/device';
@@ -52,9 +51,6 @@ export function DeviceMenuItems({ onInstall }: { onInstall: () => void }) {
     const [busy, setBusy] = useState(false);
     const [phone, setPhone] = useState(false);
     const [installed, setInstalled] = useState(false);
-    // The test push: sending, then what happened
-    const [testing, setTesting] = useState(false);
-    const [testResult, setTestResult] = useState<string | null>(null);
 
     useEffect(() => {
         setPhone(isPhone());
@@ -92,30 +88,6 @@ export function DeviceMenuItems({ onInstall }: { onInstall: () => void }) {
             setState(await pushState());
         } finally {
             setBusy(false);
-        }
-    };
-
-    const sendTest = async (event: Event) => {
-        event.preventDefault();
-
-        if (testing) {
-            return;
-        }
-
-        setTesting(true);
-        setTestResult(null);
-
-        try {
-            const result = await testPush();
-            setTestResult(
-                result.sent
-                    ? t('Sent. It should appear in a few seconds.')
-                    : `${t('Not delivered')}: ${result.reason}`,
-            );
-        } catch {
-            setTestResult(t('Not delivered') + ': ' + t('no connection'));
-        } finally {
-            setTesting(false);
         }
     };
 
@@ -161,29 +133,6 @@ export function DeviceMenuItems({ onInstall }: { onInstall: () => void }) {
                     {(state === 'on' || state === 'off') && (
                         <Toggle on={state === 'on'} busy={busy} />
                     )}
-                </DropdownMenuItem>
-            )}
-
-            {showPush && state === 'on' && (
-                <DropdownMenuItem
-                    onSelect={sendTest}
-                    className="cursor-pointer items-start"
-                >
-                    {testing ? (
-                        <Loader2 className="mt-0.5 mr-2 size-4 flex-none animate-spin" />
-                    ) : (
-                        <Send className="mt-0.5 mr-2 size-4 flex-none" />
-                    )}
-                    <span className="min-w-0 flex-1">
-                        <span className="block">
-                            {t('Send a test notification')}
-                        </span>
-                        {testResult && (
-                            <span className="block text-[11px] leading-tight break-words text-muted-foreground">
-                                {testResult}
-                            </span>
-                        )}
-                    </span>
                 </DropdownMenuItem>
             )}
 

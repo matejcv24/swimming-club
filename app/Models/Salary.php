@@ -2,11 +2,14 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BelongsToClub;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Salary extends Model
 {
+    use BelongsToClub;
+
     protected $fillable = ['user_id', 'amount', 'month'];
 
     protected $casts = [

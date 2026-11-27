@@ -227,4 +227,32 @@ class SubgroupTest extends TestCase
         $this->actingAs($admin)->post('/trainings', ['date' => '2026-11-10', 'group_id' => $small, 'subgroup_id' => $nineteen, 'member_ids' => []])
             ->assertSessionHasErrors('subgroup_id');
     }
+
+    /**
+     * The group limits who can be marked present; the subgroup doesn't (it's only
+     * for statistics). A member of "18:00" is on every subgroup's list of their group.
+     */
+    public function test_a_member_of_one_subgroup_can_be_present_in_every_subgroup_of_their_group()
+    {
+        $admin = $this->admin();
+        $advanced = Group::create(['name' => 'Advanced'])->id;
+        $eighteen = $this->subgroup('18:00', $advanced);
+        $nineteen = $this->subgroup('19:00', $advanced);
+        $ana = $this->member('Ana', $advanced, $eighteen);
+        $other = $this->member('Other group', Group::create(['name' => 'Beginners'])->id);
+
+        // The attendance page gets every active member; the page lists a group's
+        // members by their group only (resources/js/pages/trainings/index.tsx)
+        $this->actingAs($admin)->get('/trainings')
+            ->assertInertia(fn (Assert $page) => $page->where('members', fn ($members) => collect($members)->contains('id', $ana->id)));
+
+        $this->actingAs($admin)->post('/trainings', ['date' => '2026-11-12', 'group_id' => $advanced, 'subgroup_id' => $nineteen, 'member_ids' => [$ana->id]])
+            ->assertSessionHasNoErrors();
+        $this->actingAs($admin)->getJson("/trainings/by-date?date=2026-11-12&group_id={$advanced}&subgroup_id={$nineteen}")
+            ->assertJson(['member_ids' => [$ana->id]]);
+
+        // Her subgroup stays 18:00 for the statistics
+        $this->assertSame($eighteen, $ana->fresh()->subgroup_id);
+        $this->assertNotNull($other);
+    }
 }

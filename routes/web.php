@@ -4,6 +4,7 @@ use App\Http\Controllers\AdminController;
 use App\Http\Controllers\AttendanceController;
 use App\Http\Controllers\ClubController;
 use App\Http\Controllers\ClubParentController;
+use App\Http\Controllers\ClubSwitchController;
 use App\Http\Controllers\FamilyController;
 use App\Http\Controllers\GroupController;
 use App\Http\Controllers\InvoiceController;
@@ -42,15 +43,21 @@ Route::redirect('/', '/login')->name('home');
 
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/dashboard', [AdminController::class, 'index'])->name('dashboard');
+    // "My clubs" in the avatar menu: work in another of the person's clubs
+    Route::post('/clubs/{club}/switch', [ClubSwitchController::class, 'store'])->name('clubs.switch');
     Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications.index');
     Route::post('/notifications/{notification}/read', [NotificationController::class, 'markAsRead'])->name('notifications.read');
+    // The bell was opened and closed: the notifications it showed count as read
+    Route::post('/notifications/seen', [NotificationController::class, 'markSeen'])->name('notifications.seen');
+    // Each person deletes their own notifications: one, or all of them
+    Route::delete('/notifications/{notification}', [NotificationController::class, 'destroy'])->name('notifications.destroy');
+    Route::delete('/notifications', [NotificationController::class, 'destroyAll'])->name('notifications.destroyAll');
     // A tapped push notification: marked as read, then its page
     Route::get('/notifications/{notification}/open', [NotificationController::class, 'markAsRead'])->name('notifications.open');
 
     // Push notifications on this device: on / off
     Route::post('/push-subscriptions', [PushSubscriptionController::class, 'store'])->middleware('throttle:20,1')->name('push.store');
     Route::delete('/push-subscriptions', [PushSubscriptionController::class, 'destroy'])->name('push.destroy');
-    Route::post('/push-subscriptions/test', [PushSubscriptionController::class, 'test'])->middleware('throttle:10,1')->name('push.test');
 
     Route::middleware(['role:admin,coach'])->group(function () {
         // Only what the app uses: other URLs answer "not found", never an error
@@ -97,6 +104,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
         // Payment reminders by email: a preview first, then sending (admins only)
         Route::get('/unpaid-fees/{member}/reminder', [UnpaidFeeController::class, 'preview'])->name('unpaid-fees.reminder.preview');
+        // The missing email, entered right from the grey email button
+        Route::post('/unpaid-fees/{member}/email', [UnpaidFeeController::class, 'saveEmail'])
+            ->middleware('throttle:30,1')
+            ->name('unpaid-fees.email');
         Route::post('/unpaid-fees/{member}/reminder', [UnpaidFeeController::class, 'send'])
             ->middleware('throttle:30,1')
             ->name('unpaid-fees.reminder.send');

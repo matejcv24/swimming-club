@@ -2,11 +2,14 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BelongsToClub;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class MembershipFee extends Model
 {
+    use BelongsToClub;
+
     protected $fillable = ['member_id', 'member_name', 'pool', 'group_id', 'amount', 'payment_method', 'start_date', 'end_date'];
 
     protected $casts = [

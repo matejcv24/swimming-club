@@ -6,10 +6,10 @@ use App\Models\Member;
 use App\Models\MembershipFee;
 use App\Models\User;
 use App\Notifications\MembershipPaymentNotification;
+use App\Support\ClubRule;
 use App\Support\NotificationText;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 
 class MembershipFeeController extends Controller
@@ -41,7 +41,7 @@ class MembershipFeeController extends Controller
         $validated = $request->validate([
             'member_id' => [
                 'required',
-                Rule::exists('members', 'id')->where('status', 'active'),
+                ClubRule::exists('members')->where('status', 'active'),
                 // Coaches record payments only for members of their groups
                 function ($attribute, $value, $fail) {
                     if (! ($member = Member::find($value)) || ! Auth::user()->canSeeMember($member)) {
@@ -64,7 +64,7 @@ class MembershipFeeController extends Controller
         ]);
 
         if (Auth::user()?->role === 'coach' && $member) {
-            $admins = User::where('role', 'admin')->active()->get();
+            $admins = User::inCurrentClub('admin')->active()->get();
 
             foreach ($admins as $admin) {
                 $admin->notify(new MembershipPaymentNotification(

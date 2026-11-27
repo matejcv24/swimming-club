@@ -2,7 +2,7 @@ import { router, usePage } from '@inertiajs/react';
 import NotificationsIcon from '@mui/icons-material/Notifications';
 import dayjs from 'dayjs';
 import { Bell, X } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { NotificationIcon } from '@/components/notification-icon';
 import { IconBadge } from '@/components/popup-ui';
 import {
@@ -64,14 +64,41 @@ export function NotificationsMenu() {
         };
     }, []);
 
+    // The notifications shown when the bell was opened, and whether one was chosen
+    const shownIds = useRef<string[]>([]);
+    const chosen = useRef(false);
+
     // Marks only the clicked notification as read, then redirects to its page.
     const openNotification = (id: string) => {
+        chosen.current = true;
         setOpen(false);
         router.post(`/notifications/${id}/read`);
     };
 
+    // Opened and closed without choosing one: what it showed counts as read
+    const onOpenChange = (next: boolean) => {
+        if (next) {
+            shownIds.current = unreadNotifications.map((item) => item.id);
+            chosen.current = false;
+        } else if (!chosen.current && shownIds.current.length > 0) {
+            router.post(
+                '/notifications/seen',
+                { ids: shownIds.current },
+                {
+                    preserveScroll: true,
+                    preserveState: true,
+                    only: ['notifications'],
+                    showProgress: false,
+                },
+            );
+            shownIds.current = [];
+        }
+
+        setOpen(next);
+    };
+
     return (
-        <DropdownMenu open={open} onOpenChange={setOpen}>
+        <DropdownMenu open={open} onOpenChange={onOpenChange}>
             <DropdownMenuTrigger asChild>
                 <button
                     type="button"
@@ -160,7 +187,26 @@ export function NotificationsMenu() {
 
                 <DropdownMenuItem
                     className="mt-2 cursor-pointer justify-center rounded-full bg-hydra-blue py-2 text-sm font-bold text-white focus:bg-hydra-blue/90 focus:text-white"
-                    onSelect={() => router.visit('/notifications')}
+                    onSelect={() => {
+                        // Going to the list: those shown count as read, then the list
+                        chosen.current = true;
+                        const ids = shownIds.current;
+
+                        if (ids.length === 0) {
+                            router.visit('/notifications');
+
+                            return;
+                        }
+
+                        router.post(
+                            '/notifications/seen',
+                            { ids },
+                            {
+                                showProgress: false,
+                                onFinish: () => router.visit('/notifications'),
+                            },
+                        );
+                    }}
                 >
                     {t('See all notifications')}
                 </DropdownMenuItem>
