@@ -6,6 +6,8 @@ use App\Models\Club;
 use App\Models\Invitation;
 use App\Models\Salary;
 use App\Models\User;
+use App\Support\ClubRule;
+use App\Support\CurrentClub;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -26,11 +28,17 @@ class StaffController extends Controller
             ->map(fn ($salaries) => $salaries->map(fn (Salary $salary) => $salary->month->format('Y-m'))->unique()->values());
         $thisMonth = now()->format('Y-m');
 
-        // Active staff first, then deactivated; each by name
-        $staff = User::whereIn('role', self::ROLES)
+        // The club's staff: active first, then deactivated; each by name
+        $staff = User::query()
+            ->select('users.*')
+            ->join('club_user', fn ($join) => $join
+                ->on('club_user.user_id', '=', 'users.id')
+                ->where('club_user.club_id', CurrentClub::id())
+                ->whereNull('club_user.deleted_at'))
+            ->whereIn('club_user.role', self::ROLES)
             ->with('coachGroups:id')
-            ->orderByRaw('deactivated_at is not null')
-            ->orderBy('name')
+            ->orderByRaw('club_user.deactivated_at is not null')
+            ->orderBy('users.name')
             ->get()
             ->map(fn (User $user) => [
                 'id' => $user->id,
@@ -137,8 +145,13 @@ class StaffController extends Controller
 
         $this->logOutEverywhere($coach);
         $coach->save();
-        $coach->pushSubscriptions()->delete();
-        $coach->delete();
+        $coach->leaveCurrentClub();
+
+        // No other club left: the account itself is hidden too (never removed)
+        if (! $coach->memberships()->exists()) {
+            $coach->pushSubscriptions()->delete();
+            $coach->delete();
+        }
 
         return back()->with('success', 'Account deleted.');
     }
@@ -169,7 +182,7 @@ class StaffController extends Controller
             'group_ids' => ['exclude_if:all_groups,true', 'required', 'array', 'min:1'],
             'group_ids.*' => [
                 'integer',
-                Rule::exists('groups', 'id')->whereNull('deleted_at')->whereNull('parent_id'),
+                ClubRule::exists('groups')->whereNull('deleted_at')->whereNull('parent_id'),
             ],
         ];
     }

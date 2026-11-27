@@ -3,8 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Models\Invoice;
+use App\Support\ClubRule;
 use Illuminate\Http\Request;
-use Illuminate\Validation\Rule;
 
 class InvoiceController extends Controller
 {
@@ -14,7 +14,7 @@ class InvoiceController extends Controller
     public function index()
     {
         $invoices = Invoice::orderBy('month', 'desc')->get();
-        
+
         return response()->json([
             'invoices' => $invoices,
         ]);
@@ -47,7 +47,7 @@ class InvoiceController extends Controller
     {
         $validated = $request->validate([
             'month' => 'required|date_format:Y-m-d',
-            'group_id' => ['nullable', Rule::exists('groups', 'id')->whereNull('deleted_at')->whereNull('parent_id')],
+            'group_id' => ['nullable', ClubRule::exists('groups')->whereNull('deleted_at')->whereNull('parent_id')],
             'amount' => 'required|numeric|min:0',
         ]);
 

@@ -2,12 +2,15 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BelongsToClub;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Member extends Model
 {
+    use BelongsToClub;
+
     /**
      * Only members of the groups the user may see (coaches see their own groups).
      * Members of all groups (no single group) are in everyone's groups.

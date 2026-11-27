@@ -8,10 +8,12 @@ use App\Models\Group;
 use App\Models\Invitation;
 use App\Models\User;
 use App\Notifications\StaffJoinedNotification;
+use App\Support\CurrentClub;
 use App\Support\NotificationText;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Password;
@@ -29,12 +31,14 @@ class StaffInvitationController extends Controller
     {
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
-            // A deleted (hidden) account's email can be invited again: they come back
-            'email' => ['required', 'email', 'max:255', Rule::unique('users', 'email')->whereNull('deleted_at')],
+            // Someone removed from the team, or working in another club, can be invited
+            'email' => ['required', 'email', 'max:255', function ($attribute, $value, $fail) {
+                if ($this->memberOfThisClub(mb_strtolower(trim((string) $value)))) {
+                    $fail(__('This email already has an account.'));
+                }
+            }],
             'role' => ['required', Rule::in(StaffController::ROLES)],
             ...StaffController::groupRules($request->input('role') === 'coach'),
-        ], [
-            'email.unique' => __('This email already has an account.'),
         ]);
 
         $email = mb_strtolower(trim($validated['email']));
@@ -88,18 +92,29 @@ class StaffInvitationController extends Controller
     }
 
     /** The page the link opens: who is invited, and the password fields. */
-    public function show(string $token)
+    public function show(Request $request, string $token)
     {
         $invitation = Invitation::findUsable($token);
 
+        if (! $invitation) {
+            return inertia('auth/accept-invitation', ['invitation' => null, 'token' => null]);
+        }
+
+        // The page is the inviting club's (its name and logo)
+        return CurrentClub::runFor($invitation->club, fn () => $this->page($invitation, $token)->toResponse($request));
+    }
+
+    private function page(Invitation $invitation, string $token)
+    {
         return inertia('auth/accept-invitation', [
-            'invitation' => $invitation ? [
+            'invitation' => [
                 'name' => $invitation->name,
                 'email' => $invitation->email,
                 'role' => $invitation->role,
                 'club' => Club::current()->name,
-            ] : null,
-            'token' => $invitation ? $token : null,
+                'existing_account' => User::where('email', $invitation->email)->exists(),
+            ],
+            'token' => $token,
         ]);
     }
 
@@ -112,35 +127,64 @@ class StaffInvitationController extends Controller
             return redirect('/invitation/'.$token);
         }
 
-        $request->validate([
-            'password' => ['required', 'confirmed', Password::defaults()],
-        ]);
+        // Everything happens in the inviting club; afterwards they work in it
+        $response = CurrentClub::runFor($invitation->club, fn () => $this->acceptFor($request, $invitation));
+        $request->session()->put(CurrentClub::SESSION_KEY, $invitation->club_id);
+        CurrentClub::forget();
 
-        if (User::where('email', $invitation->email)->exists()) {
+        return $response;
+    }
+
+    private function acceptFor(Request $request, Invitation $invitation)
+    {
+        if ($this->memberOfThisClub($invitation->email)) {
             throw ValidationException::withMessages(['password' => __('This email already has an account. Log in instead.')]);
         }
 
-        $user = DB::transaction(function () use ($invitation, $request) {
-            $details = [
-                'name' => $invitation->name,
-                'email' => $invitation->email,
-                'password' => $request->input('password'),
+        // Someone working in another club joins with the password they already have
+        $existing = User::where('email', $invitation->email)->first();
+
+        if ($existing) {
+            $request->validate(['password' => ['required', 'string']]);
+
+            if (! $existing->password || ! Hash::check($request->input('password'), $existing->password)) {
+                throw ValidationException::withMessages(['password' => __('The password is incorrect.')]);
+            }
+        } else {
+            $request->validate(['password' => ['required', 'confirmed', Password::defaults()]]);
+        }
+
+        $user = DB::transaction(function () use ($invitation, $request, $existing) {
+            $membership = [
                 'role' => $invitation->role,
                 'all_groups' => $invitation->all_groups,
+                'deactivated_at' => null,
             ];
 
-            // Someone whose account was deleted earlier comes back to the same
-            // account, so their old trainings and salaries are theirs again
-            $user = User::onlyTrashed()->where('email', $invitation->email)->first();
-
-            if ($user) {
-                $user->restore();
-                $user->fill($details)->forceFill(['deactivated_at' => null]);
+            if ($existing) {
+                $user = $existing->forceFill($membership);
             } else {
-                $user = new User($details);
+                $details = [
+                    'name' => $invitation->name,
+                    'email' => $invitation->email,
+                    'password' => $request->input('password'),
+                ];
+
+                // Someone whose account was deleted earlier comes back to the same
+                // account, so their old trainings and salaries are theirs again
+                $user = User::onlyTrashed()->where('email', $invitation->email)->first();
+
+                if ($user) {
+                    $user->restore();
+                    $user->fill($details);
+                } else {
+                    $user = new User($details);
+                }
+
+                $user->forceFill([...$membership, 'email_verified_at' => now()]);
             }
 
-            $user->forceFill(['email_verified_at' => now()])->save();
+            $user->save();
 
             // Only groups that still exist
             if ($user->role === 'coach' && ! $user->all_groups) {
@@ -185,6 +229,12 @@ class StaffInvitationController extends Controller
                 $text,
             ));
         }
+    }
+
+    /** Already on this club's team (removed people and other clubs' people are not). */
+    private function memberOfThisClub(string $email): bool
+    {
+        return User::where('email', $email)->inCurrentClub()->exists();
     }
 
     /** True when the email went out; on failure the admin copies the link instead. */

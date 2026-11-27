@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Mail\PaymentReminderMail;
 use App\Models\Club;
+use App\Models\ClubParent;
 use App\Models\Member;
 use App\Models\PaymentReminder;
 use App\Support\PaymentReminderMessage;
@@ -47,6 +48,38 @@ class UnpaidFeeController extends Controller
         return inertia('unpaid-fees/index', [
             'unpaidMembers' => $unpaidMembers,
         ]);
+    }
+
+    /**
+     * The missing email, entered from the unpaid list: the member's own, the
+     * parent's (a parent is added if the member has none), or both. One is enough.
+     */
+    public function saveEmail(Request $request, Member $member)
+    {
+        $validated = $request->validate([
+            'member_email' => ['nullable', 'required_without:parent_email', 'email', 'max:255'],
+            'parent_email' => ['nullable', 'required_without:member_email', 'email', 'max:255'],
+        ], [
+            'member_email.required_without' => __('Enter at least one email.'),
+            'parent_email.required_without' => __('Enter at least one email.'),
+        ]);
+
+        $clean = fn (?string $email) => filled($email) ? mb_strtolower(trim($email)) : null;
+
+        if ($email = $clean($validated['member_email'] ?? null)) {
+            $member->update(['email' => $email]);
+        }
+
+        if ($email = $clean($validated['parent_email'] ?? null)) {
+            if ($member->parent) {
+                $member->parent->update(['email' => $email]);
+            } else {
+                $parent = ClubParent::create(['name' => '', 'email' => $email]);
+                $member->update(['parent_id' => $parent->id]);
+            }
+        }
+
+        return back()->with('success', 'Email saved.');
     }
 
     /** What the reminder for this member would say, and to whom (the preview). */

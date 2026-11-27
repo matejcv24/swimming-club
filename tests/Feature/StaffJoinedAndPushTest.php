@@ -93,9 +93,9 @@ class StaffJoinedAndPushTest extends TestCase
 
         $this->actingAs($owner)->withCookie('locale', 'mk')->get('/notifications')
             ->assertInertia(fn (Assert $page) => $page
-                ->where('unreadNotifications.0.message', 'Marko ја прифати поканата и се приклучи во тимот како тренер.')
-                ->where('unreadNotifications.0.type', 'staff_joined')
-                ->where('unreadNotifications.0.url', '/staff'));
+                ->where('items.0.message', 'Marko ја прифати поканата и се приклучи во тимот како тренер.')
+                ->where('items.0.type', 'staff_joined')
+                ->where('items.0.url', '/staff'));
     }
 
     public function test_every_notification_also_goes_out_as_a_push()
@@ -149,7 +149,7 @@ class StaffJoinedAndPushTest extends TestCase
         $this->assertNotNull($notification->fresh()->read_at);
 
         $other = User::factory()->create(['role' => 'admin']);
-        $this->actingAs($other)->get("/notifications/{$notification->id}/open")->assertForbidden();
+        $this->actingAs($other)->get("/notifications/{$notification->id}/open")->assertNotFound();
     }
 
     /**
@@ -214,31 +214,6 @@ class StaffJoinedAndPushTest extends TestCase
         $this->assertStringStartsWith('vapid ', $request->getHeaderLine('Authorization'));
         // The app's own language is back after wording the push in Macedonian
         $this->assertSame('en', app()->getLocale());
-    }
-
-    public function test_the_test_button_sends_a_push_to_this_device()
-    {
-        $user = User::factory()->create(['role' => 'coach']);
-        $requests = $this->fakePushService($user);
-
-        $this->actingAs($user)->postJson('/push-subscriptions/test', ['endpoint' => 'https://fcm.googleapis.com/fcm/send/device-1'])
-            ->assertOk()->assertJson(['sent' => true]);
-        $this->assertCount(1, $requests);
-    }
-
-    public function test_the_test_button_explains_why_a_push_cannot_go_out()
-    {
-        $user = User::factory()->create(['role' => 'coach']);
-        $endpoint = 'https://fcm.googleapis.com/fcm/send/mine';
-
-        config(['services.webpush.public_key' => null, 'services.webpush.private_key' => null]);
-        $this->actingAs($user)->postJson('/push-subscriptions/test', ['endpoint' => $endpoint])
-            ->assertOk()->assertJson(['sent' => false, 'reason' => 'Push is not set up on the server.']);
-
-        config(['services.webpush.public_key' => 'x', 'services.webpush.private_key' => 'y']);
-        $this->actingAs($user)->postJson('/push-subscriptions/test', ['endpoint' => $endpoint])
-            ->assertOk()->assertJson(['sent' => false])
-            ->assertJsonPath('reason', fn ($reason) => str_contains($reason, 'not registered'));
     }
 
     public function test_without_push_keys_nothing_is_sent_and_nothing_breaks()

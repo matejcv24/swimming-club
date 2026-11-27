@@ -17,9 +17,16 @@ class ClubController extends Controller
      * The club's logo, from storage that can't run scripts. Shown to everyone: also
      * on the login and invitation pages.
      */
-    public function logo()
+    public function logo(Request $request)
     {
         $club = Club::current();
+
+        // Another of the signed-in person's clubs ("My clubs" in the avatar menu)
+        $other = (int) $request->query('club');
+
+        if ($other && $other !== $club->id && $request->user()?->memberships()->where('club_id', $other)->exists()) {
+            $club = Club::findOrFail($other);
+        }
 
         abort_unless($club->logo_path && Storage::disk('local')->exists($club->logo_path), 404);
 

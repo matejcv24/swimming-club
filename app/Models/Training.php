@@ -2,12 +2,15 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BelongsToClub;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Training extends Model
 {
+    use BelongsToClub;
+
     protected $fillable = ['coach_id', 'date', 'pool', 'group_id', 'subgroup_id', 'notes'];
 
     public function coach(): BelongsTo

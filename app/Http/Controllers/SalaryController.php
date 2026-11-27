@@ -14,7 +14,12 @@ class SalaryController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'user_id' => ['required', 'exists:users,id'],
+            // Only someone on this club's team (deactivated people too, for back pay)
+            'user_id' => ['required', 'integer', function ($attribute, $value, $fail) {
+                if (! User::inCurrentClub()->whereKey($value)->exists()) {
+                    $fail(__('validation.exists', ['attribute' => $attribute]));
+                }
+            }],
             'amount' => ['required', 'numeric', 'min:0'],
             'month' => ['required', 'date'],
         ]);

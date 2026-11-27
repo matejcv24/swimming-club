@@ -2,12 +2,16 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BelongsToClub;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Invoice extends Model
 {
+    use BelongsToClub;
+
     protected $fillable = ['month', 'pool', 'group_id', 'amount'];
+
     protected $casts = [
         'month' => 'date:Y-m-d',
         'amount' => 'decimal:2',

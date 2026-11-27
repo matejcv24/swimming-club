@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Group;
 use App\Models\Member;
+use App\Support\ClubRule;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -50,7 +51,7 @@ class GroupController extends Controller
             // A subgroup belongs to a main group (subgroups have no subgroups)
             'parent_id' => [
                 'nullable',
-                Rule::exists('groups', 'id')->whereNull('deleted_at')->whereNull('parent_id'),
+                ClubRule::exists('groups')->whereNull('deleted_at')->whereNull('parent_id'),
             ],
             'name' => ['required', 'string', 'max:60', $this->uniqueName($parentId)],
         ]);
@@ -101,7 +102,7 @@ class GroupController extends Controller
             'move_to_group_id' => $toAllGroups ? ['required'] : [
                 Rule::requiredIf($hasMembers),
                 'nullable',
-                Rule::exists('groups', 'id')->whereNull('deleted_at'),
+                ClubRule::exists('groups')->whereNull('deleted_at'),
                 Rule::notIn($removedIds),
             ],
         ]);
@@ -134,7 +135,7 @@ class GroupController extends Controller
      */
     private function uniqueName(?int $parentId): Unique
     {
-        return Rule::unique('groups', 'name')
+        return ClubRule::unique('groups', 'name')
             ->whereNull('deleted_at')
             ->where(fn ($query) => $parentId === null
                 ? $query->whereNull('parent_id')

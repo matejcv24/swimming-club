@@ -9,6 +9,11 @@ import {
     useInstallReminder,
 } from '@/components/install-app-dialog';
 import { LanguageSwitch } from '@/components/language-switch';
+import {
+    ClubSwitchedToast,
+    MyClubsMenu,
+    useOtherClubsUnread,
+} from '@/components/my-clubs-menu';
 import { NotificationsMenu } from '@/components/notifications-menu';
 import { PhoneMenuSettings } from '@/components/phone-menu-settings';
 import { QuickActionsTopBar } from '@/components/quick-actions';
@@ -31,6 +36,8 @@ export function AppHeaderActions() {
         auth?: { user?: User | null };
     };
     const getInitials = useInitials();
+    // Unread notifications in the person's other clubs: a red dot on the avatar
+    const otherClubsUnread = useOtherClubsUnread();
     const [installOpen, setInstallOpen] = useState(false);
     // On a phone, after the first login: "Add to home screen" by itself
     const installDue = useInstallReminder(Boolean(auth?.user));
@@ -71,9 +78,16 @@ export function AppHeaderActions() {
                 <DropdownMenuTrigger asChild>
                     <button
                         type="button"
-                        className="flex size-9 cursor-pointer items-center justify-center rounded-full transition hover:bg-hydra-blue/15 data-[state=open]:bg-hydra-blue/15"
-                        aria-label={t('User menu')}
+                        className="relative flex size-9 cursor-pointer items-center justify-center rounded-full transition hover:bg-hydra-blue/15 data-[state=open]:bg-hydra-blue/15"
+                        aria-label={
+                            otherClubsUnread > 0
+                                ? t('User menu, unread in other clubs')
+                                : t('User menu')
+                        }
                     >
+                        {otherClubsUnread > 0 && (
+                            <span className="absolute top-0 right-0 z-10 size-2.5 rounded-full bg-red-500 ring-2 ring-background" />
+                        )}
                         <Avatar className="size-8">
                             <AvatarImage
                                 src={auth.user.avatar}
@@ -90,6 +104,7 @@ export function AppHeaderActions() {
                     className="w-64"
                     onCloseAutoFocus={(event) => event.preventDefault()}
                 >
+                    <MyClubsMenu />
                     <DeviceMenuItems onInstall={() => setInstallOpen(true)} />
                     <PhoneMenuSettings />
                     <DropdownMenuItem asChild>
@@ -129,6 +144,7 @@ export function AppHeaderActions() {
                 />
             )}
             <PushOffer />
+            <ClubSwitchedToast />
         </div>
     );
 }

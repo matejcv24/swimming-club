@@ -99,6 +99,50 @@ export default function UnpaidFeesIndex({ unpaidMembers }: Props) {
     const [text, setText] = useState('');
     const [subject, setSubject] = useState('');
     const [error, setError] = useState<string | null>(null);
+    // The member whose grey email button was tapped (no email to send to), and
+    // the email entered for them in that pop-up
+    const [noEmailFor, setNoEmailFor] = useState<UnpaidMember | null>(null);
+    // The member's own email and the parent's: one of them is enough
+    const [memberEmail, setMemberEmail] = useState('');
+    const [parentEmail, setParentEmail] = useState('');
+    const [emailErrors, setEmailErrors] = useState<{
+        member_email?: string;
+        parent_email?: string;
+    }>({});
+    const [savingEmail, setSavingEmail] = useState(false);
+
+    const askForEmail = (member: UnpaidMember) => {
+        setError(null);
+        setMemberEmail('');
+        setParentEmail('');
+        setEmailErrors({});
+        setNoEmailFor(member);
+    };
+
+    // Saves the email, then opens the reminder right away
+    const saveEmail = () => {
+        if (!noEmailFor) {
+            return;
+        }
+
+        const member = noEmailFor;
+        setSavingEmail(true);
+        setEmailErrors({});
+        router.post(
+            `/unpaid-fees/${member.id}/email`,
+            { member_email: memberEmail, parent_email: parentEmail },
+            {
+                preserveScroll: true,
+                preserveState: true,
+                onSuccess: () => {
+                    setNoEmailFor(null);
+                    openPreview(member);
+                },
+                onError: (errors) => setEmailErrors(errors),
+                onFinish: () => setSavingEmail(false),
+            },
+        );
+    };
 
     // How many unpaid members each group has, shown in the drop-down
     const counts = unpaidMembers.reduce<Record<number, number>>(
@@ -137,6 +181,7 @@ export default function UnpaidFeesIndex({ unpaidMembers }: Props) {
 
         setLoadingId(member.id);
         setError(null);
+        setNoEmailFor(null);
 
         try {
             const response = await fetch(`/unpaid-fees/${member.id}/reminder`, {
@@ -189,13 +234,14 @@ export default function UnpaidFeesIndex({ unpaidMembers }: Props) {
         if (!member.reminder_email) {
             return (
                 <Hint title={t('No email saved')}>
-                    <span
-                        role="img"
+                    <button
+                        type="button"
+                        onClick={() => askForEmail(member)}
                         aria-label={t('No email saved')}
-                        className="flex size-10 items-center justify-center rounded-full border border-dashed border-[var(--popup-border)] text-[var(--popup-muted)]"
+                        className="flex size-10 cursor-pointer items-center justify-center rounded-full border border-dashed border-[var(--popup-border)] text-[var(--popup-muted)] transition active:scale-95"
                     >
                         <UnsubscribeIcon fontSize="small" />
-                    </span>
+                    </button>
                 </Hint>
             );
         }
@@ -425,6 +471,93 @@ export default function UnpaidFeesIndex({ unpaidMembers }: Props) {
                             ))}
                         </List>
                     )}
+                </DialogContent>
+            </Dialog>
+
+            {/* The grey email button: no address yet; it can be entered right here */}
+            <Dialog
+                open={!!noEmailFor}
+                onClose={() => !savingEmail && setNoEmailFor(null)}
+                disableRestoreFocus
+                fullWidth
+                maxWidth="xs"
+                PaperProps={{ sx: { bgcolor: POPUP_BG } }}
+            >
+                <DialogTitle sx={{ p: 0 }}>
+                    <PopupHeader
+                        icon={<UnsubscribeIcon fontSize="small" />}
+                        title={t('No email saved')}
+                        subtitle={noEmailFor?.name}
+                        onClose={() => setNoEmailFor(null)}
+                    />
+                </DialogTitle>
+                <DialogContent sx={{ px: 2.25, pt: 0.5 }}>
+                    <form
+                        className="flex flex-col gap-4 pb-2"
+                        onSubmit={(event) => {
+                            event.preventDefault();
+                            saveEmail();
+                        }}
+                    >
+                        <p
+                            role="alert"
+                            className="rounded-xl bg-amber-500/15 px-3 py-2 text-sm text-amber-800 dark:text-amber-200"
+                        >
+                            {t(
+                                'The reminder can’t be sent because the selected member has no email. Enter an email in the field below.',
+                            )}
+                        </p>
+
+                        <TextField
+                            label={t("Member's email")}
+                            type="email"
+                            value={memberEmail}
+                            onChange={(event) =>
+                                setMemberEmail(event.target.value)
+                            }
+                            error={!!emailErrors.member_email}
+                            helperText={emailErrors.member_email}
+                            autoFocus
+                            fullWidth
+                            sx={FIELD_SX}
+                        />
+
+                        <TextField
+                            label={t('Parent email')}
+                            type="email"
+                            value={parentEmail}
+                            onChange={(event) =>
+                                setParentEmail(event.target.value)
+                            }
+                            error={!!emailErrors.parent_email}
+                            helperText={emailErrors.parent_email}
+                            fullWidth
+                            sx={FIELD_SX}
+                        />
+
+                        <div className="flex gap-3">
+                            <Button
+                                type="button"
+                                variant="outlined"
+                                fullWidth
+                                onClick={() => setNoEmailFor(null)}
+                                disabled={savingEmail}
+                            >
+                                {t('Cancel')}
+                            </Button>
+                            <Button
+                                type="submit"
+                                variant="contained"
+                                fullWidth
+                                disabled={
+                                    savingEmail ||
+                                    (!memberEmail.trim() && !parentEmail.trim())
+                                }
+                            >
+                                {t('Save')}
+                            </Button>
+                        </div>
+                    </form>
                 </DialogContent>
             </Dialog>
 

@@ -1,10 +1,10 @@
 import { Head, router } from '@inertiajs/react';
+import DeleteIcon from '@mui/icons-material/Delete';
 import NotificationsIcon from '@mui/icons-material/Notifications';
+import Button from '@mui/material/Button';
 import Dialog from '@mui/material/Dialog';
 import DialogContent from '@mui/material/DialogContent';
 import DialogTitle from '@mui/material/DialogTitle';
-import Tab from '@mui/material/Tab';
-import Tabs from '@mui/material/Tabs';
 import dayjs from 'dayjs';
 import { useState } from 'react';
 import { DashboardBackground } from '@/components/dashboard-background';
@@ -16,8 +16,8 @@ import { t } from '@/lib/i18n';
 import type { AppNotification } from '@/types';
 
 type Props = {
-    unreadNotifications: AppNotification[];
-    allNotifications: AppNotification[];
+    /** Every notification of this club, newest first. */
+    items: AppNotification[];
 };
 
 function formatNotificationDate(value: string | null) {
@@ -28,18 +28,37 @@ function formatNotificationDate(value: string | null) {
     return dayjs(value).format('DD.MM.YYYY HH:mm');
 }
 
-export default function NotificationsIndex({
-    unreadNotifications,
-    allNotifications,
-}: Props) {
+/**
+ * All of the person's notifications in one list (unread ones bold, with a dot).
+ * Each can be deleted, or all at once after a "are you sure?".
+ */
+export default function NotificationsIndex({ items }: Props) {
     // Fades in and out over the dashboard
     const popup = usePagePopup();
-    const [tab, setTab] = useState(0);
-    const shown = tab === 0 ? allNotifications : unreadNotifications;
+    const [confirmAll, setConfirmAll] = useState(false);
+    const [busy, setBusy] = useState(false);
+    const unread = items.filter((item) => !item.read_at).length;
 
     // Marks the notification as read, then opens the page it is about
     const openNotification = (notification: AppNotification) => {
         router.post(`/notifications/${notification.id}/read`);
+    };
+
+    const remove = (notification: AppNotification) => {
+        router.delete(`/notifications/${notification.id}`, {
+            preserveScroll: true,
+            preserveState: true,
+        });
+    };
+
+    const removeAll = () => {
+        setBusy(true);
+        router.delete('/notifications', {
+            preserveScroll: true,
+            preserveState: true,
+            onSuccess: () => setConfirmAll(false),
+            onFinish: () => setBusy(false),
+        });
     };
 
     return (
@@ -65,84 +84,144 @@ export default function NotificationsIndex({
                         icon={<NotificationsIcon fontSize="small" />}
                         title={t('Notifications')}
                         subtitle={t(':unread unread · :total in total', {
-                            unread: unreadNotifications.length,
-                            total: allNotifications.length,
+                            unread,
+                            total: items.length,
                         })}
                         onClose={popup.close}
                     />
-                    <Tabs
-                        value={tab}
-                        onChange={(_, value) => setTab(value)}
-                        variant="fullWidth"
-                    >
-                        <Tab
-                            label={t('All (:count)', {
-                                count: allNotifications.length,
-                            })}
-                        />
-                        <Tab
-                            label={t('Unread (:count)', {
-                                count: unreadNotifications.length,
-                            })}
-                        />
-                    </Tabs>
                 </DialogTitle>
 
-                <DialogContent sx={{ p: 0, overflowY: 'auto' }}>
-                    {shown.length === 0 ? (
+                <DialogContent sx={{ p: 0, overflowY: 'auto', flex: 1 }}>
+                    {items.length === 0 ? (
                         <p className="mt-12 text-center text-sm text-[var(--popup-muted)]">
-                            {tab === 0
-                                ? t(
-                                      'You have not received any notifications yet.',
-                                  )
-                                : t('No unread notifications.')}
+                            {t('You have not received any notifications yet.')}
                         </p>
                     ) : (
-                        <div className="divide-y divide-[var(--popup-border)] px-2 pb-2">
-                            {shown.map((notification) => {
+                        <ul className="divide-y divide-[var(--popup-border)] px-2 pb-2">
+                            {items.map((notification) => {
                                 const isUnread = !notification.read_at;
 
                                 return (
-                                    <button
+                                    <li
                                         key={notification.id}
-                                        type="button"
-                                        onClick={() =>
-                                            openNotification(notification)
-                                        }
-                                        className="flex w-full cursor-pointer items-center gap-3 rounded-xl px-3 py-3 text-left transition hover:bg-[var(--popup-ghost)]"
+                                        className="flex items-center gap-1"
                                     >
-                                        <IconBadge>
-                                            <NotificationIcon
-                                                type={notification.type}
-                                            />
-                                        </IconBadge>
-                                        <span className="min-w-0 flex-1">
-                                            <span
-                                                className={`block text-sm leading-5 text-[var(--popup-fg)] ${
-                                                    isUnread
-                                                        ? 'font-bold'
-                                                        : 'font-normal'
-                                                }`}
-                                            >
-                                                {notification.message}
+                                        <button
+                                            type="button"
+                                            onClick={() =>
+                                                openNotification(notification)
+                                            }
+                                            className="flex min-w-0 flex-1 cursor-pointer items-center gap-3 rounded-xl px-3 py-3 text-left transition hover:bg-[var(--popup-ghost)]"
+                                        >
+                                            <IconBadge>
+                                                <NotificationIcon
+                                                    type={notification.type}
+                                                />
+                                            </IconBadge>
+                                            <span className="min-w-0 flex-1">
+                                                <span
+                                                    className={`block text-sm leading-5 text-[var(--popup-fg)] ${
+                                                        isUnread
+                                                            ? 'font-bold'
+                                                            : 'font-normal'
+                                                    }`}
+                                                >
+                                                    {notification.message}
+                                                </span>
+                                                <span className="mt-0.5 block text-xs text-[var(--popup-muted)]">
+                                                    {formatNotificationDate(
+                                                        notification.created_at,
+                                                    )}
+                                                </span>
                                             </span>
-                                            <span className="mt-0.5 block text-xs text-[var(--popup-muted)]">
-                                                {formatNotificationDate(
-                                                    notification.created_at,
-                                                )}
-                                            </span>
-                                        </span>
-                                        {isUnread && (
-                                            <span
-                                                className="size-2.5 flex-none rounded-full bg-hydra-blue"
-                                                aria-label={t('Unread')}
-                                            />
-                                        )}
-                                    </button>
+                                            {isUnread && (
+                                                <span
+                                                    className="size-2.5 flex-none rounded-full bg-hydra-blue"
+                                                    aria-label={t('Unread')}
+                                                />
+                                            )}
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => remove(notification)}
+                                            aria-label={t(
+                                                'Delete notification',
+                                            )}
+                                            className="flex size-10 flex-none cursor-pointer items-center justify-center rounded-full text-[var(--popup-muted)] transition hover:bg-red-500/10 hover:text-red-500"
+                                        >
+                                            <DeleteIcon fontSize="small" />
+                                        </button>
+                                    </li>
                                 );
                             })}
-                        </div>
+                        </ul>
                     )}
+                </DialogContent>
+
+                {items.length > 0 && (
+                    // Same footer and button as the other pop-ups (Staff), in red
+                    <div className="flex border-t border-[var(--popup-border)] px-4 py-3">
+                        <Button
+                            variant="contained"
+                            color="error"
+                            fullWidth
+                            startIcon={<DeleteIcon />}
+                            onClick={() => setConfirmAll(true)}
+                            sx={{
+                                whiteSpace: 'nowrap',
+                                px: 1.5,
+                                lineHeight: 1.15,
+                                color: '#fff',
+                            }}
+                        >
+                            {t('Delete all notifications')}
+                        </Button>
+                    </div>
+                )}
+            </Dialog>
+
+            {/* "Delete all": asked once, it can't be undone */}
+            <Dialog
+                open={confirmAll}
+                onClose={() => setConfirmAll(false)}
+                disableRestoreFocus
+                fullWidth
+                maxWidth="xs"
+                PaperProps={{ sx: { bgcolor: POPUP_BG } }}
+            >
+                <DialogTitle sx={{ p: 0 }}>
+                    <PopupHeader
+                        icon={<DeleteIcon fontSize="small" />}
+                        title={t('Delete all notifications?')}
+                        onClose={() => setConfirmAll(false)}
+                    />
+                </DialogTitle>
+                <DialogContent sx={{ px: 2.25, pt: 0.5 }}>
+                    <p className="pb-4 text-sm text-[var(--popup-muted)]">
+                        {t(
+                            'All :count notifications will be deleted. This cannot be undone.',
+                            { count: items.length },
+                        )}
+                    </p>
+                    <div className="flex gap-3 pb-2">
+                        <Button
+                            variant="outlined"
+                            fullWidth
+                            onClick={() => setConfirmAll(false)}
+                            disabled={busy}
+                        >
+                            {t('Cancel')}
+                        </Button>
+                        <Button
+                            variant="contained"
+                            color="error"
+                            fullWidth
+                            onClick={removeAll}
+                            disabled={busy}
+                        >
+                            {t('Delete all')}
+                        </Button>
+                    </div>
                 </DialogContent>
             </Dialog>
         </MuiThemeProvider>

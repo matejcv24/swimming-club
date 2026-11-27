@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BelongsToClub;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -13,6 +14,8 @@ use Illuminate\Support\Str;
  */
 class Invitation extends Model
 {
+    use BelongsToClub;
+
     /** How long a link works. */
     public const VALID_DAYS = 7;
 
@@ -77,10 +80,13 @@ class Invitation extends Model
         return hash('sha256', $token);
     }
 
-    /** The open invitation behind a link, if the link still works. */
+    /**
+     * The open invitation behind a link, if the link still works. The link itself
+     * says which club it is for, so it's looked up in every club.
+     */
     public static function findUsable(string $token): ?self
     {
-        $invitation = static::query()->pending()->where('token_hash', self::hash($token))->first();
+        $invitation = static::query()->withoutGlobalScope('club')->pending()->where('token_hash', self::hash($token))->first();
 
         return $invitation && ! $invitation->isExpired() ? $invitation : null;
     }

@@ -14,6 +14,8 @@ type Props = {
         email: string;
         role: 'admin' | 'coach';
         club: string;
+        /** Already has an account (in another club): joins with that password. */
+        existing_account: boolean;
     } | null;
     token: string | null;
 };
@@ -60,7 +62,11 @@ export default function AcceptInvitation({ invitation, token }: Props) {
                                         ? t('an admin')
                                         : t('a coach'),
                             })}{' '}
-                            {t('Set your password to start.')}
+                            {invitation.existing_account
+                                ? t(
+                                      'You already have an account: enter its password to join.',
+                                  )
+                                : t('Set your password to start.')}
                         </p>
 
                         <div className="grid gap-2">
@@ -86,11 +92,19 @@ export default function AcceptInvitation({ invitation, token }: Props) {
                         </div>
 
                         <div className="grid gap-2">
-                            <Label htmlFor="password">{t('Password')}</Label>
+                            <Label htmlFor="password">
+                                {invitation.existing_account
+                                    ? t('Your current password')
+                                    : t('Password')}
+                            </Label>
                             <PasswordInput
                                 id="password"
                                 name="password"
-                                autoComplete="new-password"
+                                autoComplete={
+                                    invitation.existing_account
+                                        ? 'current-password'
+                                        : 'new-password'
+                                }
                                 className="mt-1 block w-full"
                                 autoFocus
                                 required
@@ -99,22 +113,24 @@ export default function AcceptInvitation({ invitation, token }: Props) {
                             <InputError message={errors.password} />
                         </div>
 
-                        <div className="grid gap-2">
-                            <Label htmlFor="password_confirmation">
-                                {t('Confirm password')}
-                            </Label>
-                            <PasswordInput
-                                id="password_confirmation"
-                                name="password_confirmation"
-                                autoComplete="new-password"
-                                className="mt-1 block w-full"
-                                required
-                                placeholder={t('Confirm password')}
-                            />
-                            <InputError
-                                message={errors.password_confirmation}
-                            />
-                        </div>
+                        {!invitation.existing_account && (
+                            <div className="grid gap-2">
+                                <Label htmlFor="password_confirmation">
+                                    {t('Confirm password')}
+                                </Label>
+                                <PasswordInput
+                                    id="password_confirmation"
+                                    name="password_confirmation"
+                                    autoComplete="new-password"
+                                    className="mt-1 block w-full"
+                                    required
+                                    placeholder={t('Confirm password')}
+                                />
+                                <InputError
+                                    message={errors.password_confirmation}
+                                />
+                            </div>
+                        )}
 
                         <Button
                             type="submit"
