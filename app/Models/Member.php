@@ -6,10 +6,21 @@ use App\Models\Concerns\BelongsToClub;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\SoftDeletes;
+use LogicException;
 
 class Member extends Model
 {
-    use BelongsToClub;
+    use BelongsToClub, SoftDeletes;
+
+    /**
+     * Never removed from the database: a deleted member is only hidden, because
+     * their payments and attendance are part of the club's finances and history.
+     */
+    public function forceDelete(): bool
+    {
+        throw new LogicException('Members are never removed from the database; delete() only hides them.');
+    }
 
     /**
      * Only members of the groups the user may see (coaches see their own groups).

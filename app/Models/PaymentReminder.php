@@ -18,8 +18,9 @@ class PaymentReminder extends Model
         return ['sent_at' => 'datetime'];
     }
 
+    /** The member, also after they were deleted (hidden): their history stays. */
     public function member(): BelongsTo
     {
-        return $this->belongsTo(Member::class);
+        return $this->belongsTo(Member::class)->withTrashed();
     }
 }

@@ -62,6 +62,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::middleware(['role:admin,coach'])->group(function () {
         // Only what the app uses: other URLs answer "not found", never an error
         Route::resource('members', MemberController::class)->only(['index', 'store', 'update']);
+        // A deleted member brought back with their history (from the duplicate warning)
+        Route::post('/members/{member}/restore', [MemberController::class, 'restore'])
+            ->whereNumber('member')
+            ->name('members.restore');
         Route::post('/parents', [ClubParentController::class, 'store'])->name('parents.store');
         Route::get('/attendance', [AttendanceController::class, 'index'])->name('attendance.index');
         Route::get('/attendance/by-member/{member}', [AttendanceController::class, 'byMember'])->name('attendance.byMember');

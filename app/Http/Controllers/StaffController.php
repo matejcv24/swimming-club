@@ -81,18 +81,28 @@ class StaffController extends Controller
         // Only the owner changes the owner's details
         abort_if($coach->isOwner() && ! $coach->is(Auth::user()), 403);
 
-        $isCoach = $coach->role === 'coach';
+        // The role can change too (admin <-> coach), except your own and the owner's
+        $role = $request->input('role', $coach->role);
+        $roleChanges = $role !== $coach->role;
+        $isCoach = $role === 'coach';
 
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'email', Rule::unique('users', 'email')->ignore($coach->id)],
             'password' => ['nullable', 'string', 'min:8'],
+            'role' => ['sometimes', Rule::in(self::ROLES), function ($attribute, $value, $fail) use ($coach, $roleChanges) {
+                if ($roleChanges && ($coach->is(Auth::user()) || $coach->isOwner())) {
+                    $fail(__('Your own role and the owner’s role can’t be changed.'));
+                }
+            }],
             ...self::groupRules($isCoach),
         ]);
 
         $coach->fill([
             'name' => $validated['name'],
             'email' => $validated['email'],
+            'role' => $role,
+            // Admins see every group; a coach gets the chosen ones
             'all_groups' => ! $isCoach || (bool) $validated['all_groups'],
         ]);
 

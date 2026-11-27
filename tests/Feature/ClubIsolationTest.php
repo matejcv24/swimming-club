@@ -266,7 +266,7 @@ class ClubIsolationTest extends TestCase
     public function test_every_route_is_covered_by_an_isolation_decision()
     {
         $clubData = [
-            'dashboard', 'members', 'members/{member}', 'parents', 'attendance', 'attendance/by-member/{member}',
+            'dashboard', 'members', 'members/{member}', 'members/{member}/restore', 'parents', 'attendance', 'attendance/by-member/{member}',
             'trainings', 'trainings/by-date', 'trainings/days', 'membership-fees', 'membership-fees/by-member/{member}',
             'membership-fees/{membershipFee}', 'unpaid-fees', 'unpaid-fees/{member}/reminder', 'groups', 'groups/{group}',
             'staff', 'staff/{coach}', 'staff/{coach}/active', 'staff/invitations', 'staff/invitations/{invitation}',

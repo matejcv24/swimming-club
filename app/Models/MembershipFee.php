@@ -18,9 +18,10 @@ class MembershipFee extends Model
         'amount' => 'float',
     ];
 
+    /** The member, also after they were deleted (hidden): their history stays. */
     public function member(): BelongsTo
     {
-        return $this->belongsTo(Member::class);
+        return $this->belongsTo(Member::class)->withTrashed();
     }
 
     /** Its group, even if the group has since been deleted (hidden). */
