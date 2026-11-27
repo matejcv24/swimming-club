@@ -104,6 +104,15 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::delete('/staff/{coach}', [StaffController::class, 'destroy'])->name('staff.destroy');
 
         Route::put('/membership-fees/{membershipFee}', [MembershipFeeController::class, 'update'])->name('membership-fees.update');
+        // A payment entered by mistake: admins delete it
+        Route::delete('/membership-fees/{membershipFee}', [MembershipFeeController::class, 'destroy'])->name('membership-fees.destroy');
+        // "Payment received" email for one payment: only admins send emails to parents,
+        // after seeing it exactly as it will be sent
+        Route::get('/membership-fees/{membershipFee}/confirmation', [MembershipFeeController::class, 'confirmationPreview'])
+            ->name('membership-fees.confirmation.preview');
+        Route::post('/membership-fees/{membershipFee}/confirmation', [MembershipFeeController::class, 'sendConfirmation'])
+            ->middleware('throttle:30,1')
+            ->name('membership-fees.confirmation');
         Route::delete('/members/{member}', [MemberController::class, 'destroy'])->name('members.destroy');
 
         // Payment reminders by email: a preview first, then sending (admins only)

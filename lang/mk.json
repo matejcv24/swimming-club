@@ -657,5 +657,22 @@
     "The member is removed from the lists. Their payments and attendance stay, so profit and reports don’t change.": "Членот се отстранува од листите. Уплатите и присуството остануваат, па профитот и извештаите не се менуваат.",
     "Deleted": "Избришан",
     "Bring them back": "Врати го",
-    "Your own role and the owner’s role can’t be changed.": "Вашата улога и улогата на сопственикот не може да се сменат."
+    "Your own role and the owner’s role can’t be changed.": "Вашата улога и улогата на сопственикот не може да се сменат.",
+    "Payment confirmation – :name": "Потврда за уплата – :name",
+    "Thank you for the membership fee payment for :name.": "Ви благодариме за уплатата на членарината за :name.",
+    "This payment covers the period from :from to :to.": "Оваа уплата го покрива периодот од :from до :to.",
+    "Payment saved": "Уплатата е зачувана",
+    "Send a confirmation email to the parent (:email)?": "Да се испрати потврда на е-пошта до родителот (:email)?",
+    "Send a confirmation email to the member (:email)?": "Да се испрати потврда на е-пошта до членот (:email)?",
+    "No email is entered for this member or their parent, so no confirmation can be sent.": "Нема внесена е-пошта за членот ниту за родителот, па не може да се прати потврда.",
+    "Send confirmation": "Испрати потврда",
+    "Confirmation sent :date": "Потврда пратена :date",
+    "An admin can send a confirmation email to the parent.": "Администраторот може да испрати потврда на е-пошта до родителот.",
+    "Delete payment": "Избриши уплата",
+    "Delete the payment of :amount MKD for :from – :to?": "Да се избрише уплатата од :amount MKD за :from – :to?",
+    "Only for a payment entered by mistake: profit and reports will no longer count it. This cannot be undone.": "Само за уплата внесена по грешка: профитот и извештаите повеќе нема да ја сметаат. Ова не може да се врати.",
+    "confirmation": "потврда",
+    "Payment confirmation": "Потврда за уплата",
+    ":user recorded a payment for :member. Tap to send the confirmation email.": ":user внесе уплата за :member. Допрете за да испратите потврда на е-пошта.",
+    "If you like, enter an email below and send the confirmation.": "Ако сакате, внесете е-пошта подолу и испратете потврда."
 }

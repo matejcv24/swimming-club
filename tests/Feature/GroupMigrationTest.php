@@ -23,7 +23,7 @@ class GroupMigrationTest extends TestCase
         $coach = User::factory()->create(['role' => 'coach']);
 
         // Roll back to just before groups existed, add pool-based data, migrate again
-        Artisan::call('migrate:rollback', ['--step' => 17]);
+        Artisan::call('migrate:rollback', ['--step' => 18]);
 
         $parentId = DB::table('parents')->insertGetId(['name' => 'P', 'phone' => '1', 'created_at' => now(), 'updated_at' => now()]);
         $bigMember = DB::table('members')->insertGetId(['name' => 'Big swimmer', 'pool' => 'big', 'status' => 'active', 'parent_id' => $parentId, 'created_at' => now(), 'updated_at' => now()]);
