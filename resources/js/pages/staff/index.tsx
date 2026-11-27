@@ -245,6 +245,7 @@ export default function StaffIndex({ staff, invitations }: Props) {
         name: '',
         email: '',
         password: '',
+        role: 'coach' as Role,
         ...NO_GROUPS,
     });
     const [editErrors, setEditErrors] = useState<Record<string, string>>({});
@@ -555,6 +556,7 @@ export default function StaffIndex({ staff, invitations }: Props) {
             name: coach.name,
             email: coach.email,
             password: '',
+            role: coach.role,
             all_groups: coach.all_groups,
             group_ids: coach.group_ids,
         });
@@ -590,6 +592,7 @@ export default function StaffIndex({ staff, invitations }: Props) {
                     name: '',
                     email: '',
                     password: '',
+                    role: 'coach',
                     ...NO_GROUPS,
                 });
                 setEditErrors({});
@@ -2035,7 +2038,37 @@ export default function StaffIndex({ staff, invitations }: Props) {
                             fullWidth
                             sx={FIELD_SX}
                         />
-                        {editingCoach?.role === 'coach' && (
+                        {/* Admin or coach: not for your own account or the owner's */}
+                        {editingCoach &&
+                            !editingCoach.is_self &&
+                            !editingCoach.is_owner && (
+                                <div className="flex flex-col gap-2">
+                                    <span className="text-sm font-semibold text-[var(--popup-fg)]">
+                                        {t('Role')}
+                                    </span>
+                                    <RoleSwitch
+                                        value={editForm.role}
+                                        onChange={(role) =>
+                                            setEditForm({ ...editForm, role })
+                                        }
+                                    />
+                                    <p className="text-xs text-[var(--popup-muted)]">
+                                        {editForm.role === 'coach'
+                                            ? t(
+                                                  'A coach sees only their own groups, not the club’s money.',
+                                              )
+                                            : t(
+                                                  'An admin sees everything, including the money and the team.',
+                                              )}
+                                    </p>
+                                    {editErrors.role && (
+                                        <p className="text-xs text-red-500">
+                                            {editErrors.role}
+                                        </p>
+                                    )}
+                                </div>
+                            )}
+                        {editForm.role === 'coach' && (
                             <CoachGroupsField
                                 id="edit-coach-groups"
                                 groups={groups}
@@ -2063,7 +2096,7 @@ export default function StaffIndex({ staff, invitations }: Props) {
                                 variant="contained"
                                 fullWidth
                                 disabled={
-                                    editingCoach?.role === 'coach' &&
+                                    editForm.role === 'coach' &&
                                     !editForm.all_groups &&
                                     editForm.group_ids.length === 0
                                 }

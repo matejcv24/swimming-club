@@ -81,6 +81,8 @@ interface DuplicateMatch {
     status: 'active' | 'inactive';
     parent: string | null;
     canOpen: boolean;
+    /** Deleted (hidden) earlier: can be brought back with their history. */
+    deleted: boolean;
 }
 
 /** The duplicate warning: from adding or editing, and whether "add anyway" was pressed once. */
@@ -237,6 +239,40 @@ export default function MembersIndex({ members, userRole }: Props) {
 
         setDuplicate(null);
         setSelectedMember(existing);
+    };
+
+    // A deleted member comes back with all of their payments and attendance
+    const [restoring, setRestoring] = useState(false);
+    const restoreMember = (match: DuplicateMatch) => {
+        if (!duplicate || restoring) {
+            return;
+        }
+
+        const kind = duplicate.kind;
+        setRestoring(true);
+        router.post(
+            `/members/${match.id}/restore`,
+            {},
+            {
+                preserveScroll: true,
+                onSuccess: (page) => {
+                    const restored = (page.props.members as Member[]).find(
+                        (member) => member.id === match.id,
+                    );
+
+                    if (kind === 'add') {
+                        setShowAddModal(false);
+                        setOpenedFromWarning(openedToAdd);
+                    } else {
+                        setEditMember(null);
+                    }
+
+                    setDuplicate(null);
+                    setSelectedMember(restored ?? null);
+                },
+                onFinish: () => setRestoring(false),
+            },
+        );
     };
 
     const handleAddSubmit = (e: React.FormEvent) => {
@@ -542,7 +578,7 @@ export default function MembersIndex({ members, userRole }: Props) {
                             </Typography>
                             <Typography variant="body2" color="text.secondary">
                                 {t(
-                                    'All of their membership fees, attendance records and parent details will be deleted too. This cannot be undone.',
+                                    'The member is removed from the lists. Their payments and attendance stay, so profit and reports don’t change.',
                                 )}
                             </Typography>
                             <div className="flex gap-3">
@@ -1067,8 +1103,10 @@ export default function MembersIndex({ members, userRole }: Props) {
                                     <div>
                                         <Typography fontWeight="bold">
                                             {match.name}
-                                            {match.status === 'inactive' &&
-                                                ` · ${t('Inactive')}`}
+                                            {match.deleted
+                                                ? ` · ${t('Deleted')}`
+                                                : match.status === 'inactive' &&
+                                                  ` · ${t('Inactive')}`}
                                         </Typography>
                                         <Typography
                                             variant="body2"
@@ -1079,7 +1117,17 @@ export default function MembersIndex({ members, userRole }: Props) {
                                                 ` · ${t('Parent: :name', { name: match.parent })}`}
                                         </Typography>
                                     </div>
-                                    {match.canOpen ? (
+                                    {match.canOpen && match.deleted ? (
+                                        <Button
+                                            variant="contained"
+                                            fullWidth
+                                            size="medium"
+                                            disabled={restoring}
+                                            onClick={() => restoreMember(match)}
+                                        >
+                                            {t('Bring them back')}
+                                        </Button>
+                                    ) : match.canOpen ? (
                                         <Button
                                             variant="contained"
                                             fullWidth

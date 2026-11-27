@@ -37,7 +37,6 @@
     "All (:count)": "Сите (:count)",
     "All groups": "Сите групи",
     "all groups": "сите групи",
-    "All of their membership fees, attendance records and parent details will be deleted too. This cannot be undone.": "Ќе бидат избришани и сите негови членарини, присуства и податоци за родителот. Ова не може да се врати.",
     "Amount": "Износ",
     "Amount (MKD)": "Износ (MKD)",
     "Appearance": "Изглед",
@@ -654,5 +653,9 @@
     "You can see everything, but nothing can be added or changed. Nothing was deleted.": "Гледате сè, но не може да се додава или менува. Ништо не е избришано.",
     "The reminder can’t be sent because the selected member has no email. Enter an email in the field below.": "Испраќањето на потсетникот не е возможно бидејќи недостасува е-пошта за избраниот член. Внесете е-пошта во полето подолу.",
     "Member's email": "Е-пошта на членот",
-    "Enter at least one email.": "Внесете барем една е-пошта."
+    "Enter at least one email.": "Внесете барем една е-пошта.",
+    "The member is removed from the lists. Their payments and attendance stay, so profit and reports don’t change.": "Членот се отстранува од листите. Уплатите и присуството остануваат, па профитот и извештаите не се менуваат.",
+    "Deleted": "Избришан",
+    "Bring them back": "Врати го",
+    "Your own role and the owner’s role can’t be changed.": "Вашата улога и улогата на сопственикот не може да се сменат."
 }

@@ -72,7 +72,8 @@ class DuplicateMembers
             return collect();
         }
 
-        return Member::query()
+        // Deleted (hidden) members too: they can be brought back with their history
+        return Member::withTrashed()
             ->with(['parent', 'group', 'subgroup'])
             ->when($exceptId, fn ($query) => $query->whereKeyNot($exceptId))
             ->get()
@@ -102,6 +103,7 @@ class DuplicateMembers
                 'status' => $member->status,
                 'parent' => $canOpen ? $member->parent?->name : null,
                 'canOpen' => $canOpen,
+                'deleted' => $member->trashed(),
             ];
         })->all();
     }

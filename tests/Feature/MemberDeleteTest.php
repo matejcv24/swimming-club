@@ -9,7 +9,6 @@ use App\Models\MembershipFee;
 use App\Models\Training;
 use App\Models\User;
 use App\Notifications\MemberChangedNotification;
-use App\Notifications\MembershipPaymentNotification;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -47,7 +46,7 @@ class MemberDeleteTest extends TestCase
         return $member;
     }
 
-    public function test_admin_can_delete_member_with_all_related_data()
+    public function test_deleting_a_member_hides_them_but_keeps_payments_attendance_and_parent()
     {
         $admin = User::factory()->create(['role' => 'admin']);
         $member = $this->createMemberWithData('Duplicate');
@@ -55,24 +54,55 @@ class MemberDeleteTest extends TestCase
         $parentId = $member->parent_id;
 
         $admin->notify(new MemberChangedNotification('Coach added a new member Duplicate', "/members?member={$member->id}"));
-        $admin->notify(new MembershipPaymentNotification('Coach recorded new payment for Duplicate', "/membership-fees?member={$member->id}&history=1"));
-        $admin->notify(new MemberChangedNotification('Coach added a new member Keep Me', "/members?member={$other->id}"));
 
         $this->actingAs($admin)
             ->delete("/members/{$member->id}")
             ->assertSessionHasNoErrors();
 
-        $this->assertModelMissing($member);
-        $this->assertDatabaseMissing('membership_fees', ['member_id' => $member->id]);
-        $this->assertDatabaseMissing('attendances', ['member_id' => $member->id]);
-        $this->assertDatabaseMissing('parents', ['id' => $parentId]);
+        // Hidden from every list, never removed from the database
+        $this->assertSoftDeleted($member);
+        $this->assertSame(['Keep Me'], Member::pluck('name')->all());
+        $this->actingAs($admin)->get('/members')->assertInertia(fn ($page) => $page
+            ->has('members', 1)
+            ->where('members.0.name', 'Keep Me'));
+
+        // The club's money and history stay exactly as they were
+        $this->assertDatabaseHas('membership_fees', ['member_id' => $member->id, 'amount' => 1500]);
+        $this->assertDatabaseHas('attendances', ['member_id' => $member->id]);
+        $this->assertDatabaseHas('parents', ['id' => $parentId]);
+        $this->assertSame(3000.0, (float) MembershipFee::sum('amount'));
         $this->assertSame(1, $admin->notifications()->count());
-        $this->assertSame("/members?member={$other->id}", $admin->notifications()->first()->data['url']);
+        $this->assertSame('Duplicate', MembershipFee::where('member_id', $member->id)->first()->member->name);
 
         $this->assertModelExists($other);
-        $this->assertDatabaseHas('membership_fees', ['member_id' => $other->id]);
-        $this->assertDatabaseHas('attendances', ['member_id' => $other->id]);
-        $this->assertDatabaseHas('parents', ['id' => $other->parent_id]);
+    }
+
+    public function test_a_member_can_never_be_removed_from_the_database()
+    {
+        $member = $this->createMemberWithData('Kept');
+
+        $this->expectException(\LogicException::class);
+        $member->forceDelete();
+    }
+
+    public function test_a_deleted_member_comes_back_with_their_history_from_the_duplicate_warning()
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $member = $this->createMemberWithData('Ana Petrova');
+        $this->actingAs($admin)->delete("/members/{$member->id}");
+
+        // Adding the same child again (same name and parent phone) offers to bring them back
+        $response = $this->actingAs($admin)->post('/members', ['name' => 'Ana Petrova', 'parent_phone' => '070000000']);
+        $response->assertSessionHasErrors('duplicate');
+        $match = json_decode(session('errors')->first('duplicate'), true)[0];
+        $this->assertSame($member->id, $match['id']);
+        $this->assertTrue($match['deleted']);
+
+        $this->actingAs($admin)->post("/members/{$member->id}/restore")->assertSessionHasNoErrors();
+
+        $this->assertNotSoftDeleted($member);
+        $this->assertSame(1, MembershipFee::where('member_id', $member->id)->count());
+        $this->assertSame(1, Member::count());
     }
 
     public function test_shared_parent_is_kept_when_another_member_uses_it()
@@ -84,7 +114,7 @@ class MemberDeleteTest extends TestCase
 
         $this->actingAs($admin)->delete("/members/{$first->id}");
 
-        $this->assertModelMissing($first);
+        $this->assertSoftDeleted($first);
         $this->assertDatabaseHas('parents', ['id' => $parent->id]);
     }
 

@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\ClubNotification;
 use App\Models\ClubParent;
 use App\Models\Member;
 use App\Models\User;
@@ -12,7 +11,6 @@ use App\Support\DuplicateMembers;
 use App\Support\NotificationText;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
 class MemberController extends Controller
@@ -214,33 +212,27 @@ class MemberController extends Controller
         return back()->with('success', 'Member updated!');
     }
 
+    /**
+     * Removes a member from the lists. Only the member is hidden: their payments,
+     * attendance, parent and notifications stay exactly as they are, so the
+     * club's profit, reports and totals don't change.
+     */
     public function destroy(Member $member)
     {
-        DB::transaction(function () use ($member) {
-            $member->attendances()->delete();
-            $member->membershipFees()->delete();
-
-            // Remove notifications that link to this member, they would point to nothing
-            ClubNotification::query()
-                ->where('data', 'like', '%member='.$member->id.'%')
-                ->get()
-                ->filter(function (ClubNotification $notification) use ($member) {
-                    parse_str((string) parse_url($notification->data['url'] ?? '', PHP_URL_QUERY), $query);
-
-                    return (int) ($query['member'] ?? 0) === $member->id;
-                })
-                ->each->delete();
-
-            $parent = $member->parent;
-
-            $member->delete();
-
-            if ($parent && ! $parent->members()->exists()) {
-                $parent->delete();
-            }
-        });
+        $member->delete();
 
         return back()->with('success', 'Member deleted!');
+    }
+
+    /** Brings a deleted member back, with all of their history (from the duplicate warning). */
+    public function restore(int $member)
+    {
+        $found = Member::onlyTrashed()->findOrFail($member);
+        abort_unless(Auth::user()->canSeeMember($found), 403);
+
+        $found->restore();
+
+        return back()->with('success', 'Member restored.');
     }
 
     /**
