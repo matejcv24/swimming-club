@@ -268,7 +268,7 @@ class ClubIsolationTest extends TestCase
         $clubData = [
             'dashboard', 'members', 'members/{member}', 'members/{member}/restore', 'parents', 'attendance', 'attendance/by-member/{member}',
             'trainings', 'trainings/by-date', 'trainings/days', 'membership-fees', 'membership-fees/by-member/{member}',
-            'membership-fees/{membershipFee}', 'unpaid-fees', 'unpaid-fees/{member}/reminder', 'groups', 'groups/{group}',
+            'membership-fees/{membershipFee}', 'membership-fees/{membershipFee}/confirmation', 'unpaid-fees', 'unpaid-fees/{member}/reminder', 'groups', 'groups/{group}',
             'staff', 'staff/{coach}', 'staff/{coach}/active', 'staff/invitations', 'staff/invitations/{invitation}',
             'staff/invitations/{invitation}/resend', 'salaries', 'salaries/{salary}', 'salaries/by-coach/{coach}',
             'invoices', 'invoices/{invoice}', 'invoices/by-month/{month}', 'profit', 'reports/monthly',

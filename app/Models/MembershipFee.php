@@ -16,6 +16,7 @@ class MembershipFee extends Model
         'start_date' => 'date',
         'end_date' => 'date',
         'amount' => 'float',
+        'confirmation_sent_at' => 'datetime',
     ];
 
     /** The member, also after they were deleted (hidden): their history stays. */

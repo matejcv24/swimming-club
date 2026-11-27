@@ -1,6 +1,8 @@
 import { Head, router } from '@inertiajs/react';
 import CreditCardIcon from '@mui/icons-material/CreditCard';
+import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
+import EmailIcon from '@mui/icons-material/Email';
 import Autocomplete from '@mui/material/Autocomplete';
 import Button from '@mui/material/Button';
 import Chip from '@mui/material/Chip';
@@ -38,6 +40,11 @@ import {
     popupFg,
 } from '@/components/mui-theme-provider';
 import {
+    ConfirmationPreviewDialog,
+    PaymentSavedDialog,
+} from '@/components/payment-saved-dialog';
+import type { SavedFee } from '@/components/payment-saved-dialog';
+import {
     CloseButton,
     Hint,
     PopupHeader,
@@ -70,6 +77,8 @@ interface Fee {
     payment_method: 'cash' | 'card';
     start_date: string;
     end_date: string;
+    /** When the "payment received" email went out (null: not sent) */
+    confirmation_sent_at?: string | null;
     member?: {
         id: number;
         name: string;
@@ -144,6 +153,16 @@ function PaymentMethodBadge({ fee }: { fee: Fee }) {
             <Typography variant="caption" color="text.secondary">
                 {methodLabel(fee.payment_method)}
             </Typography>
+            {fee.confirmation_sent_at && (
+                <Typography
+                    variant="caption"
+                    sx={{ color: 'success.main', lineHeight: 1.2 }}
+                >
+                    {t('Confirmation sent :date', {
+                        date: dayjs(fee.confirmation_sent_at).format('DD.MM'),
+                    })}
+                </Typography>
+            )}
         </div>
     );
 }
@@ -180,6 +199,12 @@ export default function MembershipFeesIndex({
     const [endDate, setEndDate] = useState<Dayjs | null>(null);
     const [showHistoryModal, setShowHistoryModal] = useState(false);
     const [editingFee, setEditingFee] = useState<Fee | null>(null);
+    // The payment just saved (null: the "payment saved" pop-up is closed)
+    const [savedFee, setSavedFee] = useState<SavedFee | null>(null);
+    // The payment whose confirmation email is shown before sending
+    const [previewFeeId, setPreviewFeeId] = useState<number | null>(null);
+    // The preview was opened from the "payment saved" pop-up (not the history)
+    const [previewFromSaved, setPreviewFromSaved] = useState(false);
     const [editFeeForm, setEditFeeForm] = useState<{
         amount: string;
         payment_method: 'cash' | 'card';
@@ -324,13 +349,22 @@ export default function MembershipFeesIndex({
             (member) => member.id === Number(memberId),
         );
 
+        // From a coach's payment notification: that payment's confirmation email,
+        // ready to send (admins; once sent, just the history)
+        const confirmFeeId = Number(params.get('confirm')) || null;
+
         if (notificationMember) {
             queueMicrotask(() => {
                 void handleMemberSelect(notificationMember);
                 setShowHistoryModal(true);
+
+                if (confirmFeeId && userRole === 'admin') {
+                    setPreviewFromSaved(false);
+                    setPreviewFeeId(confirmFeeId);
+                }
             });
         }
-    }, [handleMemberSelect, members]);
+    }, [handleMemberSelect, members, userRole]);
 
     const handleSave = () => {
         if (!selectedMember || !startDate || !endDate) {
@@ -347,10 +381,15 @@ export default function MembershipFeesIndex({
                 end_date: endDate.format('YYYY-MM-DD'),
             },
             {
-                onSuccess: () => {
-                    if (openedToAdd) {
-                        popup.close();
+                onSuccess: (page) => {
+                    // "Payment saved", with the offer to email a confirmation
+                    setSavedFee(
+                        (page.props.feeSaved as SavedFee | null | undefined) ??
+                            null,
+                    );
 
+                    if (openedToAdd) {
+                        // The pop-up closes after the "payment saved" one
                         return;
                     }
 
@@ -362,6 +401,76 @@ export default function MembershipFeesIndex({
                 },
             },
         );
+    };
+
+    // Done with the new payment: back to the dashboard (its quick action) or the form
+    const finishNewPayment = () => {
+        if (openedToAdd) {
+            popup.close();
+        } else if (selectedMember) {
+            // The history shows "confirmation sent" right away
+            handleMemberSelect(selectedMember);
+        }
+    };
+
+    // "Not now" / "Close": the payment stays saved
+    const closeSaved = () => {
+        setSavedFee(null);
+        finishNewPayment();
+    };
+
+    const openPreviewFromSaved = (feeId: number) => {
+        setSavedFee(null);
+        setPreviewFromSaved(true);
+        setPreviewFeeId(feeId);
+    };
+
+    const closePreview = () => {
+        setPreviewFeeId(null);
+
+        if (previewFromSaved) {
+            // Not sent after all: the payment itself is still saved
+            setPreviewFromSaved(false);
+            finishNewPayment();
+        }
+    };
+
+    const confirmationSent = () => {
+        setPreviewFeeId(null);
+
+        if (previewFromSaved) {
+            setPreviewFromSaved(false);
+            finishNewPayment();
+        } else if (selectedMember) {
+            void handleMemberSelect(selectedMember);
+        }
+    };
+
+    // Admins: delete a payment (asked first)
+    const [deletingFee, setDeletingFee] = useState<Fee | null>(null);
+    const [feeBusy, setFeeBusy] = useState(false);
+
+    const refreshHistory = () => {
+        if (selectedMember) {
+            void handleMemberSelect(selectedMember);
+        }
+    };
+
+    const deleteFee = () => {
+        if (!deletingFee) {
+            return;
+        }
+
+        setFeeBusy(true);
+        router.delete(`/membership-fees/${deletingFee.id}`, {
+            preserveScroll: true,
+            preserveState: true,
+            onSuccess: () => {
+                setDeletingFee(null);
+                refreshHistory();
+            },
+            onFinish: () => setFeeBusy(false),
+        });
     };
 
     const handleEditFeeOpen = (fee: Fee) => {
@@ -830,23 +939,67 @@ export default function MembershipFeesIndex({
                                             </span>
                                         </Typography>
                                     }
+                                    secondary={
+                                        // Admins: the "payment received" email, shown first
+                                        userRole === 'admin' &&
+                                        !fee.confirmation_sent_at ? (
+                                            <Button
+                                                size="small"
+                                                variant="text"
+                                                startIcon={
+                                                    <EmailIcon fontSize="small" />
+                                                }
+                                                onClick={() => {
+                                                    setPreviewFromSaved(false);
+                                                    setPreviewFeeId(fee.id);
+                                                }}
+                                                sx={{
+                                                    mt: 0.5,
+                                                    ml: -0.75,
+                                                    px: 0.75,
+                                                    minHeight: 32,
+                                                    whiteSpace: 'nowrap',
+                                                }}
+                                            >
+                                                {t('Send confirmation')}
+                                            </Button>
+                                        ) : undefined
+                                    }
                                     sx={{ flex: '1 1 auto', minWidth: 0 }}
                                 />
                                 <div className="flex flex-none items-center gap-1">
                                     <PaymentMethodBadge fee={fee} />
                                     {userRole === 'admin' && (
-                                        <Hint title={t('Edit payment')}>
-                                            <IconButton
-                                                size="small"
-                                                color="primary"
-                                                onClick={() =>
-                                                    handleEditFeeOpen(fee)
-                                                }
-                                                aria-label={t('Edit payment')}
-                                            >
-                                                <EditIcon fontSize="small" />
-                                            </IconButton>
-                                        </Hint>
+                                        <div className="flex flex-col gap-2">
+                                            <Hint title={t('Edit payment')}>
+                                                <IconButton
+                                                    size="small"
+                                                    color="primary"
+                                                    onClick={() =>
+                                                        handleEditFeeOpen(fee)
+                                                    }
+                                                    aria-label={t(
+                                                        'Edit payment',
+                                                    )}
+                                                >
+                                                    <EditIcon fontSize="small" />
+                                                </IconButton>
+                                            </Hint>
+                                            <Hint title={t('Delete payment')}>
+                                                <IconButton
+                                                    size="small"
+                                                    color="error"
+                                                    onClick={() =>
+                                                        setDeletingFee(fee)
+                                                    }
+                                                    aria-label={t(
+                                                        'Delete payment',
+                                                    )}
+                                                >
+                                                    <DeleteIcon fontSize="small" />
+                                                </IconButton>
+                                            </Hint>
+                                        </div>
                                     )}
                                 </div>
                             </ListItem>
@@ -1301,6 +1454,89 @@ export default function MembershipFeesIndex({
                     </TableContainer>
                 </DialogContent>
             </Dialog>
+            <PaymentSavedDialog
+                fee={savedFee}
+                canSend={userRole === 'admin'}
+                onClose={closeSaved}
+                onSend={openPreviewFromSaved}
+            />
+
+            {/* The confirmation email as it will be sent: Cancel, or Send */}
+            {userRole === 'admin' && (
+                <ConfirmationPreviewDialog
+                    feeId={previewFeeId}
+                    onClose={closePreview}
+                    onSent={confirmationSent}
+                />
+            )}
+
+            {/* Deleting a payment: asked once */}
+            {userRole === 'admin' && (
+                <Dialog
+                    open={!!deletingFee}
+                    onClose={() => !feeBusy && setDeletingFee(null)}
+                    disableRestoreFocus
+                    fullWidth
+                    maxWidth="xs"
+                    PaperProps={{ sx: { bgcolor: POPUP_BG } }}
+                >
+                    <DialogTitle sx={{ p: 0 }}>
+                        <div className="flex items-center justify-between px-4 py-3">
+                            <Typography variant="h6" fontWeight="bold">
+                                {t('Delete payment')}
+                            </Typography>
+                            <CloseButton onClick={() => setDeletingFee(null)} />
+                        </div>
+                        <Divider />
+                    </DialogTitle>
+                    <DialogContent>
+                        <div className="flex flex-col gap-4 py-4">
+                            {deletingFee && (
+                                <Typography variant="body1">
+                                    {t(
+                                        'Delete the payment of :amount MKD for :from – :to?',
+                                        {
+                                            amount: formatCurrency(
+                                                Number(deletingFee.amount),
+                                            ),
+                                            from: dayjs(
+                                                deletingFee.start_date,
+                                            ).format('DD.MM.YYYY'),
+                                            to: dayjs(
+                                                deletingFee.end_date,
+                                            ).format('DD.MM.YYYY'),
+                                        },
+                                    )}
+                                </Typography>
+                            )}
+                            <Typography variant="body2" color="text.secondary">
+                                {t(
+                                    'Only for a payment entered by mistake: profit and reports will no longer count it. This cannot be undone.',
+                                )}
+                            </Typography>
+                            <div className="flex gap-3">
+                                <Button
+                                    variant="outlined"
+                                    fullWidth
+                                    onClick={() => setDeletingFee(null)}
+                                    disabled={feeBusy}
+                                >
+                                    {t('Cancel')}
+                                </Button>
+                                <Button
+                                    variant="contained"
+                                    color="error"
+                                    fullWidth
+                                    onClick={deleteFee}
+                                    disabled={feeBusy}
+                                >
+                                    {t('Delete')}
+                                </Button>
+                            </div>
+                        </div>
+                    </DialogContent>
+                </Dialog>
+            )}
         </MuiThemeProvider>
     );
 }

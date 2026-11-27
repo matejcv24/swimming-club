@@ -90,6 +90,8 @@ class HandleInertiaRequests extends Middleware
             'myClubs' => fn () => $request->user() ? MyClubs::for($request->user()) : [],
             // The club just switched to, for the short message after switching
             'clubSwitched' => fn () => $request->session()->get('club_switched'),
+            // The payment just recorded, for the "payment saved / send confirmation" pop-up
+            'feeSaved' => fn () => $request->session()->get('fee_saved'),
             // The subscription banner (demo ending, grace, read-only); null: none
             'clubAccess' => fn () => $request->user() ? ClubAccess::current()->banner() : null,
             // The club's groups (in their order) and their subgroups, with how many
