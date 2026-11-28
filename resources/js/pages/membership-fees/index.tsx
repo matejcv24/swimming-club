@@ -59,7 +59,6 @@ import { CardsSkeleton } from '@/components/skeletons';
 import { usePagePopup } from '@/hooks/use-page-popup';
 import { groupNameOf, useGroups } from '@/lib/groups';
 import { locale, pickerLocaleText, t, tc } from '@/lib/i18n';
-import { clearOnClick } from '@/lib/search-field';
 import { showToast } from '@/lib/toast';
 import type { ClubSharedData } from '@/types/club';
 
@@ -606,10 +605,6 @@ export default function MembershipFeesIndex({
                                     }
                                     variant="outlined"
                                     sx={inputSx}
-                                    {...clearOnClick(
-                                        selectedMember !== null,
-                                        () => handleMemberSelect(null),
-                                    )}
                                 />
                             )}
                         />

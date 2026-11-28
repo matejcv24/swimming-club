@@ -20,7 +20,6 @@ import { useEffect, useRef, useState } from 'react';
 import type { ReactElement, ReactNode } from 'react';
 import { POPUP_BG, POPUP_FG, popupFg } from '@/components/mui-theme-provider';
 import { t } from '@/lib/i18n';
-import { clearOnClick } from '@/lib/search-field';
 
 /**
  * Round icon "thumb" in the style of the light/dark toggle: navy with a light-blue
@@ -269,7 +268,7 @@ export function PopupHeader({
     );
 }
 
-/** Pill-shaped search field. Clicking it again clears the last search. */
+/** Pill-shaped search field, with an X to clear it while something is typed. */
 export function PillSearchField({
     value,
     onChange,
@@ -285,9 +284,21 @@ export function PillSearchField({
                 fullWidth
                 value={value}
                 onChange={(e) => onChange(e.target.value)}
-                {...clearOnClick(value !== '', () => onChange(''))}
                 placeholder={placeholder}
                 startAdornment={<SearchIcon fontSize="small" />}
+                // While something is typed: an X that clears it
+                endAdornment={
+                    value !== '' ? (
+                        <IconButton
+                            size="small"
+                            aria-label={t('Clear')}
+                            onClick={() => onChange('')}
+                            sx={{ mr: -0.75, p: 0.5 }}
+                        >
+                            <CloseIcon sx={{ fontSize: 18 }} />
+                        </IconButton>
+                    ) : undefined
+                }
                 inputProps={{ 'aria-label': placeholder }}
                 sx={{
                     height: 40,
