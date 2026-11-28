@@ -53,16 +53,8 @@ class InvoiceController extends Controller
 
         $groupId = $validated['group_id'] ?? null;
 
-        $existing = Invoice::where('month', $validated['month'])
-            ->when($groupId, fn ($query) => $query->where('group_id', $groupId), fn ($query) => $query->whereNull('group_id'))
-            ->first();
-
-        if ($existing) {
-            $existing->update(['amount' => $validated['amount']]);
-
-            return response()->json($existing, 200);
-        }
-
+        // A month can have several invoices (also for the same group): each is
+        // kept, and the history adds them up per month
         $invoice = Invoice::create([
             'month' => $validated['month'],
             'group_id' => $groupId,

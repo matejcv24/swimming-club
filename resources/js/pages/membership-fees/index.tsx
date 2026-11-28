@@ -609,7 +609,7 @@ export default function MembershipFeesIndex({
                             )}
                         />
 
-                        {selectedMember && !addMode && (
+                        {selectedMember && (
                             <div className="flex flex-col gap-2">
                                 <SectionLabel>{t('Last payment')}</SectionLabel>
                                 {loadingFees ? (

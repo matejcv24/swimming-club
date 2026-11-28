@@ -206,14 +206,8 @@ export default function InvoicesIndex({ invoices }: Props) {
                     group: group ? { id: group.id, name: group.name } : null,
                 };
 
-                // The same month and group again updates that invoice, so replace it
-                setInvoiceList((list) =>
-                    list.some((inv) => inv.id === withGroup.id)
-                        ? list.map((inv) =>
-                              inv.id === withGroup.id ? withGroup : inv,
-                          )
-                        : [withGroup, ...list],
-                );
+                // Every invoice is kept: a month can have several
+                setInvoiceList((list) => [withGroup, ...list]);
                 showToast(
                     t('The invoice for :month was saved', {
                         month: invoiceMonth.format('MMMM'),
@@ -276,6 +270,8 @@ export default function InvoicesIndex({ invoices }: Props) {
 
     // The invoice whose actions are open, and the one asked about before deleting
     const [actionsFor, setActionsFor] = useState<Invoice | null>(null);
+    // The month whose invoices are open (from the year's list)
+    const [openMonth, setOpenMonth] = useState<string | null>(null);
     const [deleteTarget, setDeleteTarget] = useState<Invoice | null>(null);
     const [deletingInvoice, setDeletingInvoice] = useState(false);
 
@@ -495,39 +491,90 @@ export default function InvoicesIndex({ invoices }: Props) {
                         </SummaryCard>
                     )}
                     <ul className="border-t border-[var(--popup-border)]">
-                        {yearMonths.flatMap((month) =>
-                            groupedInvoices[month].invoices.map((invoice) => (
-                                <li
-                                    key={invoice.id}
-                                    className="border-b border-[var(--popup-border)]"
-                                >
-                                    <button
-                                        type="button"
-                                        onClick={() => setActionsFor(invoice)}
-                                        className="flex w-full cursor-pointer items-center gap-3 px-[18px] py-3 text-left transition hover:bg-[var(--popup-ghost)]"
-                                    >
-                                        <span className="min-w-0 flex-1">
-                                            <span className="block text-[15px] font-semibold text-[var(--popup-fg)] capitalize">
-                                                {dayjs(month).format(
-                                                    'MMMM YYYY',
-                                                )}
-                                            </span>
-                                            <span className="block text-[13px] text-[var(--popup-muted)]">
-                                                {invoiceLabel(invoice)}
-                                            </span>
-                                        </span>
-                                        <span className="flex-none text-[15px] font-bold whitespace-nowrap text-red-500 dark:text-red-400">
-                                            {formatCurrency(invoice.amount)} MKD
-                                        </span>
-                                        <MoreVertIcon
-                                            fontSize="small"
-                                            className="flex-none text-[var(--popup-muted)]"
-                                        />
-                                    </button>
-                                </li>
-                            )),
-                        )}
+                        {yearMonths.map((month) => (
+                            <DrillRow
+                                key={month}
+                                title={
+                                    <span className="capitalize">
+                                        {dayjs(month).format('MMMM YYYY')}
+                                    </span>
+                                }
+                                subtitle={tc(
+                                    ':count invoice|:count invoices',
+                                    groupedInvoices[month].invoices.length,
+                                )}
+                                value={`${formatCurrency(groupedInvoices[month].total)} MKD`}
+                                valueClassName="text-red-500 dark:text-red-400"
+                                onClick={() => setOpenMonth(month)}
+                            />
+                        ))}
                     </ul>
+                </DialogContent>
+            </Dialog>
+
+            {/* One month: its invoices, each with edit and delete */}
+            <Dialog
+                open={!!openMonth && !!groupedInvoices[openMonth]}
+                onClose={() => setOpenMonth(null)}
+                disableRestoreFocus
+                fullWidth
+                maxWidth="sm"
+                PaperProps={{ sx: { bgcolor: POPUP_BG } }}
+            >
+                <PopupHeader
+                    icon={<ReceiptLongIcon fontSize="small" />}
+                    title={t('Invoices')}
+                    subtitle={
+                        openMonth ? dayjs(openMonth).format('MMMM YYYY') : ''
+                    }
+                    onClose={() => setOpenMonth(null)}
+                />
+                <DialogContent sx={{ p: 0 }}>
+                    {openMonth && groupedInvoices[openMonth] && (
+                        <>
+                            <SummaryCard
+                                tone="red"
+                                title={`${formatCurrency(groupedInvoices[openMonth].total)} MKD`}
+                            >
+                                {tc(
+                                    ':count invoice|:count invoices',
+                                    groupedInvoices[openMonth].invoices.length,
+                                )}
+                            </SummaryCard>
+                            <ul className="border-t border-[var(--popup-border)]">
+                                {groupedInvoices[openMonth].invoices.map(
+                                    (invoice) => (
+                                        <li
+                                            key={invoice.id}
+                                            className="border-b border-[var(--popup-border)]"
+                                        >
+                                            <button
+                                                type="button"
+                                                onClick={() =>
+                                                    setActionsFor(invoice)
+                                                }
+                                                className="flex w-full cursor-pointer items-center gap-3 px-[18px] py-3 text-left transition hover:bg-[var(--popup-ghost)]"
+                                            >
+                                                <span className="min-w-0 flex-1 text-[15px] font-semibold text-[var(--popup-fg)]">
+                                                    {invoiceLabel(invoice)}
+                                                </span>
+                                                <span className="flex-none text-[15px] font-bold whitespace-nowrap text-red-500 dark:text-red-400">
+                                                    {formatCurrency(
+                                                        invoice.amount,
+                                                    )}{' '}
+                                                    MKD
+                                                </span>
+                                                <MoreVertIcon
+                                                    fontSize="small"
+                                                    className="flex-none text-[var(--popup-muted)]"
+                                                />
+                                            </button>
+                                        </li>
+                                    ),
+                                )}
+                            </ul>
+                        </>
+                    )}
                 </DialogContent>
             </Dialog>
 
