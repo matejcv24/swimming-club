@@ -1,5 +1,5 @@
 import { Head, router } from '@inertiajs/react';
-import AssignmentIndIcon from '@mui/icons-material/AssignmentInd';
+import AddIcon from '@mui/icons-material/Add';
 import BlockIcon from '@mui/icons-material/Block';
 import CheckIcon from '@mui/icons-material/Check';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
@@ -11,19 +11,18 @@ import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import LinkIcon from '@mui/icons-material/Link';
 import LockOpenIcon from '@mui/icons-material/LockOpen';
 import MailOutlineIcon from '@mui/icons-material/MailOutline';
+import MoreVertIcon from '@mui/icons-material/MoreVert';
 import PaymentsIcon from '@mui/icons-material/Payments';
 import PersonIcon from '@mui/icons-material/Person';
+import PersonAddAlt1Icon from '@mui/icons-material/PersonAddAlt1';
 import SendIcon from '@mui/icons-material/Send';
 import Avatar from '@mui/material/Avatar';
 import Button from '@mui/material/Button';
-import Chip from '@mui/material/Chip';
 import CircularProgress from '@mui/material/CircularProgress';
 import Dialog from '@mui/material/Dialog';
 import DialogContent from '@mui/material/DialogContent';
 import DialogTitle from '@mui/material/DialogTitle';
-import Divider from '@mui/material/Divider';
 import FormControl from '@mui/material/FormControl';
-import IconButton from '@mui/material/IconButton';
 import InputLabel from '@mui/material/InputLabel';
 import List from '@mui/material/List';
 import ListItem from '@mui/material/ListItem';
@@ -55,16 +54,21 @@ import {
     popupFg,
 } from '@/components/mui-theme-provider';
 import {
+    ActionMenu,
+    AddButton,
     avatarSx,
-    CloseButton,
+    ConfirmDialog,
+    EmptyState,
     FIELD_SX,
     PopupHeader,
-    ShowHistoryButton,
+    SummaryCard,
+    YearSection,
 } from '@/components/popup-ui';
 import { CardsSkeleton } from '@/components/skeletons';
 import { usePagePopup } from '@/hooks/use-page-popup';
 import { useGroups } from '@/lib/groups';
 import { locale, pickerLocaleText, t, tc } from '@/lib/i18n';
+import { showToast } from '@/lib/toast';
 
 type Role = 'admin' | 'coach';
 
@@ -114,11 +118,7 @@ interface Salary {
     id: number;
     amount: number;
     month: string;
-}
-
-interface GroupedSalaryByMonth {
-    month: string;
-    total: number;
+    created_at?: string | null;
 }
 
 interface Props {
@@ -149,6 +149,16 @@ const SUBHEADER_SX = {
 } as const;
 
 // A pair of buttons whose labels must stay on one line (Macedonian is longer)
+/** The two buttons at the bottom of the team: two lines each, the same height, bigger icons. */
+const TWO_LINE_SX = {
+    minHeight: 56,
+    lineHeight: 1.2,
+    whiteSpace: 'normal',
+    justifyContent: 'center',
+    gap: 0.5,
+    '& .MuiButton-startIcon > svg': { fontSize: 26 },
+} as const;
+
 const ONE_LINE_SX = {
     whiteSpace: 'nowrap',
     px: 1,
@@ -334,9 +344,9 @@ export default function StaffIndex({ staff, invitations }: Props) {
                     a.name.localeCompare(b.name),
             );
 
-    const openSalaryEntry = () => {
+    const openSalaryEntry = (userId: number | '' = '') => {
         setSalaryEntry({
-            userId: '',
+            userId,
             amount: '',
             month: dayjs().startOf('month'),
             saved: null,
@@ -366,7 +376,19 @@ export default function StaffIndex({ staff, invitations }: Props) {
             {
                 preserveScroll: true,
                 // Ready for the next one: the person is chosen again
-                onSuccess: () =>
+                onSuccess: () => {
+                    showToast(
+                        t('The salary for :name for :month was entered', {
+                            name,
+                            month: entry.month.format('MMMM'),
+                        }),
+                    );
+
+                    // Entered from a person's history: it shows the new one
+                    if (selectedCoach?.id === entry.userId) {
+                        void loadSalaries(entry.userId);
+                    }
+
                     setSalaryEntry({
                         ...entry,
                         userId: '',
@@ -374,7 +396,8 @@ export default function StaffIndex({ staff, invitations }: Props) {
                         saved: name,
                         errors: {},
                         saving: false,
-                    }),
+                    });
+                },
                 onError: (errors) =>
                     setSalaryEntry({ ...entry, errors, saving: false }),
             },
@@ -387,7 +410,23 @@ export default function StaffIndex({ staff, invitations }: Props) {
             { active: isActive },
             {
                 preserveScroll: true,
-                onSuccess: () => setDeactivating(null),
+                onSuccess: () => {
+                    setDeactivating(null);
+                    showToast(
+                        isActive
+                            ? t(':name is active again', { name: member.name })
+                            : t(':name was deactivated', { name: member.name }),
+                        isActive ? 'saved' : 'deleted',
+                        isActive
+                            ? undefined
+                            : () =>
+                                  router.put(
+                                      `/staff/${member.id}/active`,
+                                      { active: true },
+                                      { preserveScroll: true },
+                                  ),
+                    );
+                },
             },
         );
 
@@ -395,7 +434,15 @@ export default function StaffIndex({ staff, invitations }: Props) {
         setDeleteBusy(true);
         router.delete(`/staff/${member.id}`, {
             preserveScroll: true,
-            onSuccess: () => setDeleting(null),
+            onSuccess: () => {
+                setDeleting(null);
+                showToast(
+                    t('The account of :name was deleted', {
+                        name: member.name,
+                    }),
+                    'deleted',
+                );
+            },
             onFinish: () => setDeleteBusy(false),
         });
     };
@@ -412,6 +459,12 @@ export default function StaffIndex({ staff, invitations }: Props) {
         router.post('/staff/invitations', invite, {
             preserveScroll: true,
             onSuccess: () => {
+                showToast(
+                    t('The invitation was sent to :name', {
+                        name: invite.name,
+                    }),
+                    'sent',
+                );
                 setInviting(false);
                 setInvite(EMPTY_INVITE);
                 setInviteErrors({});
@@ -482,74 +535,23 @@ export default function StaffIndex({ staff, invitations }: Props) {
         month: Dayjs;
         errors: Record<string, string>;
         saving: boolean;
-        confirmingDelete: boolean;
     } | null>(null);
-    const [showSalaryHistoryModal, setShowSalaryHistoryModal] = useState(false);
-    const [showSalaryYearDetailModal, setShowSalaryYearDetailModal] =
-        useState(false);
-    const [selectedSalaryYear, setSelectedSalaryYear] = useState<string | null>(
-        null,
-    );
+    // The salary whose actions (edit, delete) are open, and the one asked about
+    const [salaryActions, setSalaryActions] = useState<Salary | null>(null);
+    const [deletingSalary, setDeletingSalary] = useState<Salary | null>(null);
+    const [salaryBusy, setSalaryBusy] = useState(false);
 
-    const groupedSalaries: Record<string, GroupedSalaryByMonth> = {};
+    // The salaries by year (of their month), newest first
+    const salaryYears = (() => {
+        const years = new Map<string, Salary[]>();
 
-    salaries.forEach((salary) => {
-        const monthKey = dayjs(salary.month)
-            .startOf('month')
-            .format('YYYY-MM-DD');
+        salaries.forEach((salary) => {
+            const year = dayjs(salary.month).format('YYYY');
+            years.set(year, [...(years.get(year) ?? []), salary]);
+        });
 
-        if (!groupedSalaries[monthKey]) {
-            groupedSalaries[monthKey] = {
-                month: monthKey,
-                total: 0,
-            };
-        }
-
-        groupedSalaries[monthKey].total += Number(salary.amount);
-    });
-
-    const sortedSalaryMonths = Object.keys(groupedSalaries).sort().reverse();
-    const currentYear = dayjs().format('YYYY');
-
-    const currentYearSalaryMonths = sortedSalaryMonths.filter(
-        (month) => dayjs(month).format('YYYY') === currentYear,
-    );
-
-    const currentYearLastSalaryMonth = currentYearSalaryMonths[0];
-    const currentYearLastSalary = currentYearLastSalaryMonth
-        ? groupedSalaries[currentYearLastSalaryMonth]
-        : null;
-
-    const salaryYearGroups: Record<
-        string,
-        { year: string; total: number; monthCount: number }
-    > = {};
-
-    Object.values(groupedSalaries).forEach((monthData) => {
-        const year = dayjs(monthData.month).format('YYYY');
-
-        if (!salaryYearGroups[year]) {
-            salaryYearGroups[year] = {
-                year,
-                total: 0,
-                monthCount: 0,
-            };
-        }
-
-        salaryYearGroups[year].total += monthData.total;
-        salaryYearGroups[year].monthCount += 1;
-    });
-
-    const sortedSalaryYears = Object.keys(salaryYearGroups)
-        .filter((year) => year !== currentYear)
-        .sort()
-        .reverse();
-
-    const salaryYearMonths = selectedSalaryYear
-        ? sortedSalaryMonths.filter(
-              (month) => dayjs(month).format('YYYY') === selectedSalaryYear,
-          )
-        : [];
+        return [...years.entries()].sort(([a], [b]) => b.localeCompare(a));
+    })();
 
     const handleEditOpen = (coach: Staff) => {
         setEditForm({
@@ -588,6 +590,11 @@ export default function StaffIndex({ staff, invitations }: Props) {
                 );
                 setPerson(updated ?? null);
                 setEditingCoach(null);
+                showToast(
+                    t('The changes for :name were saved', {
+                        name: editForm.name,
+                    }),
+                );
                 setEditForm({
                     name: '',
                     email: '',
@@ -615,9 +622,6 @@ export default function StaffIndex({ staff, invitations }: Props) {
         setSelectedCoach(coach);
         setSalaries([]);
         setLoadingSalaries(true);
-        setShowSalaryHistoryModal(false);
-        setShowSalaryYearDetailModal(false);
-        setSelectedSalaryYear(null);
         await loadSalaries(coach.id);
         setLoadingSalaries(false);
     };
@@ -629,11 +633,11 @@ export default function StaffIndex({ staff, invitations }: Props) {
             month: dayjs(salary.month).startOf('month'),
             errors: {},
             saving: false,
-            confirmingDelete: false,
         });
 
     const afterSalaryChange = () => {
         setEditingSalary(null);
+        showToast(t('The salary was changed'));
 
         if (selectedCoach) {
             loadSalaries(selectedCoach.id);
@@ -665,60 +669,24 @@ export default function StaffIndex({ staff, invitations }: Props) {
     };
 
     const deleteSalary = () => {
-        if (!editingSalary) {
+        if (!deletingSalary) {
             return;
         }
 
-        setEditingSalary({ ...editingSalary, saving: true });
-        router.delete(`/salaries/${editingSalary.id}`, {
+        setSalaryBusy(true);
+        router.delete(`/salaries/${deletingSalary.id}`, {
             preserveScroll: true,
-            onSuccess: afterSalaryChange,
+            onSuccess: () => {
+                setDeletingSalary(null);
+                showToast(t('The salary was deleted'), 'deleted');
+
+                if (selectedCoach) {
+                    void loadSalaries(selectedCoach.id);
+                }
+            },
+            onFinish: () => setSalaryBusy(false),
         });
     };
-
-    // Each salary of those months, with a button to correct it
-    const salaryRows = (months: string[]) => (
-        <List disablePadding>
-            {months.flatMap((month) =>
-                salaries
-                    .filter((salary) =>
-                        dayjs(salary.month).isSame(month, 'month'),
-                    )
-                    .map((salary) => (
-                        <ListItem
-                            key={salary.id}
-                            divider
-                            sx={{ px: 2, gap: 1 }}
-                        >
-                            <ListItemText
-                                primary={
-                                    <Typography variant="body2">
-                                        {dayjs(month).format('MMMM YYYY')}
-                                    </Typography>
-                                }
-                                sx={{ flex: '1 1 auto', minWidth: 0 }}
-                            />
-                            <Chip
-                                label={`${formatCurrency(Number(salary.amount))} MKD`}
-                                color="success"
-                                size="small"
-                                sx={{ flexShrink: 0 }}
-                            />
-                            <IconButton
-                                size="small"
-                                color="primary"
-                                aria-label={t('Edit salary for :month', {
-                                    month: dayjs(month).format('MMMM YYYY'),
-                                })}
-                                onClick={() => openSalaryEdit(salary)}
-                            >
-                                <EditIcon fontSize="small" />
-                            </IconButton>
-                        </ListItem>
-                    )),
-            )}
-        </List>
-    );
 
     // One person's row: tapping it opens their card
     const personRow = (member: Staff, index: number) => (
@@ -1021,37 +989,27 @@ export default function StaffIndex({ staff, invitations }: Props) {
                     </List>
                 </DialogContent>
 
-                <div className="flex gap-3 border-t border-[var(--popup-border)] px-4 py-3">
+                <div className="grid grid-cols-2 gap-3 border-t border-[var(--popup-border)] px-[18px] py-3">
                     <Button
                         variant="outlined"
-                        fullWidth
+                        onClick={() => openSalaryEntry()}
+                        sx={TWO_LINE_SX}
                         startIcon={<PaymentsIcon />}
-                        onClick={openSalaryEntry}
-                        sx={{ whiteSpace: 'nowrap', px: 1.5, lineHeight: 1.15 }}
                     >
-                        {/* Phones: "Add" over "Salary", next to the icon */}
-                        <span className="flex flex-col items-start text-left sm:hidden">
-                            <span>{t('Add')}</span>
-                            <span>{t('Salary')}</span>
-                        </span>
-                        <span className="hidden sm:inline">
-                            {t('Enter salary')}
+                        <span className="flex flex-col items-start text-left">
+                            <span>{t('Enter')}</span>
+                            <span>{t('salary')}</span>
                         </span>
                     </Button>
                     <Button
                         variant="contained"
-                        fullWidth
-                        startIcon={<AssignmentIndIcon />}
                         onClick={openInvite}
-                        sx={{ whiteSpace: 'nowrap', px: 1.5, lineHeight: 1.15 }}
+                        sx={TWO_LINE_SX}
+                        startIcon={<PersonAddAlt1Icon />}
                     >
-                        {/* Phones: "Add" over "Employee", next to the icon */}
-                        <span className="flex flex-col items-start text-left sm:hidden">
+                        <span className="flex flex-col items-start text-left">
                             <span>{t('Add')}</span>
-                            <span>{t('Employee')}</span>
-                        </span>
-                        <span className="hidden sm:inline">
-                            {t('Add employee')}
+                            <span>{t('employee')}</span>
                         </span>
                     </Button>
                 </div>
@@ -1068,120 +1026,118 @@ export default function StaffIndex({ staff, invitations }: Props) {
             >
                 {person && (
                     <>
-                        <DialogTitle sx={{ p: 0 }}>
-                            <PopupHeader
-                                icon={<PersonIcon fontSize="small" />}
-                                title={person.name}
-                                subtitle={
-                                    person.is_owner
-                                        ? `${t('Owner')} · ${t('Admin')}`
-                                        : roleLabel(person.role)
-                                }
-                                onClose={() => setPerson(null)}
-                            />
-                        </DialogTitle>
-                        <DialogContent sx={{ px: 2.25 }}>
-                            <div className="flex flex-col gap-4 pt-1 pb-2">
-                                <PersonDetail label={t('Email')}>
-                                    <a
-                                        href={`mailto:${person.email}`}
-                                        className="text-hydra-blue dark:text-sky-300"
-                                    >
-                                        {person.email}
-                                    </a>
-                                </PersonDetail>
-                                {person.role === 'coach' && (
-                                    <PersonDetail label={t('Groups')}>
-                                        {coachGroupsLabel(person, groups)}
-                                    </PersonDetail>
-                                )}
-                                <PersonDetail
-                                    label={t('Salary for :month', { month })}
+                        <PopupHeader
+                            avatar={
+                                <Avatar
+                                    sx={{
+                                        width: 38,
+                                        height: 38,
+                                        fontSize: 15,
+                                        ...(person.active
+                                            ? avatarSx(1)
+                                            : {
+                                                  bgcolor: popupFg(0.15),
+                                                  color: POPUP_FG,
+                                              }),
+                                    }}
                                 >
-                                    {person.salary_this_month
-                                        ? t('Recorded')
-                                        : t('Not recorded yet')}
-                                </PersonDetail>
-                                {!person.active && (
-                                    <PersonDetail label={t('Status')}>
-                                        <span className="text-red-500">
-                                            {describe(person)}
-                                        </span>
-                                    </PersonDetail>
-                                )}
-
-                                <div className="mt-1 flex flex-col gap-2">
-                                    <Button
-                                        variant="contained"
-                                        startIcon={<PaymentsIcon />}
+                                    {getInitials(person.name)}
+                                </Avatar>
+                            }
+                            title={person.name}
+                            subtitle={`${
+                                person.is_owner
+                                    ? `${t('Owner')} · ${t('Admin')}`
+                                    : roleLabel(person.role)
+                            } · ${describe(person)}`}
+                            onClose={() => setPerson(null)}
+                        />
+                        <div className="grid grid-cols-2 gap-x-4 gap-y-3 px-[18px] pt-1 pb-4">
+                            <PersonDetail label={t('Email')} wide>
+                                <a
+                                    href={`mailto:${person.email}`}
+                                    className="text-hydra-blue dark:text-sky-300"
+                                >
+                                    {person.email}
+                                </a>
+                            </PersonDetail>
+                            <PersonDetail
+                                label={t('Salary for :month', { month })}
+                                wide
+                            >
+                                {person.salary_this_month
+                                    ? t('Recorded')
+                                    : t('Not recorded yet')}
+                            </PersonDetail>
+                        </div>
+                        <div className="flex flex-col px-2 pb-3">
+                            <CardAction
+                                tone="primary"
+                                icon={<PaymentsIcon fontSize="small" />}
+                                onClick={() => {
+                                    const member = person;
+                                    setPerson(null);
+                                    handleCoachClick(member);
+                                }}
+                            >
+                                {t('Salary history')}
+                            </CardAction>
+                            {/* The owner's details are changed only by the owner */}
+                            {(!person.is_owner || person.is_self) && (
+                                <CardAction
+                                    icon={<EditIcon fontSize="small" />}
+                                    onClick={() => {
+                                        const member = person;
+                                        setPerson(null);
+                                        handleEditOpen(member);
+                                    }}
+                                >
+                                    {t('Edit')}
+                                </CardAction>
+                            )}
+                            {!person.is_self &&
+                                !person.is_owner &&
+                                (person.active ? (
+                                    <CardAction
+                                        tone="danger"
+                                        icon={<BlockIcon fontSize="small" />}
                                         onClick={() => {
                                             const member = person;
                                             setPerson(null);
-                                            handleCoachClick(member);
+                                            setDeactivating(member);
                                         }}
                                     >
-                                        {t('Salary history')}
-                                    </Button>
-                                    {/* The owner's details are changed only by the owner */}
-                                    {(!person.is_owner || person.is_self) && (
-                                        <Button
-                                            variant="outlined"
-                                            startIcon={<EditIcon />}
+                                        {t('Deactivate')}
+                                    </CardAction>
+                                ) : (
+                                    <>
+                                        <CardAction
+                                            tone="primary"
+                                            icon={
+                                                <LockOpenIcon fontSize="small" />
+                                            }
                                             onClick={() => {
                                                 const member = person;
                                                 setPerson(null);
-                                                handleEditOpen(member);
+                                                setActive(member, true);
                                             }}
                                         >
-                                            {t('Edit')}
-                                        </Button>
-                                    )}
-                                    {!person.is_self &&
-                                        !person.is_owner &&
-                                        (person.active ? (
-                                            <Button
-                                                variant="outlined"
-                                                color="error"
-                                                startIcon={<BlockIcon />}
-                                                onClick={() => {
-                                                    const member = person;
-                                                    setPerson(null);
-                                                    setDeactivating(member);
-                                                }}
-                                            >
-                                                {t('Deactivate')}
-                                            </Button>
-                                        ) : (
-                                            <>
-                                                <Button
-                                                    variant="outlined"
-                                                    color="success"
-                                                    startIcon={<LockOpenIcon />}
-                                                    onClick={() => {
-                                                        const member = person;
-                                                        setPerson(null);
-                                                        setActive(member, true);
-                                                    }}
-                                                >
-                                                    {t('Activate')}
-                                                </Button>
-                                                <Button
-                                                    variant="contained"
-                                                    color="error"
-                                                    startIcon={<DeleteIcon />}
-                                                    onClick={() => {
-                                                        const member = person;
-                                                        setPerson(null);
-                                                        setDeleting(member);
-                                                    }}
-                                                >
-                                                    {t('Delete account')}
-                                                </Button>
-                                            </>
-                                        ))}
-                                </div>
-                            </div>
-                        </DialogContent>
+                                            {t('Activate')}
+                                        </CardAction>
+                                        <CardAction
+                                            tone="danger"
+                                            icon={<DeleteIcon fontSize="small" />}
+                                            onClick={() => {
+                                                const member = person;
+                                                setPerson(null);
+                                                setDeleting(member);
+                                            }}
+                                        >
+                                            {t('Delete account')}
+                                        </CardAction>
+                                    </>
+                                ))}
+                        </div>
                     </>
                 )}
             </Dialog>
@@ -1307,277 +1263,197 @@ export default function StaffIndex({ staff, invitations }: Props) {
                 </DialogContent>
             </Dialog>
 
-            {selectedCoach && (
-                <Dialog
-                    open={!!selectedCoach}
-                    onClose={() => setSelectedCoach(null)}
-                    fullWidth
-                    maxWidth="sm"
-                    PaperProps={{
-                        sx: { bgcolor: POPUP_BG },
-                    }}
-                >
-                    <DialogTitle sx={{ p: 0 }}>
-                        <PopupHeader
-                            icon={<PaymentsIcon fontSize="small" />}
-                            title={t('Salary history')}
-                            subtitle={selectedCoach.name}
-                            onClose={() => setSelectedCoach(null)}
-                        />
-                    </DialogTitle>
-
-                    <DialogContent sx={{ overflowY: 'auto' }}>
-                        <div className="flex flex-col gap-6 py-4">
-                            <Typography
-                                variant="caption"
-                                color="text.secondary"
-                                sx={{
-                                    textTransform: 'uppercase',
-                                    letterSpacing: 1,
-                                }}
-                            >
-                                {t('Payment History By Month')}
-                            </Typography>
-
-                            {loadingSalaries ? (
-                                <CardsSkeleton cards={1} />
-                            ) : currentYearLastSalary ? (
-                                <List disablePadding>
-                                    <ListItem
-                                        divider
-                                        sx={{
-                                            px: 0,
-                                            cursor: 'pointer',
-                                            display: 'flex',
-                                            flexDirection: 'column',
-                                            height: 'auto',
-                                            gap: 2,
-                                            paddingY: 1.5,
-                                            alignItems: 'center',
-                                            '&:hover': {
-                                                bgcolor: popupFg(0.05),
-                                            },
-                                        }}
-                                        onClick={() =>
-                                            setShowSalaryHistoryModal(true)
-                                        }
-                                    >
-                                        <div
-                                            style={{
-                                                display: 'flex',
-                                                justifyContent: 'center',
-                                                alignItems: 'center',
-                                                gap: '16px',
-                                            }}
-                                        >
-                                            <Typography variant="body2">
-                                                {dayjs(
-                                                    currentYearLastSalary.month,
-                                                ).format('MMMM YYYY')}
-                                            </Typography>
-                                            {currentYearSalaryMonths.length >
-                                                1 && (
-                                                <Typography
-                                                    variant="caption"
-                                                    color="primary"
-                                                >
-                                                    {tc(
-                                                        ':count month|:count months',
-                                                        currentYearSalaryMonths.length,
-                                                    )}
-                                                </Typography>
-                                            )}
-                                        </div>
-
-                                        <Chip
-                                            label={`${formatCurrency(currentYearLastSalary.total)} MKD`}
-                                            color="success"
-                                            size="small"
-                                        />
-                                        {/* Says plainly that the whole history opens from here */}
-                                        <ShowHistoryButton
-                                            label={t('View full history')}
-                                            onClick={() =>
-                                                setShowSalaryHistoryModal(true)
-                                            }
-                                        />
-                                    </ListItem>
-                                </List>
-                            ) : (
-                                <Typography
-                                    variant="body2"
-                                    color="text.secondary"
-                                >
-                                    {t(
-                                        'No salary payments recorded for :year.',
-                                        {
-                                            year: currentYear,
-                                        },
-                                    )}
-                                </Typography>
-                            )}
-
-                            <Divider />
-
-                            <Typography
-                                variant="caption"
-                                color="text.secondary"
-                                sx={{
-                                    textTransform: 'uppercase',
-                                    letterSpacing: 1,
-                                }}
-                            >
-                                {t('Payment History By Year')}
-                            </Typography>
-
-                            {loadingSalaries ? (
-                                <CardsSkeleton />
-                            ) : sortedSalaryYears.length > 0 ? (
-                                <List disablePadding>
-                                    {sortedSalaryYears.map((year) => (
-                                        <ListItem
-                                            key={year}
-                                            divider
-                                            sx={{
-                                                px: 0,
-                                                cursor: 'pointer',
-                                                display: 'flex',
-                                                flexDirection: 'column',
-                                                height: 'auto',
-                                                gap: 2,
-                                                paddingY: 1.5,
-                                                alignItems: 'center',
-                                                '&:hover': {
-                                                    bgcolor: popupFg(0.05),
-                                                },
-                                            }}
-                                            onClick={() => {
-                                                setSelectedSalaryYear(year);
-                                                setShowSalaryYearDetailModal(
-                                                    true,
-                                                );
-                                            }}
-                                        >
-                                            <div
-                                                style={{
-                                                    display: 'flex',
-                                                    justifyContent: 'center',
-                                                    alignItems: 'center',
-                                                    gap: '16px',
-                                                }}
-                                            >
-                                                <Typography variant="body2">
-                                                    {year}
-                                                </Typography>
-                                                <Typography
-                                                    variant="caption"
-                                                    color="primary"
-                                                >
-                                                    {tc(
-                                                        ':count month|:count months',
-                                                        salaryYearGroups[year]
-                                                            .monthCount,
-                                                    )}
-                                                </Typography>
-                                            </div>
-
-                                            <Chip
-                                                label={`${formatCurrency(
-                                                    salaryYearGroups[year]
-                                                        .total,
-                                                )} MKD`}
-                                                color="success"
-                                                size="small"
-                                            />
-                                            {/* Says plainly that the whole history opens from here */}
-                                            <ShowHistoryButton
-                                                label={t('View months')}
-                                                onClick={() => {
-                                                    setSelectedSalaryYear(year);
-                                                    setShowSalaryYearDetailModal(
-                                                        true,
-                                                    );
-                                                }}
-                                            />
-                                        </ListItem>
-                                    ))}
-                                </List>
-                            ) : (
-                                <Typography
-                                    variant="body2"
-                                    color="text.secondary"
-                                >
-                                    {t('No past-year payment history yet.')}
-                                </Typography>
-                            )}
-                        </div>
-                    </DialogContent>
-                </Dialog>
-            )}
-
+            {/* A person's salaries: like a member's payment history */}
             <Dialog
-                open={showSalaryHistoryModal}
-                onClose={() => setShowSalaryHistoryModal(false)}
-                fullWidth
-                maxWidth="sm"
-                PaperProps={{
-                    sx: { bgcolor: POPUP_BG },
-                }}
-            >
-                <DialogTitle sx={{ p: 0 }}>
-                    <div className="flex items-center justify-between px-4 py-3">
-                        <Typography variant="h6" fontWeight="bold">
-                            {t('Payment History By Month — :name', {
-                                name: selectedCoach?.name ?? '',
-                            })}
-                        </Typography>
-                        <CloseButton
-                            onClick={() => setShowSalaryHistoryModal(false)}
-                        />
-                    </div>
-                    <Divider />
-                </DialogTitle>
-
-                <DialogContent sx={{ p: 0 }}>
-                    {salaryRows(currentYearSalaryMonths)}
-                </DialogContent>
-            </Dialog>
-
-            <Dialog
-                open={showSalaryYearDetailModal}
-                onClose={() => {
-                    setShowSalaryYearDetailModal(false);
-                    setSelectedSalaryYear(null);
-                }}
+                open={!!selectedCoach}
+                onClose={() => setSelectedCoach(null)}
                 disableRestoreFocus
                 fullWidth
                 maxWidth="sm"
-                PaperProps={{
-                    sx: { bgcolor: POPUP_BG },
-                }}
+                PaperProps={{ sx: { bgcolor: POPUP_BG } }}
             >
-                <DialogTitle sx={{ p: 0 }}>
-                    <div className="flex items-center justify-between px-4 py-3">
-                        <Typography variant="h6" fontWeight="bold">
-                            {t('Payment History - :year — :name', {
-                                year: selectedSalaryYear ?? '',
-                                name: selectedCoach?.name ?? '',
-                            })}
-                        </Typography>
-                        <CloseButton
-                            onClick={() => {
-                                setShowSalaryYearDetailModal(false);
-                                setSelectedSalaryYear(null);
-                            }}
-                        />
-                    </div>
-                    <Divider />
-                </DialogTitle>
+                <PopupHeader
+                    icon={<PaymentsIcon fontSize="small" />}
+                    title={t('Salary history')}
+                    subtitle={
+                        selectedCoach
+                            ? `${selectedCoach.name} · ${roleLabel(selectedCoach.role)}`
+                            : ''
+                    }
+                    actions={
+                        selectedCoach?.active && (
+                            <AddButton
+                                label={t('Enter salary')}
+                                icon={<AddIcon fontSize="small" />}
+                                onClick={() =>
+                                    selectedCoach &&
+                                    openSalaryEntry(selectedCoach.id)
+                                }
+                            />
+                        )
+                    }
+                    onClose={() => setSelectedCoach(null)}
+                />
 
                 <DialogContent sx={{ p: 0 }}>
-                    {salaryRows(salaryYearMonths)}
+                    {loadingSalaries ? (
+                        <div className="px-[18px] pb-4">
+                            <CardsSkeleton cards={2} />
+                        </div>
+                    ) : salaries.length === 0 ? (
+                        <EmptyState
+                            icon={<PaymentsIcon />}
+                            title={t('No salaries entered yet')}
+                            text={t('They show up here once the first is entered.')}
+                        />
+                    ) : (
+                        <>
+                            <SummaryCard
+                                tone="blue"
+                                title={t('Last salary: :month', {
+                                    month: dayjs(salaries[0].month).format(
+                                        'MMMM YYYY',
+                                    ),
+                                })}
+                            >
+                                {salaryYears[0][0]}:{' '}
+                                {tc(
+                                    ':count salary|:count salaries',
+                                    salaryYears[0][1].length,
+                                )}{' '}
+                                ·{' '}
+                                {formatCurrency(
+                                    salaryYears[0][1].reduce(
+                                        (sum, salary) =>
+                                            sum + Number(salary.amount),
+                                        0,
+                                    ),
+                                )}{' '}
+                                MKD
+                            </SummaryCard>
+                            <ul className="border-t border-[var(--popup-border)]">
+                                {salaryYears.map(
+                                    ([year, yearSalaries], index) => (
+                                        <YearSection
+                                            key={year}
+                                            year={year}
+                                            summary={`${tc(':count salary|:count salaries', yearSalaries.length)} · ${formatCurrency(
+                                                yearSalaries.reduce(
+                                                    (sum, salary) =>
+                                                        sum +
+                                                        Number(salary.amount),
+                                                    0,
+                                                ),
+                                            )} MKD`}
+                                            defaultOpen={index === 0}
+                                        >
+                                            {yearSalaries.map((salary) => (
+                                                <li
+                                                    key={salary.id}
+                                                    className="border-b border-[var(--popup-border)]"
+                                                >
+                                                    <button
+                                                        type="button"
+                                                        onClick={() =>
+                                                            setSalaryActions(
+                                                                salary,
+                                                            )
+                                                        }
+                                                        className="flex w-full cursor-pointer items-center gap-3 px-[18px] py-3 text-left transition hover:bg-[var(--popup-ghost)]"
+                                                    >
+                                                        <span className="min-w-0 flex-1">
+                                                            <span className="block text-[15px] font-semibold text-[var(--popup-fg)] capitalize">
+                                                                {dayjs(
+                                                                    salary.month,
+                                                                ).format(
+                                                                    'MMMM YYYY',
+                                                                )}
+                                                            </span>
+                                                            {salary.created_at && (
+                                                                <span className="block text-[13px] text-[var(--popup-muted)]">
+                                                                    {t(
+                                                                        'Entered on :date',
+                                                                        {
+                                                                            date: dayjs(
+                                                                                salary.created_at,
+                                                                            ).format(
+                                                                                'DD.MM.YYYY',
+                                                                            ),
+                                                                        },
+                                                                    )}
+                                                                </span>
+                                                            )}
+                                                        </span>
+                                                        <span className="flex-none text-[15px] font-bold whitespace-nowrap text-green-600 dark:text-green-400">
+                                                            {formatCurrency(
+                                                                Number(
+                                                                    salary.amount,
+                                                                ),
+                                                            )}{' '}
+                                                            MKD
+                                                        </span>
+                                                        <MoreVertIcon
+                                                            fontSize="small"
+                                                            className="flex-none text-[var(--popup-muted)]"
+                                                        />
+                                                    </button>
+                                                </li>
+                                            ))}
+                                        </YearSection>
+                                    ),
+                                )}
+                            </ul>
+                        </>
+                    )}
                 </DialogContent>
             </Dialog>
+
+            {/* One salary's actions: edit, delete */}
+            <ActionMenu
+                open={!!salaryActions}
+                title={
+                    salaryActions
+                        ? `${dayjs(salaryActions.month).format('MMMM YYYY')} · ${formatCurrency(Number(salaryActions.amount))} MKD`
+                        : ''
+                }
+                subtitle={selectedCoach?.name}
+                onClose={() => setSalaryActions(null)}
+                actions={[
+                    {
+                        label: t('Edit salary'),
+                        icon: <EditIcon fontSize="small" />,
+                        onClick: () =>
+                            salaryActions && openSalaryEdit(salaryActions),
+                    },
+                    {
+                        label: t('Delete salary'),
+                        icon: <DeleteIcon fontSize="small" />,
+                        tone: 'danger',
+                        onClick: () => setDeletingSalary(salaryActions),
+                    },
+                ]}
+            />
+
+            <ConfirmDialog
+                open={!!deletingSalary}
+                icon={<DeleteIcon fontSize="small" />}
+                title={t('Delete salary?')}
+                subtitle={
+                    deletingSalary
+                        ? `${selectedCoach?.name ?? ''} · ${dayjs(deletingSalary.month).format('MMMM YYYY')}`
+                        : undefined
+                }
+                confirmLabel={t('Delete')}
+                busy={salaryBusy}
+                onConfirm={deleteSalary}
+                onClose={() => setDeletingSalary(null)}
+            >
+                <p>
+                    {t(
+                        'Only for a salary entered by mistake: profit will no longer count it.',
+                    )}
+                </p>
+            </ConfirmDialog>
 
             {/* Correct a salary (amount or month), or delete it */}
             <Dialog
@@ -1592,46 +1468,16 @@ export default function StaffIndex({ staff, invitations }: Props) {
                     <PopupHeader
                         icon={<EditIcon fontSize="small" />}
                         title={t('Edit salary')}
-                        subtitle={selectedCoach?.name}
+                        subtitle={
+                            editingSalary
+                                ? `${selectedCoach?.name ?? ''} · ${dayjs(editingSalary.month).format('MMMM YYYY')}`
+                                : selectedCoach?.name
+                        }
                         onClose={() => setEditingSalary(null)}
                     />
                 </DialogTitle>
                 {editingSalary && (
                     <DialogContent sx={{ px: 2.25, pt: 0.5 }}>
-                        {editingSalary.confirmingDelete ? (
-                            <div className="flex flex-col gap-4 pt-3 pb-2">
-                                <p className="text-sm text-[var(--popup-fg)]">
-                                    {t(
-                                        'Are you sure you want to delete this salary?',
-                                    )}
-                                </p>
-                                <div className="flex gap-3">
-                                    <Button
-                                        variant="outlined"
-                                        fullWidth
-                                        disabled={editingSalary.saving}
-                                        onClick={() =>
-                                            setEditingSalary({
-                                                ...editingSalary,
-                                                confirmingDelete: false,
-                                            })
-                                        }
-                                    >
-                                        {t('Cancel')}
-                                    </Button>
-                                    <Button
-                                        variant="contained"
-                                        color="error"
-                                        fullWidth
-                                        startIcon={<DeleteIcon />}
-                                        disabled={editingSalary.saving}
-                                        onClick={deleteSalary}
-                                    >
-                                        {t('Delete')}
-                                    </Button>
-                                </div>
-                            </div>
-                        ) : (
                             <form
                                 onSubmit={saveSalaryEdit}
                                 // Room above the first field for its floating label
@@ -1699,108 +1545,49 @@ export default function StaffIndex({ staff, invitations }: Props) {
                                         {t('Save')}
                                     </Button>
                                 </div>
-                                <Button
-                                    type="button"
-                                    color="error"
-                                    startIcon={<DeleteIcon />}
-                                    onClick={() =>
-                                        setEditingSalary({
-                                            ...editingSalary,
-                                            confirmingDelete: true,
-                                        })
-                                    }
-                                >
-                                    {t('Delete this salary')}
-                                </Button>
                             </form>
-                        )}
                     </DialogContent>
                 )}
             </Dialog>
 
             {/* Asks before taking away someone's login */}
-            <Dialog
+            <ConfirmDialog
                 open={!!deactivating}
+                icon={<BlockIcon fontSize="small" />}
+                title={t('Deactivate?')}
+                subtitle={
+                    deactivating
+                        ? `${deactivating.name} · ${roleLabel(deactivating.role)}`
+                        : undefined
+                }
+                confirmLabel={t('Deactivate')}
+                onConfirm={() => deactivating && setActive(deactivating, false)}
                 onClose={() => setDeactivating(null)}
-                maxWidth="xs"
-                fullWidth
-                PaperProps={{ sx: { bgcolor: POPUP_BG } }}
             >
-                <div className="flex flex-col gap-4 p-6">
-                    <Typography variant="h6" fontWeight="bold">
-                        {t('Deactivate :name?', {
-                            name: deactivating?.name ?? '',
-                        })}
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary">
-                        {t(
-                            "They won't be able to log in until you activate them again, and they are logged out now. Their trainings, salaries and history stay.",
-                        )}
-                    </Typography>
-                    <div className="flex gap-3">
-                        <Button
-                            variant="outlined"
-                            fullWidth
-                            onClick={() => setDeactivating(null)}
-                        >
-                            {t('Cancel')}
-                        </Button>
-                        <Button
-                            variant="contained"
-                            color="error"
-                            fullWidth
-                            startIcon={<BlockIcon />}
-                            onClick={() =>
-                                deactivating && setActive(deactivating, false)
-                            }
-                        >
-                            {t('Deactivate')}
-                        </Button>
-                    </div>
-                </div>
-            </Dialog>
+                <p>
+                    {t(
+                        "They won't be able to log in until you activate them again, and they are logged out now. Their trainings, salaries and history stay.",
+                    )}
+                </p>
+            </ConfirmDialog>
 
             {/* Asks before deleting a deactivated account (only the account goes) */}
-            <Dialog
+            <ConfirmDialog
                 open={!!deleting}
-                onClose={() => !deleteBusy && setDeleting(null)}
-                maxWidth="xs"
-                fullWidth
-                PaperProps={{ sx: { bgcolor: POPUP_BG } }}
+                icon={<DeleteIcon fontSize="small" />}
+                title={t('Delete account?')}
+                subtitle={deleting?.name}
+                confirmLabel={t('Delete')}
+                busy={deleteBusy}
+                onConfirm={() => deleting && deleteAccount(deleting)}
+                onClose={() => setDeleting(null)}
             >
-                <div className="flex flex-col gap-4 p-6">
-                    <Typography variant="h6" fontWeight="bold">
-                        {t('Delete the account of :name?', {
-                            name: deleting?.name ?? '',
-                        })}
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary">
-                        {t(
-                            'They are removed from the team list. Their trainings, attendance and salaries stay in the history and the finances, unchanged.',
-                        )}
-                    </Typography>
-                    <div className="flex gap-3">
-                        <Button
-                            variant="outlined"
-                            fullWidth
-                            disabled={deleteBusy}
-                            onClick={() => setDeleting(null)}
-                        >
-                            {t('Cancel')}
-                        </Button>
-                        <Button
-                            variant="contained"
-                            color="error"
-                            fullWidth
-                            startIcon={<DeleteIcon />}
-                            disabled={deleteBusy}
-                            onClick={() => deleting && deleteAccount(deleting)}
-                        >
-                            {t('Delete')}
-                        </Button>
-                    </div>
-                </div>
-            </Dialog>
+                <p>
+                    {t(
+                        'They are removed from the team list. Their trainings, attendance and salaries stay in the history and the finances, unchanged.',
+                    )}
+                </p>
+            </ConfirmDialog>
 
             {/* Enter salary: pick the person, the amount and the month */}
             <Dialog
@@ -2182,16 +1969,51 @@ function ShortLabel({ short, full }: { short: string; full: string }) {
 /** A label with its value under it, on a person's card. */
 function PersonDetail({
     label,
+    wide = false,
     children,
 }: {
     label: string;
+    wide?: boolean;
     children: ReactNode;
 }) {
     return (
-        <div>
+        <div className={`min-w-0 ${wide ? 'col-span-2' : ''}`}>
             <p className="text-xs text-[var(--popup-muted)]">{label}</p>
-            <p className="text-[15px] text-[var(--popup-fg)]">{children}</p>
+            <p className="truncate text-[15px] font-semibold text-[var(--popup-fg)]">
+                {children}
+            </p>
         </div>
+    );
+}
+
+/** One action of a card, 48px high: the main one blue, the dangerous one red. */
+function CardAction({
+    icon,
+    tone = 'default',
+    onClick,
+    children,
+}: {
+    icon: ReactNode;
+    tone?: 'primary' | 'default' | 'danger';
+    onClick: () => void;
+    children: ReactNode;
+}) {
+    const color = {
+        primary:
+            'text-hydra-blue hover:bg-[var(--popup-ghost)] dark:text-sky-300',
+        default: 'text-[var(--popup-fg)] hover:bg-[var(--popup-ghost)]',
+        danger: 'text-red-500 hover:bg-red-500/10',
+    }[tone];
+
+    return (
+        <button
+            type="button"
+            onClick={onClick}
+            className={`flex min-h-12 cursor-pointer items-center gap-3 rounded-xl border-t border-[var(--popup-border)] px-3 text-left font-semibold ${color}`}
+        >
+            {icon}
+            {children}
+        </button>
     );
 }
 

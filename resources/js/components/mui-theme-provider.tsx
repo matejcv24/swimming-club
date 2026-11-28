@@ -55,6 +55,14 @@ const components: Components<Theme> = {
         defaultProps: { disableElevation: true },
         styleOverrides: {
             root: { borderRadius: 999, textTransform: 'none', fontWeight: 700 },
+            // Every full-size button: one height (44px), 15px text on one line
+            sizeMedium: {
+                minHeight: 44,
+                fontSize: 15,
+                lineHeight: 1.2,
+                whiteSpace: 'nowrap',
+            },
+            outlined: { borderWidth: 1.5, '&:hover': { borderWidth: 1.5 } },
         },
     },
     // Edit, delete, add...: soft round buttons

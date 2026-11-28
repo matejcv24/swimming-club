@@ -1,6 +1,7 @@
 import { Head, router } from '@inertiajs/react';
 import DeleteIcon from '@mui/icons-material/Delete';
 import NotificationsIcon from '@mui/icons-material/Notifications';
+import NotificationsNoneIcon from '@mui/icons-material/NotificationsNone';
 import Button from '@mui/material/Button';
 import Dialog from '@mui/material/Dialog';
 import DialogContent from '@mui/material/DialogContent';
@@ -10,9 +11,16 @@ import { useState } from 'react';
 import { DashboardBackground } from '@/components/dashboard-background';
 import { MuiThemeProvider, POPUP_BG } from '@/components/mui-theme-provider';
 import { NotificationIcon } from '@/components/notification-icon';
-import { IconBadge, PopupHeader } from '@/components/popup-ui';
+import {
+    ConfirmDialog,
+    EmptyState,
+    IconBadge,
+    Note,
+    PopupHeader,
+} from '@/components/popup-ui';
 import { usePagePopup } from '@/hooks/use-page-popup';
-import { t } from '@/lib/i18n';
+import { t, tc } from '@/lib/i18n';
+import { showToast } from '@/lib/toast';
 import type { AppNotification } from '@/types';
 
 type Props = {
@@ -56,7 +64,10 @@ export default function NotificationsIndex({ items }: Props) {
         router.delete('/notifications', {
             preserveScroll: true,
             preserveState: true,
-            onSuccess: () => setConfirmAll(false),
+            onSuccess: () => {
+                setConfirmAll(false);
+                showToast(t('The notifications were deleted'), 'deleted');
+            },
             onFinish: () => setBusy(false),
         });
     };
@@ -93,9 +104,13 @@ export default function NotificationsIndex({ items }: Props) {
 
                 <DialogContent sx={{ p: 0, overflowY: 'auto', flex: 1 }}>
                     {items.length === 0 ? (
-                        <p className="mt-12 text-center text-sm text-[var(--popup-muted)]">
-                            {t('You have not received any notifications yet.')}
-                        </p>
+                        <EmptyState
+                            icon={<NotificationsNoneIcon />}
+                            title={t('No notifications')}
+                            text={t(
+                                'You have not received any notifications yet.',
+                            )}
+                        />
                     ) : (
                         <ul className="divide-y divide-[var(--popup-border)] px-2 pb-2">
                             {items.map((notification) => {
@@ -181,49 +196,21 @@ export default function NotificationsIndex({ items }: Props) {
             </Dialog>
 
             {/* "Delete all": asked once, it can't be undone */}
-            <Dialog
+            <ConfirmDialog
                 open={confirmAll}
+                icon={<DeleteIcon fontSize="small" />}
+                title={t('Delete all notifications?')}
+                subtitle={tc(
+                    ':count notification|:count notifications',
+                    items.length,
+                )}
+                confirmLabel={t('Delete all')}
+                busy={busy}
+                onConfirm={removeAll}
                 onClose={() => setConfirmAll(false)}
-                disableRestoreFocus
-                fullWidth
-                maxWidth="xs"
-                PaperProps={{ sx: { bgcolor: POPUP_BG } }}
             >
-                <DialogTitle sx={{ p: 0 }}>
-                    <PopupHeader
-                        icon={<DeleteIcon fontSize="small" />}
-                        title={t('Delete all notifications?')}
-                        onClose={() => setConfirmAll(false)}
-                    />
-                </DialogTitle>
-                <DialogContent sx={{ px: 2.25, pt: 0.5 }}>
-                    <p className="pb-4 text-sm text-[var(--popup-muted)]">
-                        {t(
-                            'All :count notifications will be deleted. This cannot be undone.',
-                            { count: items.length },
-                        )}
-                    </p>
-                    <div className="flex gap-3 pb-2">
-                        <Button
-                            variant="outlined"
-                            fullWidth
-                            onClick={() => setConfirmAll(false)}
-                            disabled={busy}
-                        >
-                            {t('Cancel')}
-                        </Button>
-                        <Button
-                            variant="contained"
-                            color="error"
-                            fullWidth
-                            onClick={removeAll}
-                            disabled={busy}
-                        >
-                            {t('Delete all')}
-                        </Button>
-                    </div>
-                </DialogContent>
-            </Dialog>
+                <Note tone="error">{t('This cannot be undone.')}</Note>
+            </ConfirmDialog>
         </MuiThemeProvider>
     );
 }

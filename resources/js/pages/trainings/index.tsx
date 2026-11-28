@@ -6,7 +6,6 @@ import EditIcon from '@mui/icons-material/Edit';
 import EventAvailableIcon from '@mui/icons-material/EventAvailable';
 import PersonAddAlt1Icon from '@mui/icons-material/PersonAddAlt1';
 import TouchAppIcon from '@mui/icons-material/TouchApp';
-import WarningAmberIcon from '@mui/icons-material/WarningAmber';
 import Avatar from '@mui/material/Avatar';
 import AvatarGroup from '@mui/material/AvatarGroup';
 import Button from '@mui/material/Button';
@@ -47,8 +46,11 @@ import {
 import {
     avatarSx,
     IconBadge,
+    Note,
     PillSearchField,
     PopupHeader,
+    SectionLabel,
+    Tile,
 } from '@/components/popup-ui';
 import { ListSkeleton } from '@/components/skeletons';
 import { usePagePopup } from '@/hooks/use-page-popup';
@@ -296,7 +298,6 @@ export default function TrainingsIndex({
         null,
     );
     // Adding attendance on a group's overview: a subgroup must be picked first
-    const [showPickSubgroup, setShowPickSubgroup] = useState(false);
     // Editing from the "All" overview: a group (or subgroup) is picked first
     const [showPickTarget, setShowPickTarget] = useState(false);
     // The group (or subgroup) picked on an overview to edit. The chosen view
@@ -602,26 +603,14 @@ export default function TrainingsIndex({
         );
     };
 
-    // The overview's edit button: that group's (or subgroup's) day, ready to tick
-    // What attendance is recorded for: each group without subgroups, and each
-    // subgroup of the others
-    const editTargets = groups.flatMap((group) =>
-        group.subgroups.length === 0
-            ? [
-                  {
-                      key: `g${group.id}`,
-                      label: group.name,
-                      groupId: group.id,
-                      subgroupId: null as number | null,
-                  },
-              ]
-            : group.subgroups.map((subgroup) => ({
-                  key: `s${subgroup.id}`,
-                  label: `${group.name} · ${subgroup.name}`,
-                  groupId: group.id,
-                  subgroupId: subgroup.id as number | null,
-              })),
-    );
+    // "5 present" or "Not entered" under a time slot's tile
+    const slotStatus = (groupId: number, subgroupId: number | null) => {
+        const count = recordedCount(groupId, subgroupId);
+
+        return count > 0
+            ? tc(':count present|:count present', count)
+            : t('Not entered');
+    };
 
     // How many came to a target's training on the open day (from the overview)
     const recordedCount = (groupId: number, subgroupId: number | null) =>
@@ -677,32 +666,10 @@ export default function TrainingsIndex({
 
         if (open && open.group_id !== null && sectionExists(open)) {
             void pickTargetAndEdit(open.group_id, open.subgroup_id);
-        } else if (showAll) {
-            setShowPickTarget(true);
         } else {
-            setShowPickSubgroup(true);
+            // One window for both: every group, or only the one chosen above
+            setShowPickTarget(true);
         }
-    };
-
-    // From the "pick a subgroup" warning: open that subgroup's day, ready to tick
-    const pickSubgroupAndAdd = async (subgroupId: number) => {
-        if (!selectedDate || activeGroupId === null) {
-            return;
-        }
-
-        setShowPickSubgroup(false);
-        setReturnTo(
-            overview
-                ? {
-                      overviewGroupId: showAll ? null : activeGroupId,
-                      overview,
-                      openSection,
-                  }
-                : null,
-        );
-        setEditTarget({ groupId: activeGroupId, subgroupId });
-        await loadAttendance(selectedDate, activeGroupId, subgroupId, false);
-        setEditMode(true);
     };
 
     // Leave edit mode without saving: back to what is recorded for the day
@@ -793,7 +760,7 @@ export default function TrainingsIndex({
                         icon={<CalendarMonthIcon fontSize="small" />}
                         title={t('Trainings')}
                         subtitle={t(
-                            'Pick a group and a day to see who trained',
+                            'Group and day',
                         )}
                         onClose={popup.close}
                     />
@@ -1455,108 +1422,86 @@ export default function TrainingsIndex({
                 )}
             </Dialog>
 
-            {/* Attendance is recorded per subgroup */}
-            <Dialog
-                open={showPickSubgroup}
-                onClose={() => setShowPickSubgroup(false)}
-                maxWidth="xs"
-                fullWidth
-                PaperProps={{ sx: { bgcolor: POPUP_BG } }}
-            >
-                <div className="flex flex-col items-center gap-4 p-6 text-center">
-                    <IconBadge>
-                        <WarningAmberIcon fontSize="small" />
-                    </IconBadge>
-                    <p className="text-base font-bold text-[var(--popup-fg)]">
-                        {t(
-                            'Please select a subgroup so you can enter attendance.',
-                        )}
-                    </p>
-                    {/* Pick it right here and go on adding that subgroup's attendance */}
-                    <ToggleButtonGroup
-                        exclusive
-                        fullWidth
-                        size="small"
-                        value={null}
-                        onChange={(_, value: number | null) => {
-                            if (value !== null) {
-                                void pickSubgroupAndAdd(value);
-                            }
-                        }}
-                        sx={SEGMENT_SX}
-                    >
-                        {subgroups.map((subgroup) => (
-                            <ToggleButton key={subgroup.id} value={subgroup.id}>
-                                {subgroup.name}
-                            </ToggleButton>
-                        ))}
-                    </ToggleButtonGroup>
-                    <Button
-                        variant="outlined"
-                        fullWidth
-                        onClick={() => setShowPickSubgroup(false)}
-                    >
-                        {t('Cancel')}
-                    </Button>
-                </div>
-            </Dialog>
-
-            {/* "All": which group's (or subgroup's) attendance to edit */}
+            {/* Which group's (or time slot's) attendance: one window, tiles */}
             <Dialog
                 open={showPickTarget}
                 onClose={() => setShowPickTarget(false)}
-                maxWidth="xs"
+                disableRestoreFocus
                 fullWidth
+                maxWidth="xs"
                 PaperProps={{ sx: { bgcolor: POPUP_BG } }}
             >
-                <div className="flex flex-col gap-4 p-5">
-                    <div className="flex items-center gap-3">
-                        <IconBadge>
-                            <EditIcon fontSize="small" />
-                        </IconBadge>
-                        <div className="min-w-0 flex-1">
-                            <p className="text-base font-bold text-[var(--popup-fg)]">
-                                {t('Which group?')}
-                            </p>
-                            <p className="text-sm text-[var(--popup-muted)]">
-                                {selectedDate?.format('DD.MM.YYYY')}
-                            </p>
-                        </div>
-                    </div>
-                    <div className="flex flex-col gap-2">
-                        {editTargets.map((target) => {
-                            const count = recordedCount(
-                                target.groupId,
-                                target.subgroupId,
-                            );
-
-                            return (
-                                <button
-                                    key={target.key}
-                                    type="button"
-                                    onClick={() =>
-                                        void pickTargetAndEdit(
-                                            target.groupId,
-                                            target.subgroupId,
-                                        )
-                                    }
-                                    className="flex min-h-12 cursor-pointer items-center justify-between gap-3 rounded-xl border border-[var(--popup-border)] px-4 py-3 text-left font-semibold text-[var(--popup-fg)] transition hover:border-hydra-blue hover:bg-hydra-blue/10"
-                                >
-                                    <span className="min-w-0 truncate">
-                                        {target.label}
-                                    </span>
-                                    {count > 0 && <CountPill count={count} />}
-                                </button>
-                            );
-                        })}
-                    </div>
-                    <Button
-                        variant="outlined"
-                        fullWidth
-                        onClick={() => setShowPickTarget(false)}
-                    >
-                        {t('Cancel')}
-                    </Button>
+                <PopupHeader
+                    icon={<CalendarMonthIcon fontSize="small" />}
+                    title={t('Which group?')}
+                    subtitle={`${selectedDate?.format('DD.MM.YYYY') ?? ''} · ${t('enter attendance')}`}
+                    onClose={() => setShowPickTarget(false)}
+                />
+                <Note tone="info" className="mx-[18px] mb-3">
+                    {t('Attendance is entered separately for each time slot.')}
+                </Note>
+                <div className="max-h-[60vh] overflow-y-auto pb-3">
+                    {groups
+                        .filter(
+                            (group) => showAll || group.id === activeGroupId,
+                        )
+                        .map((group) => (
+                            <section
+                                key={group.id}
+                                className="border-t border-[var(--popup-border)] px-[18px] pt-3 pb-3.5"
+                            >
+                                <div className="mb-2.5">
+                                    <SectionLabel>{group.name}</SectionLabel>
+                                </div>
+                                <div className="grid grid-cols-2 gap-2.5">
+                                    {group.subgroups.length === 0 ? (
+                                        <Tile
+                                            wide
+                                            name={t('Whole group')}
+                                            status={slotStatus(group.id, null)}
+                                            statusTone={
+                                                recordedCount(group.id, null) >
+                                                0
+                                                    ? 'green'
+                                                    : 'muted'
+                                            }
+                                            onClick={() =>
+                                                void pickTargetAndEdit(
+                                                    group.id,
+                                                    null,
+                                                )
+                                            }
+                                        />
+                                    ) : (
+                                        group.subgroups.map((subgroup) => (
+                                            <Tile
+                                                key={subgroup.id}
+                                                label={t('Time slot')}
+                                                name={subgroup.name}
+                                                status={slotStatus(
+                                                    group.id,
+                                                    subgroup.id,
+                                                )}
+                                                statusTone={
+                                                    recordedCount(
+                                                        group.id,
+                                                        subgroup.id,
+                                                    ) > 0
+                                                        ? 'green'
+                                                        : 'muted'
+                                                }
+                                                onClick={() =>
+                                                    void pickTargetAndEdit(
+                                                        group.id,
+                                                        subgroup.id,
+                                                    )
+                                                }
+                                            />
+                                        ))
+                                    )}
+                                </div>
+                            </section>
+                        ))}
                 </div>
             </Dialog>
 

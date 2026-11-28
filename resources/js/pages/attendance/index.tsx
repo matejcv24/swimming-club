@@ -1,23 +1,17 @@
 import { Head } from '@inertiajs/react';
 import AssignmentTurnedInIcon from '@mui/icons-material/AssignmentTurnedIn';
+import CalendarMonthIcon from '@mui/icons-material/CalendarMonth';
+import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import Avatar from '@mui/material/Avatar';
-import Chip from '@mui/material/Chip';
 import Dialog from '@mui/material/Dialog';
 import DialogContent from '@mui/material/DialogContent';
 import DialogTitle from '@mui/material/DialogTitle';
-import Divider from '@mui/material/Divider';
 import FormControl from '@mui/material/FormControl';
 import InputLabel from '@mui/material/InputLabel';
-import List from '@mui/material/List';
-import ListItem from '@mui/material/ListItem';
-import ListItemAvatar from '@mui/material/ListItemAvatar';
-import ListItemButton from '@mui/material/ListItemButton';
-import ListItemText from '@mui/material/ListItemText';
 import MenuItem from '@mui/material/MenuItem';
 import Select from '@mui/material/Select';
-import Typography from '@mui/material/Typography';
 import dayjs from 'dayjs';
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { DashboardBackground } from '@/components/dashboard-background';
 import {
     MuiThemeProvider,
@@ -26,14 +20,17 @@ import {
     popupFg,
 } from '@/components/mui-theme-provider';
 import {
-    CloseButton,
+    avatarSx,
+    DrillRow,
+    EmptyState,
     PillSearchField,
     PopupHeader,
-    ShowHistoryButton,
+    SummaryCard,
+    YearSection,
 } from '@/components/popup-ui';
 import { CardsSkeleton } from '@/components/skeletons';
 import { usePagePopup } from '@/hooks/use-page-popup';
-import { groupNameOf, useGroups } from '@/lib/groups';
+import { groupNameOf, groupWithSubgroupName, useGroups } from '@/lib/groups';
 import { t, tc } from '@/lib/i18n';
 
 interface Member {
@@ -47,18 +44,14 @@ interface Member {
 interface AttendanceRow {
     id: number;
     date: string;
+    group_id: number | null;
+    subgroup_id: number | null;
 }
 
 interface Props {
     userRole: 'admin' | 'coach';
     members: Member[];
 }
-
-const chipSx = {
-    minWidth: '180px',
-    display: 'flex',
-    justifyContent: 'center',
-};
 
 export default function AttendanceIndex({ members }: Props) {
     // Fades in and out over the dashboard
@@ -77,10 +70,6 @@ export default function AttendanceIndex({ members }: Props) {
               : groups[0].id;
     const [selectedMember, setSelectedMember] = useState<Member | null>(null);
     const [showMemberHistoryModal, setShowMemberHistoryModal] = useState(false);
-    const [showYearDetailModal, setShowYearDetailModal] = useState(false);
-    const [selectedYear, setSelectedYear] = useState<string | null>(null);
-    const [showCurrentYearMonthsModal, setShowCurrentYearMonthsModal] =
-        useState(false);
     const [showMonthDatesModal, setShowMonthDatesModal] = useState(false);
     const [selectedMonth, setSelectedMonth] = useState<string | null>(null);
     const [attendanceSearch, setAttendanceSearch] = useState('');
@@ -169,9 +158,6 @@ export default function AttendanceIndex({ members }: Props) {
 
     const sortedMonths = Object.keys(groupedByMonth).sort().reverse();
     const currentYear = dayjs().format('YYYY');
-    const currentYearMonths = sortedMonths.filter(
-        (month) => dayjs(month).format('YYYY') === currentYear,
-    );
     const currentMonthKey = dayjs().startOf('month').format('YYYY-MM-DD');
     const currentMonthData = groupedByMonth[currentMonthKey] ?? null;
 
@@ -195,16 +181,38 @@ export default function AttendanceIndex({ members }: Props) {
         yearGroups[year].monthCount += 1;
     });
 
-    const sortedYears = Object.keys(yearGroups)
-        .filter((year) => year !== currentYear || !currentMonthData)
-        .sort()
-        .reverse();
+    // Newest year first; only the newest starts open
+    const allYears = Object.keys(yearGroups).sort().reverse();
 
-    const yearMonths = selectedYear
-        ? sortedMonths.filter(
-              (month) => dayjs(month).format('YYYY') === selectedYear,
-          )
-        : [];
+    // The last training of a month (its rows are newest first)
+    const lastDateOf = (month: string) =>
+        memberAttendanceRows.find(
+            (row) =>
+                dayjs(row.date).startOf('month').format('YYYY-MM-DD') === month,
+        )?.date;
+
+    const closeHistory = () => {
+        setShowMemberHistoryModal(false);
+        setSelectedMember(null);
+    };
+
+    const closeMonth = () => {
+        setShowMonthDatesModal(false);
+        setSelectedMonth(null);
+    };
+
+    // From a member's card: their attendance right away
+    useEffect(() => {
+        const memberId = Number(
+            new URLSearchParams(window.location.search).get('member'),
+        );
+        const member = members.find((item) => item.id === memberId);
+
+        if (member) {
+            queueMicrotask(() => void openHistory(member));
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
 
     const getInitials = (name: string) =>
         name
@@ -297,498 +305,202 @@ export default function AttendanceIndex({ members }: Props) {
                 </DialogTitle>
 
                 <DialogContent sx={{ p: 0, overflowY: 'auto', flex: 1 }}>
-                    <List disablePadding>
-                        {filteredMembers.map((member) => (
-                            <ListItemButton
-                                key={member.id}
-                                divider
-                                onClick={() => void openHistory(member)}
-                            >
-                                <ListItemAvatar>
-                                    <Avatar>{getInitials(member.name)}</Avatar>
-                                </ListItemAvatar>
-                                <ListItemText
-                                    primary={
-                                        <Typography
-                                            variant="body1"
-                                            fontWeight="bold"
-                                        >
-                                            {member.name}
-                                        </Typography>
-                                    }
-                                    secondary={
-                                        <Typography
-                                            variant="body2"
-                                            color="text.secondary"
-                                        >
-                                            {activeFilter === 'all' &&
-                                                `${groupNameOf(groups, member.group_id)} · `}
-                                            {t('Attendances: :count', {
-                                                count: member.current_month_attendances_count,
-                                            })}
-                                        </Typography>
-                                    }
-                                />
-                            </ListItemButton>
-                        ))}
-                    </List>
+                    {filteredMembers.length === 0 ? (
+                        <EmptyState
+                            icon={<AssignmentTurnedInIcon />}
+                            title={t('No members found.')}
+                        />
+                    ) : (
+                        <ul className="border-t border-[var(--popup-border)]">
+                            {filteredMembers.map((member, index) => (
+                                <li
+                                    key={member.id}
+                                    className="border-b border-[var(--popup-border)]"
+                                >
+                                    <button
+                                        type="button"
+                                        onClick={() => void openHistory(member)}
+                                        className="flex w-full cursor-pointer items-center gap-3 px-[18px] py-2.5 text-left transition hover:bg-[var(--popup-ghost)]"
+                                    >
+                                        <Avatar sx={avatarSx(index)}>
+                                            {getInitials(member.name)}
+                                        </Avatar>
+                                        <span className="min-w-0 flex-1">
+                                            <span className="block truncate text-[15px] font-bold text-[var(--popup-fg)]">
+                                                {member.name}
+                                            </span>
+                                            <span className="block text-[13px] text-[var(--popup-muted)]">
+                                                {activeFilter === 'all' &&
+                                                    `${groupNameOf(groups, member.group_id)} · `}
+                                                {t('Attendances: :count', {
+                                                    count: member.current_month_attendances_count,
+                                                })}
+                                            </span>
+                                        </span>
+                                        <ChevronRightIcon
+                                            fontSize="small"
+                                            className="flex-none text-[var(--popup-muted)]"
+                                        />
+                                    </button>
+                                </li>
+                            ))}
+                        </ul>
+                    )}
                 </DialogContent>
             </Dialog>
 
             <Dialog
                 open={showMemberHistoryModal}
-                onClose={() => {
-                    setShowMemberHistoryModal(false);
-                    setSelectedMember(null);
-                }}
+                onClose={closeHistory}
                 disableRestoreFocus
                 fullWidth
                 maxWidth="sm"
-                PaperProps={{
-                    sx: { bgcolor: POPUP_BG },
-                }}
+                PaperProps={{ sx: { bgcolor: POPUP_BG } }}
             >
-                <DialogTitle sx={{ p: 0 }}>
-                    <div className="flex items-center justify-between px-4 py-3">
-                        <Typography variant="h6" fontWeight="bold">
-                            {t('Attendance - :name', {
-                                name: selectedMember?.name ?? '',
-                            })}
-                        </Typography>
-                        <CloseButton
-                            onClick={() => {
-                                setShowMemberHistoryModal(false);
-                                setSelectedMember(null);
-                            }}
-                        />
-                    </div>
-                    <Divider />
-                </DialogTitle>
+                <PopupHeader
+                    icon={<CalendarMonthIcon fontSize="small" />}
+                    title={t('Attendance')}
+                    subtitle={
+                        selectedMember
+                            ? `${selectedMember.name} · ${groupNameOf(groups, selectedMember.group_id)}`
+                            : ''
+                    }
+                    onClose={closeHistory}
+                />
 
                 <DialogContent sx={{ p: 0 }}>
                     {history === null ? (
-                        <div className="p-4">
+                        <div className="px-[18px] pb-4">
                             <CardsSkeleton />
                         </div>
+                    ) : memberAttendanceRows.length === 0 ? (
+                        <EmptyState
+                            icon={<CalendarMonthIcon />}
+                            title={t('No attendance history yet.')}
+                        />
                     ) : (
-                        <div className="flex flex-col gap-6 p-4">
-                            <div className="flex flex-col gap-4">
-                                <Typography
-                                    variant="caption"
-                                    color="text.secondary"
-                                    sx={{
-                                        textTransform: 'uppercase',
-                                        letterSpacing: 1,
-                                    }}
-                                >
-                                    {t('Attendances By Month')}
-                                </Typography>
-
-                                {currentMonthData ? (
-                                    <List disablePadding>
-                                        <ListItem
-                                            divider
-                                            sx={{
-                                                px: 0,
-                                                cursor: 'pointer',
-                                                display: 'flex',
-                                                flexDirection: 'column',
-                                                gap: 2,
-                                                alignItems: 'center',
-                                                py: 1.5,
-                                                '&:hover': {
-                                                    bgcolor: popupFg(0.05),
-                                                },
-                                            }}
-                                            onClick={() =>
-                                                setShowCurrentYearMonthsModal(
-                                                    true,
-                                                )
-                                            }
-                                        >
-                                            <div
-                                                style={{
-                                                    display: 'flex',
-                                                    justifyContent: 'center',
-                                                    alignItems: 'center',
-                                                    gap: '16px',
-                                                }}
-                                            >
-                                                <Typography variant="body2">
-                                                    {dayjs(
-                                                        currentMonthKey,
-                                                    ).format('MMMM YYYY')}
-                                                </Typography>
-                                                {currentYearMonths.length >
-                                                    1 && (
-                                                    <Typography
-                                                        variant="caption"
-                                                        color="primary"
-                                                    >
-                                                        {tc(
-                                                            ':count month|:count months',
-                                                            currentYearMonths.length,
-                                                        )}
-                                                    </Typography>
-                                                )}
-                                            </div>
-
-                                            <Chip
-                                                label={t(
-                                                    'Attendances: :count',
-                                                    {
-                                                        count: currentMonthData.total,
-                                                    },
-                                                )}
-                                                color="success"
-                                                size="small"
-                                                sx={chipSx}
-                                            />
-                                            {/* Says plainly that the whole history opens from here */}
-                                            <ShowHistoryButton
-                                                label={t('View full history')}
-                                                onClick={() =>
-                                                    setShowCurrentYearMonthsModal(
-                                                        true,
-                                                    )
-                                                }
-                                            />
-                                        </ListItem>
-                                    </List>
-                                ) : (
-                                    <Typography
-                                        variant="body2"
-                                        color="text.secondary"
-                                    >
-                                        {t(
-                                            'No attendances recorded this month.',
+                        <>
+                            <SummaryCard
+                                tone="green"
+                                title={t(':month: :count trainings', {
+                                    month: dayjs().format('MMMM YYYY'),
+                                    count: currentMonthData?.total ?? 0,
+                                })}
+                            >
+                                {t(':year: :count trainings in :months', {
+                                    year: currentYear,
+                                    count: yearGroups[currentYear]?.total ?? 0,
+                                    months: tc(
+                                        ':count month|:count months',
+                                        yearGroups[currentYear]?.monthCount ??
+                                            0,
+                                    ),
+                                })}
+                            </SummaryCard>
+                            <ul className="border-t border-[var(--popup-border)]">
+                                {allYears.map((year, index) => (
+                                    <YearSection
+                                        key={year}
+                                        year={year}
+                                        summary={tc(
+                                            ':count training|:count trainings',
+                                            yearGroups[year].total,
                                         )}
-                                    </Typography>
-                                )}
-                            </div>
-
-                            <Divider />
-
-                            <div className="flex flex-col gap-4">
-                                <Typography
-                                    variant="caption"
-                                    color="text.secondary"
-                                    sx={{
-                                        textTransform: 'uppercase',
-                                        letterSpacing: 1,
-                                    }}
-                                >
-                                    {t('Attendances By Year')}
-                                </Typography>
-
-                                {sortedYears.length > 0 ? (
-                                    <List disablePadding>
-                                        {sortedYears.map((year) => (
-                                            <ListItem
-                                                key={year}
-                                                divider
-                                                sx={{
-                                                    px: 0,
-                                                    cursor: 'pointer',
-                                                    display: 'flex',
-                                                    flexDirection: 'column',
-                                                    gap: 2,
-                                                    alignItems: 'center',
-                                                    py: 1.5,
-                                                    '&:hover': {
-                                                        bgcolor: popupFg(0.05),
-                                                    },
-                                                }}
-                                                onClick={() => {
-                                                    setSelectedYear(year);
-                                                    setShowYearDetailModal(
-                                                        true,
-                                                    );
-                                                }}
-                                            >
-                                                <div
-                                                    style={{
-                                                        display: 'flex',
-                                                        justifyContent:
-                                                            'center',
-                                                        alignItems: 'center',
-                                                        gap: '16px',
-                                                    }}
-                                                >
-                                                    <Typography variant="body2">
-                                                        {year}
-                                                    </Typography>
-                                                    <Typography
-                                                        variant="caption"
-                                                        color="primary"
-                                                    >
-                                                        {tc(
-                                                            ':count month|:count months',
-                                                            yearGroups[year]
-                                                                .monthCount,
-                                                        )}
-                                                    </Typography>
-                                                </div>
-
-                                                <Chip
-                                                    label={t(
-                                                        'Attendances: :count',
-                                                        {
-                                                            count: yearGroups[
-                                                                year
-                                                            ].total,
-                                                        },
+                                        defaultOpen={index === 0}
+                                    >
+                                        {sortedMonths
+                                            .filter(
+                                                (month) =>
+                                                    dayjs(month).format(
+                                                        'YYYY',
+                                                    ) === year,
+                                            )
+                                            .map((month) => (
+                                                <DrillRow
+                                                    key={month}
+                                                    title={dayjs(month).format(
+                                                        'MMMM YYYY',
                                                     )}
-                                                    color="success"
-                                                    size="small"
-                                                    sx={chipSx}
-                                                />
-                                                {/* Says plainly that the whole history opens from here */}
-                                                <ShowHistoryButton
-                                                    label={t('View months')}
+                                                    subtitle={t('Last: :date', {
+                                                        date: dayjs(
+                                                            lastDateOf(month),
+                                                        ).format('DD.MM.YYYY'),
+                                                    })}
+                                                    value={
+                                                        groupedByMonth[month]
+                                                            .total
+                                                    }
+                                                    valueClassName="text-green-600 dark:text-green-400"
                                                     onClick={() => {
-                                                        setSelectedYear(year);
-                                                        setShowYearDetailModal(
+                                                        setSelectedMonth(month);
+                                                        setShowMonthDatesModal(
                                                             true,
                                                         );
                                                     }}
                                                 />
-                                            </ListItem>
-                                        ))}
-                                    </List>
-                                ) : (
-                                    <Typography
-                                        variant="body2"
-                                        color="text.secondary"
-                                    >
-                                        {t('No attendance history yet.')}
-                                    </Typography>
-                                )}
-                            </div>
-                        </div>
+                                            ))}
+                                    </YearSection>
+                                ))}
+                            </ul>
+                        </>
                     )}
-                </DialogContent>
-            </Dialog>
-
-            <Dialog
-                open={showCurrentYearMonthsModal}
-                onClose={() => setShowCurrentYearMonthsModal(false)}
-                disableRestoreFocus
-                fullWidth
-                maxWidth="sm"
-                PaperProps={{
-                    sx: { bgcolor: POPUP_BG },
-                }}
-            >
-                <DialogTitle sx={{ p: 0 }}>
-                    <div className="flex items-center justify-between px-4 py-3">
-                        <Typography variant="h6" fontWeight="bold">
-                            {t('Attendance By Month - :year', {
-                                year: currentYear,
-                            })}
-                        </Typography>
-                        <CloseButton
-                            onClick={() => setShowCurrentYearMonthsModal(false)}
-                        />
-                    </div>
-                    <Divider />
-                </DialogTitle>
-
-                <DialogContent sx={{ p: 0 }}>
-                    <List disablePadding>
-                        {currentYearMonths.map((month) => {
-                            const monthData = groupedByMonth[month];
-
-                            return (
-                                <ListItem
-                                    key={month}
-                                    divider
-                                    sx={{
-                                        px: 2,
-                                        py: 2,
-                                        display: 'flex',
-                                        flexDirection: 'column',
-                                        gap: 2,
-                                        alignItems: 'center',
-                                        cursor: 'pointer',
-                                        '&:hover': {
-                                            bgcolor: popupFg(0.05),
-                                        },
-                                    }}
-                                    onClick={() => {
-                                        setSelectedMonth(month);
-                                        setShowMonthDatesModal(true);
-                                    }}
-                                >
-                                    <Typography variant="body2">
-                                        {dayjs(month).format('MMMM YYYY')}
-                                    </Typography>
-
-                                    <Chip
-                                        label={t('Attendances: :count', {
-                                            count: monthData.total,
-                                        })}
-                                        color="success"
-                                        size="small"
-                                        sx={chipSx}
-                                    />
-                                    <ShowHistoryButton
-                                        label={t('View dates')}
-                                        onClick={() => {
-                                            setSelectedMonth(month);
-                                            setShowMonthDatesModal(true);
-                                        }}
-                                    />
-                                </ListItem>
-                            );
-                        })}
-                    </List>
                 </DialogContent>
             </Dialog>
 
             <Dialog
                 open={showMonthDatesModal}
-                onClose={() => {
-                    setShowMonthDatesModal(false);
-                    setSelectedMonth(null);
-                }}
+                onClose={closeMonth}
                 disableRestoreFocus
                 fullWidth
                 maxWidth="sm"
-                PaperProps={{
-                    sx: { bgcolor: POPUP_BG },
-                }}
+                PaperProps={{ sx: { bgcolor: POPUP_BG } }}
             >
-                <DialogTitle sx={{ p: 0 }}>
-                    <div className="flex items-center justify-between px-4 py-3">
-                        <Typography variant="h6" fontWeight="bold">
-                            {t('Attendance Dates - :month', {
-                                month: selectedMonth
-                                    ? dayjs(selectedMonth).format('MMMM YYYY')
-                                    : '',
-                            })}
-                        </Typography>
-                        <CloseButton
-                            onClick={() => {
-                                setShowMonthDatesModal(false);
-                                setSelectedMonth(null);
-                            }}
-                        />
-                    </div>
-                    <Divider />
-                </DialogTitle>
+                <PopupHeader
+                    icon={<CalendarMonthIcon fontSize="small" />}
+                    title={
+                        selectedMonth
+                            ? dayjs(selectedMonth).format('MMMM YYYY')
+                            : ''
+                    }
+                    subtitle={
+                        selectedMember
+                            ? `${selectedMember.name} · ${tc(':count training|:count trainings', selectedMonthAttendances.length)}`
+                            : ''
+                    }
+                    onClose={closeMonth}
+                />
 
                 <DialogContent sx={{ p: 0 }}>
                     {selectedMonthAttendances.length > 0 ? (
-                        <List disablePadding>
+                        <ul className="border-t border-[var(--popup-border)]">
                             {selectedMonthAttendances.map((attendance) => (
-                                <ListItem
+                                <li
                                     key={attendance.id}
-                                    divider
-                                    sx={{
-                                        px: 2,
-                                        py: 2,
-                                    }}
+                                    className="border-b border-[var(--popup-border)] px-[18px] py-3 last:border-b-0"
                                 >
-                                    <Typography variant="body2">
+                                    <span className="block text-[15px] font-semibold text-[var(--popup-fg)] capitalize">
                                         {dayjs(attendance.date).format(
-                                            'DD.MM.YYYY - dddd',
+                                            'dddd, DD.MM.YYYY',
                                         )}
-                                    </Typography>
-                                </ListItem>
+                                    </span>
+                                    <span className="block text-[13px] text-[var(--popup-muted)]">
+                                        {groupWithSubgroupName(
+                                            groups,
+                                            attendance.group_id,
+                                            attendance.subgroup_id,
+                                        )}
+                                    </span>
+                                </li>
                             ))}
-                        </List>
+                        </ul>
                     ) : (
-                        <Typography
-                            variant="body2"
-                            color="text.secondary"
-                            sx={{ p: 3, textAlign: 'center' }}
-                        >
-                            {t('No attendance dates recorded for this month.')}
-                        </Typography>
-                    )}
-                </DialogContent>
-            </Dialog>
-
-            <Dialog
-                open={showYearDetailModal}
-                onClose={() => {
-                    setShowYearDetailModal(false);
-                    setSelectedYear(null);
-                }}
-                disableRestoreFocus
-                fullWidth
-                maxWidth="sm"
-                PaperProps={{
-                    sx: { bgcolor: POPUP_BG },
-                }}
-            >
-                <DialogTitle sx={{ p: 0 }}>
-                    <div className="flex items-center justify-between px-4 py-3">
-                        <Typography variant="h6" fontWeight="bold">
-                            {t('Attendance By Month - :year', {
-                                year: selectedYear ?? '',
-                            })}
-                        </Typography>
-                        <CloseButton
-                            onClick={() => {
-                                setShowYearDetailModal(false);
-                                setSelectedYear(null);
-                            }}
+                        <EmptyState
+                            icon={<CalendarMonthIcon />}
+                            title={t(
+                                'No attendance dates recorded for this month.',
+                            )}
                         />
-                    </div>
-                    <Divider />
-                </DialogTitle>
-
-                <DialogContent sx={{ p: 0 }}>
-                    <List disablePadding>
-                        {yearMonths.map((month) => {
-                            const monthData = groupedByMonth[month];
-
-                            return (
-                                <ListItem
-                                    key={month}
-                                    divider
-                                    sx={{
-                                        px: 2,
-                                        py: 2,
-                                        display: 'flex',
-                                        flexDirection: 'column',
-                                        gap: 2,
-                                        alignItems: 'center',
-                                        cursor: 'pointer',
-                                        '&:hover': {
-                                            bgcolor: popupFg(0.05),
-                                        },
-                                    }}
-                                    onClick={() => {
-                                        setSelectedMonth(month);
-                                        setShowMonthDatesModal(true);
-                                    }}
-                                >
-                                    <Typography variant="body2">
-                                        {dayjs(month).format('MMMM YYYY')}
-                                    </Typography>
-
-                                    <Chip
-                                        label={t('Attendances: :count', {
-                                            count: monthData.total,
-                                        })}
-                                        color="success"
-                                        size="small"
-                                        sx={chipSx}
-                                    />
-                                    <ShowHistoryButton
-                                        label={t('View dates')}
-                                        onClick={() => {
-                                            setSelectedMonth(month);
-                                            setShowMonthDatesModal(true);
-                                        }}
-                                    />
-                                </ListItem>
-                            );
-                        })}
-                    </List>
+                    )}
                 </DialogContent>
             </Dialog>
         </MuiThemeProvider>

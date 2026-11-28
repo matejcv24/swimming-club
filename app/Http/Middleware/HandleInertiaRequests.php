@@ -77,13 +77,22 @@ class HandleInertiaRequests extends Middleware
 
                 // An address of no club (the shared sign-in page later): the app's own name
                 if (! $club) {
-                    return ['name' => config('app.name'), 'email' => null, 'logo_url' => null];
+                    return [
+                        'name' => config('app.name'),
+                        'email' => null,
+                        'logo_url' => null,
+                        'payment_confirmation_emails' => false,
+                        'payment_reminder_emails' => false,
+                    ];
                 }
 
                 return [
                     'name' => $club->name,
                     'email' => $request->user() ? $club->email : null,
                     'logo_url' => $club->logoUrl(),
+                    // Whether the club sends these emails (Club settings)
+                    'payment_confirmation_emails' => (bool) $club->payment_confirmation_emails,
+                    'payment_reminder_emails' => (bool) $club->payment_reminder_emails,
                 ];
             },
             // "My clubs" in the avatar menu (empty: the person has one club)

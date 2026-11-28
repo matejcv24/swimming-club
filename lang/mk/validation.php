@@ -104,7 +104,7 @@ return [
         'current_password' => 'тековна лозинка',
         'amount' => 'износ',
         'group_id' => 'група',
-        'subgroup_id' => 'подгрупа',
+        'subgroup_id' => 'термин',
         'parent_id' => 'група',
         'group_ids' => 'групи',
         'all_groups' => 'сите групи',

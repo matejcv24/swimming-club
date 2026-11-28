@@ -1,8 +1,14 @@
+import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import CloseIcon from '@mui/icons-material/Close';
+import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import HistoryIcon from '@mui/icons-material/History';
+import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import SearchIcon from '@mui/icons-material/Search';
+import WarningAmberIcon from '@mui/icons-material/WarningAmber';
 import Button from '@mui/material/Button';
+import Dialog from '@mui/material/Dialog';
 import IconButton from '@mui/material/IconButton';
 import type { IconButtonProps } from '@mui/material/IconButton';
 import InputBase from '@mui/material/InputBase';
@@ -11,7 +17,11 @@ import Tabs from '@mui/material/Tabs';
 import Tooltip from '@mui/material/Tooltip';
 import { useEffect, useRef, useState } from 'react';
 import type { ReactElement, ReactNode } from 'react';
-import { POPUP_FG, popupFg } from '@/components/mui-theme-provider';
+import {
+    POPUP_BG,
+    POPUP_FG,
+    popupFg,
+} from '@/components/mui-theme-provider';
 import { t } from '@/lib/i18n';
 import { clearOnClick } from '@/lib/search-field';
 
@@ -217,15 +227,24 @@ export function SlidingText({
     );
 }
 
-/** Header of a main pop-up: icon badge, title, short summary, actions and close. */
+/**
+ * Header of every pop-up: icon badge (red for deleting and other dangerous
+ * questions, or a person's avatar), title, who/when as the subtitle, actions
+ * (e.g. the blue "+") and close.
+ */
 export function PopupHeader({
     icon,
+    avatar,
+    tone = 'brand',
     title,
     subtitle,
     actions,
     onClose,
 }: {
-    icon: ReactNode;
+    icon?: ReactNode;
+    /** Shown instead of the icon badge, e.g. a member's initials. */
+    avatar?: ReactNode;
+    tone?: 'brand' | 'red' | 'green';
     title: string;
     subtitle?: ReactNode;
     actions?: ReactNode;
@@ -233,7 +252,7 @@ export function PopupHeader({
 }) {
     return (
         <div className="flex items-center gap-3 px-[18px] pt-[18px] pb-3.5">
-            <IconBadge>{icon}</IconBadge>
+            {avatar ?? <IconBadge tone={tone}>{icon}</IconBadge>}
             <div className="min-w-0">
                 {/* A long title slides on phones instead of being cut off */}
                 <SlidingText className="text-[17px] leading-tight font-extrabold text-[var(--popup-fg)]">
@@ -357,6 +376,402 @@ export function StatusDot({ active }: { active: boolean }) {
             />
             {active ? t('Active') : t('Inactive')}
         </span>
+    );
+}
+
+/** A pop-up's buttons: Cancel on the left, the action on the right, same width. */
+export function PopupButtons({ children }: { children: ReactNode }) {
+    return (
+        <div className="grid grid-cols-2 gap-3 px-[18px] pt-2 pb-[18px] [&>*:only-child]:col-span-2">
+            {children}
+        </div>
+    );
+}
+
+/**
+ * The one way to ask before something is deleted or switched off: a red badge,
+ * the question as the title ("Delete member?"), who or what as the subtitle,
+ * one short paragraph, then Cancel / [the verb].
+ */
+export function ConfirmDialog({
+    open,
+    icon,
+    title,
+    subtitle,
+    children,
+    confirmLabel,
+    busy = false,
+    confirmDisabled = false,
+    tone = 'red',
+    onConfirm,
+    onClose,
+}: {
+    open: boolean;
+    icon: ReactNode;
+    title: string;
+    subtitle?: ReactNode;
+    children?: ReactNode;
+    confirmLabel: string;
+    busy?: boolean;
+    /** The action can't be done yet (e.g. a choice is missing); Cancel still works. */
+    confirmDisabled?: boolean;
+    /** Blue for a question that loses nothing (e.g. activate again). */
+    tone?: 'red' | 'brand';
+    onConfirm: () => void;
+    onClose: () => void;
+}) {
+    return (
+        <Dialog
+            open={open}
+            onClose={() => !busy && onClose()}
+            disableRestoreFocus
+            fullWidth
+            maxWidth="xs"
+            PaperProps={{ sx: { bgcolor: POPUP_BG } }}
+        >
+            <PopupHeader
+                icon={icon}
+                tone={tone}
+                title={title}
+                subtitle={subtitle}
+                onClose={() => !busy && onClose()}
+            />
+            {children && (
+                <div className="flex flex-col gap-3 px-[18px] pb-2 text-sm text-[var(--popup-fg)]/80">
+                    {children}
+                </div>
+            )}
+            <PopupButtons>
+                <Button variant="outlined" onClick={onClose} disabled={busy}>
+                    {t('Cancel')}
+                </Button>
+                <Button
+                    variant="contained"
+                    color={tone === 'red' ? 'error' : 'primary'}
+                    onClick={onConfirm}
+                    disabled={busy || confirmDisabled}
+                >
+                    {confirmLabel}
+                </Button>
+            </PopupButtons>
+        </Dialog>
+    );
+}
+
+export type MenuAction = {
+    label: string;
+    icon: ReactNode;
+    onClick: () => void;
+    /** Blue for the main action, red (and last) for deleting. */
+    tone?: 'primary' | 'default' | 'danger';
+    hidden?: boolean;
+};
+
+/**
+ * A small pop-up with what was tapped at the top and its actions below, 48px
+ * each: the main one blue, deleting red and last. The same for payments,
+ * salaries, invoices, members and staff.
+ */
+export function ActionMenu({
+    open,
+    title,
+    subtitle,
+    actions,
+    onClose,
+}: {
+    open: boolean;
+    title: string;
+    subtitle?: ReactNode;
+    actions: MenuAction[];
+    onClose: () => void;
+}) {
+    const color = {
+        primary:
+            'text-hydra-blue hover:bg-[var(--popup-ghost)] dark:text-sky-300',
+        default: 'text-[var(--popup-fg)] hover:bg-[var(--popup-ghost)]',
+        danger: 'text-red-500 hover:bg-red-500/10',
+    };
+
+    return (
+        <Dialog
+            open={open}
+            onClose={onClose}
+            disableRestoreFocus
+            fullWidth
+            maxWidth="xs"
+            PaperProps={{ sx: { bgcolor: POPUP_BG } }}
+        >
+            <div className="flex items-start justify-between gap-3 px-[18px] pt-[18px] pb-2">
+                <div className="min-w-0">
+                    <p className="text-[15px] font-extrabold text-[var(--popup-fg)]">
+                        {title}
+                    </p>
+                    {subtitle && (
+                        <p className="text-sm text-[var(--popup-muted)]">
+                            {subtitle}
+                        </p>
+                    )}
+                </div>
+                <CloseButton onClick={onClose} />
+            </div>
+            <div className="flex flex-col px-2 pb-3">
+                {actions
+                    .filter((action) => !action.hidden)
+                    .map((action) => (
+                        <button
+                            key={action.label}
+                            type="button"
+                            onClick={() => {
+                                onClose();
+                                action.onClick();
+                            }}
+                            className={`flex min-h-12 cursor-pointer items-center gap-3 rounded-xl border-t border-[var(--popup-border)] px-3 text-left font-semibold ${color[action.tone ?? 'default']}`}
+                        >
+                            {action.icon}
+                            {action.label}
+                        </button>
+                    ))}
+            </div>
+        </Dialog>
+    );
+}
+
+/**
+ * A year in a history: a thin strip across the whole width with the count and
+ * total on the right. Tapping it opens or closes the year; only the current
+ * year starts open.
+ */
+export function YearSection({
+    year,
+    summary,
+    defaultOpen,
+    children,
+}: {
+    year: string;
+    summary?: ReactNode;
+    defaultOpen?: boolean;
+    children: ReactNode;
+}) {
+    const [open, setOpen] = useState(
+        defaultOpen ?? year === String(new Date().getFullYear()),
+    );
+
+    return (
+        <li>
+            <button
+                type="button"
+                aria-expanded={open}
+                onClick={() => setOpen((value) => !value)}
+                className="flex w-full cursor-pointer items-center gap-2 border-b border-[var(--popup-border)] bg-[var(--popup-ghost)] px-[18px] py-2 text-left text-[12.5px] font-bold text-[var(--popup-fg)]/80"
+            >
+                <span className="flex-1">{year}</span>
+                {summary && (
+                    <span className="font-semibold text-[var(--popup-muted)]">
+                        {summary}
+                    </span>
+                )}
+                <ExpandMoreIcon
+                    sx={{ fontSize: 18 }}
+                    className={`text-[var(--popup-muted)] transition-transform ${open ? '' : '-rotate-90'}`}
+                />
+            </button>
+            {open && <ul>{children}</ul>}
+        </li>
+    );
+}
+
+/** A form's section title: small capitals, grey ("ENTER A NEW PAYMENT"). */
+export function SectionLabel({ children }: { children: ReactNode }) {
+    return (
+        <p className="m-0 text-xs font-bold tracking-[1px] text-[var(--popup-muted)] uppercase">
+            {children}
+        </p>
+    );
+}
+
+/**
+ * Top of a history: one bold sentence and one line of numbers. Green = all
+ * good, red = late or a loss, blue = information only.
+ */
+export function SummaryCard({
+    tone,
+    title,
+    children,
+}: {
+    tone: 'green' | 'red' | 'blue';
+    title: ReactNode;
+    children?: ReactNode;
+}) {
+    const colors = {
+        green: 'bg-green-500/15 text-green-800 dark:text-green-200',
+        red: 'bg-red-500/10 text-red-700 dark:text-red-300',
+        blue: 'bg-hydra-blue/15 text-hydra-navy dark:text-sky-200',
+    };
+
+    return (
+        <div
+            className={`mx-[18px] mb-3 rounded-xl px-3 py-2.5 text-sm ${colors[tone]}`}
+        >
+            <p className="font-bold">{title}</p>
+            {children && <p>{children}</p>}
+        </div>
+    );
+}
+
+/** Nothing to show: a badge, one bold sentence and a line of explanation. */
+export function EmptyState({
+    icon,
+    title,
+    text,
+    tone = 'brand',
+    action,
+}: {
+    icon: ReactNode;
+    title: string;
+    text?: string;
+    tone?: 'brand' | 'green';
+    action?: ReactNode;
+}) {
+    return (
+        <div className="flex flex-col items-center gap-2 px-[18px] pt-5 pb-7 text-center">
+            <IconBadge tone={tone} className="size-12">
+                {icon}
+            </IconBadge>
+            <p className="mt-1 font-bold text-[var(--popup-fg)]">{title}</p>
+            {text && (
+                <p className="text-sm text-[var(--popup-muted)]">{text}</p>
+            )}
+            {action && <div className="mt-2">{action}</div>}
+        </div>
+    );
+}
+
+/**
+ * A note inside a pop-up, always with its icon: blue a tip, yellow something
+ * missing, green it worked, red it can't be undone (or it failed).
+ */
+export function Note({
+    tone,
+    children,
+    className = '',
+}: {
+    tone: 'info' | 'warn' | 'success' | 'error';
+    children: ReactNode;
+    className?: string;
+}) {
+    const styles = {
+        info: 'bg-hydra-blue/15 text-hydra-navy dark:text-sky-200',
+        warn: 'bg-amber-500/15 text-amber-800 dark:text-amber-200',
+        success: 'bg-green-500/15 text-green-800 dark:text-green-200',
+        error: 'bg-red-500/10 text-red-700 dark:text-red-300',
+    };
+    const icons = {
+        info: <InfoOutlinedIcon sx={{ fontSize: 17 }} />,
+        warn: <WarningAmberIcon sx={{ fontSize: 17 }} />,
+        success: <CheckCircleOutlineIcon sx={{ fontSize: 17 }} />,
+        error: <ErrorOutlineIcon sx={{ fontSize: 17 }} />,
+    };
+
+    return (
+        <div
+            className={`flex items-start gap-2 rounded-xl px-3 py-2.5 text-sm ${styles[tone]} ${className}`}
+        >
+            <span className="mt-px flex-none">{icons[tone]}</span>
+            <div className="min-w-0 flex-1">{children}</div>
+        </div>
+    );
+}
+
+/**
+ * A month or year that opens more: title and count on the left, the total on
+ * the right, > at the end. The same height as a history row.
+ */
+export function DrillRow({
+    title,
+    subtitle,
+    value,
+    valueClassName = 'text-[var(--popup-fg)]',
+    onClick,
+}: {
+    title: ReactNode;
+    subtitle?: ReactNode;
+    value?: ReactNode;
+    valueClassName?: string;
+    onClick: () => void;
+}) {
+    return (
+        <li className="border-b border-[var(--popup-border)]">
+            <button
+                type="button"
+                onClick={onClick}
+                className="flex w-full cursor-pointer items-center gap-3 px-[18px] py-3 text-left transition hover:bg-[var(--popup-ghost)]"
+            >
+                <span className="min-w-0 flex-1">
+                    <span className="block text-[15px] font-semibold text-[var(--popup-fg)]">
+                        {title}
+                    </span>
+                    {subtitle && (
+                        <span className="mt-0.5 block text-[13px] text-[var(--popup-muted)]">
+                            {subtitle}
+                        </span>
+                    )}
+                </span>
+                {value !== undefined && (
+                    <span
+                        className={`flex-none text-right text-[15px] font-bold whitespace-nowrap ${valueClassName}`}
+                    >
+                        {value}
+                    </span>
+                )}
+                <ChevronRightIcon
+                    fontSize="small"
+                    className="flex-none text-[var(--popup-muted)]"
+                />
+            </button>
+        </li>
+    );
+}
+
+/** A tappable tile (a training's time slot): small label, big name, status. */
+export function Tile({
+    label,
+    name,
+    status,
+    statusTone = 'muted',
+    wide = false,
+    onClick,
+}: {
+    label?: string;
+    name: string;
+    status?: string;
+    statusTone?: 'muted' | 'green';
+    wide?: boolean;
+    onClick: () => void;
+}) {
+    return (
+        <button
+            type="button"
+            onClick={onClick}
+            className={`flex min-h-[72px] cursor-pointer flex-col items-start justify-center gap-0.5 rounded-[14px] bg-[var(--popup-ghost)] px-3.5 py-3 text-left shadow-[inset_0_0_0_1px_var(--popup-border)] transition hover:shadow-[inset_0_0_0_1.5px_#1690c8] ${wide ? 'col-span-2' : ''}`}
+        >
+            {label && (
+                <span className="text-[13px] font-semibold text-[var(--popup-muted)]">
+                    {label}
+                </span>
+            )}
+            <span
+                className={`leading-tight font-extrabold text-[var(--popup-fg)] ${wide ? 'text-base' : 'text-xl'}`}
+            >
+                {name}
+            </span>
+            {status && (
+                <span
+                    className={`text-[12.5px] ${statusTone === 'green' ? 'font-bold text-green-600 dark:text-green-400' : 'text-[var(--popup-muted)]'}`}
+                >
+                    {status}
+                </span>
+            )}
+        </button>
     );
 }
 

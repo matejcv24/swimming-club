@@ -1,28 +1,20 @@
 import { Head } from '@inertiajs/react';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
-import Chip from '@mui/material/Chip';
 import Dialog from '@mui/material/Dialog';
 import DialogContent from '@mui/material/DialogContent';
-import DialogTitle from '@mui/material/DialogTitle';
-import Divider from '@mui/material/Divider';
-import List from '@mui/material/List';
-import ListItem from '@mui/material/ListItem';
-import Typography from '@mui/material/Typography';
 import dayjs from 'dayjs';
 import { useState } from 'react';
 import { DashboardBackground } from '@/components/dashboard-background';
+import { MuiThemeProvider, POPUP_BG } from '@/components/mui-theme-provider';
 import {
-    MuiThemeProvider,
-    POPUP_BG,
-    popupFg,
-} from '@/components/mui-theme-provider';
-import {
-    CloseButton,
+    DrillRow,
+    EmptyState,
     PopupHeader,
-    ShowHistoryButton,
+    SummaryCard,
+    YearSection,
 } from '@/components/popup-ui';
 import { usePagePopup } from '@/hooks/use-page-popup';
-import { t, tc } from '@/lib/i18n';
+import { t } from '@/lib/i18n';
 
 interface ProfitRow {
     month: string;
@@ -36,12 +28,6 @@ interface Props {
     profits: ProfitRow[];
 }
 
-const chipSx = {
-    minWidth: '220px',
-    display: 'flex',
-    justifyContent: 'center',
-};
-
 const formatCurrency = (value: number): string => {
     return new Intl.NumberFormat('en-US', {
         minimumFractionDigits: 0,
@@ -49,60 +35,40 @@ const formatCurrency = (value: number): string => {
     }).format(value);
 };
 
+/** "+12,500" or "−8,300": profit is green when it's a gain, red when a loss. */
+const signed = (value: number) =>
+    `${value < 0 ? '−' : '+'}${formatCurrency(Math.abs(value))}`;
+
+const profitColor = (value: number) =>
+    value < 0
+        ? 'text-red-500 dark:text-red-400'
+        : 'text-green-600 dark:text-green-400';
+
 export default function ProfitIndex({ profits }: Props) {
     // Fades in and out over the dashboard
     const popup = usePagePopup();
-    const [showHistoryModal, setShowHistoryModal] = useState(false);
-    const [showYearDetailModal, setShowYearDetailModal] = useState(false);
-    const [selectedYear, setSelectedYear] = useState<string | null>(null);
+    // The month whose breakdown is open
+    const [openMonth, setOpenMonth] = useState<ProfitRow | null>(null);
 
-    const groupedProfits: Record<string, ProfitRow> = {};
-    profits.forEach((row) => {
-        groupedProfits[row.month] = row;
-    });
+    // The months by year, newest first
+    const years = (() => {
+        const grouped = new Map<string, ProfitRow[]>();
 
-    const sortedMonths = Object.keys(groupedProfits).sort().reverse();
-    const currentYear = dayjs().format('YYYY');
+        [...profits]
+            .sort((a, b) => b.month.localeCompare(a.month))
+            .forEach((row) => {
+                const year = dayjs(row.month).format('YYYY');
+                grouped.set(year, [...(grouped.get(year) ?? []), row]);
+            });
 
-    const currentYearMonths = sortedMonths.filter(
-        (month) => dayjs(month).format('YYYY') === currentYear,
-    );
+        return [...grouped.entries()].sort(([a], [b]) => b.localeCompare(a));
+    })();
 
-    const currentYearLastMonth = currentYearMonths[0];
-    const currentYearLastProfit = currentYearLastMonth
-        ? groupedProfits[currentYearLastMonth]
-        : null;
+    const sum = (rows: ProfitRow[], key: keyof Omit<ProfitRow, 'month'>) =>
+        rows.reduce((total, row) => total + row[key], 0);
 
-    const yearGroups: Record<
-        string,
-        { year: string; total: number; monthCount: number }
-    > = {};
-
-    Object.values(groupedProfits).forEach((monthData) => {
-        const year = dayjs(monthData.month).format('YYYY');
-
-        if (!yearGroups[year]) {
-            yearGroups[year] = {
-                year,
-                total: 0,
-                monthCount: 0,
-            };
-        }
-
-        yearGroups[year].total += monthData.profit;
-        yearGroups[year].monthCount += 1;
-    });
-
-    const sortedYears = Object.keys(yearGroups)
-        .filter((year) => year !== currentYear)
-        .sort()
-        .reverse();
-
-    const yearMonths = selectedYear
-        ? sortedMonths.filter(
-              (month) => dayjs(month).format('YYYY') === selectedYear,
-          )
-        : [];
+    const latestYear = years[0];
+    const latestTotal = latestYear ? sum(latestYear[1], 'profit') : 0;
 
     return (
         <MuiThemeProvider>
@@ -115,508 +81,146 @@ export default function ProfitIndex({ profits }: Props) {
                 maxWidth="sm"
                 PaperProps={{
                     sx: {
-                        height: '80vh',
+                        maxHeight: '85vh',
                         display: 'flex',
                         flexDirection: 'column',
                         bgcolor: POPUP_BG,
                     },
                 }}
             >
-                <DialogTitle sx={{ p: 0 }}>
-                    <PopupHeader
-                        icon={<TrendingUpIcon fontSize="small" />}
-                        title={t('Profit')}
-                        subtitle={t('Fees minus invoices and salaries')}
-                        onClose={popup.close}
-                    />
-                </DialogTitle>
+                <PopupHeader
+                    icon={<TrendingUpIcon fontSize="small" />}
+                    title={t('Profit')}
+                    subtitle={t('Fees minus invoices and salaries')}
+                    onClose={popup.close}
+                />
 
                 <DialogContent sx={{ p: 0, overflowY: 'auto', flex: 1 }}>
-                    <div className="flex flex-col gap-6 p-4">
-                        <div className="flex flex-col gap-4">
-                            <Typography
-                                variant="caption"
-                                color="text.secondary"
-                                sx={{
-                                    textTransform: 'uppercase',
-                                    letterSpacing: 1,
-                                }}
+                    {!latestYear ? (
+                        <EmptyState
+                            icon={<TrendingUpIcon />}
+                            title={t('No profit recorded yet')}
+                            text={t(
+                                'It shows up once fees, salaries or invoices are entered.',
+                            )}
+                        />
+                    ) : (
+                        <>
+                            <SummaryCard
+                                tone={latestTotal < 0 ? 'red' : 'green'}
+                                title={`${latestYear[0]}: ${signed(latestTotal)} MKD`}
                             >
-                                {t('Profit History By Month')}
-                            </Typography>
-
-                            {currentYearLastProfit ? (
-                                <List disablePadding>
-                                    <ListItem
-                                        divider
-                                        sx={{
-                                            px: 0,
-                                            cursor: 'pointer',
-                                            display: 'flex',
-                                            flexDirection: 'column',
-                                            height: 'auto',
-                                            gap: 2,
-                                            paddingY: 1.5,
-                                            alignItems: 'center',
-                                            '&:hover': {
-                                                bgcolor: popupFg(0.05),
-                                            },
-                                        }}
-                                        onClick={() =>
-                                            setShowHistoryModal(true)
-                                        }
+                                +{formatCurrency(sum(latestYear[1], 'memberships'))}{' '}
+                                {t('fees')} · −
+                                {formatCurrency(
+                                    sum(latestYear[1], 'salaries') +
+                                        sum(latestYear[1], 'invoices'),
+                                )}{' '}
+                                {t('costs')}
+                            </SummaryCard>
+                            <ul className="border-t border-[var(--popup-border)]">
+                                {years.map(([year, rows], index) => (
+                                    <YearSection
+                                        key={year}
+                                        year={year}
+                                        summary={`${signed(sum(rows, 'profit'))} MKD`}
+                                        defaultOpen={index === 0}
                                     >
-                                        <div
-                                            style={{
-                                                display: 'flex',
-                                                justifyContent: 'center',
-                                                alignItems: 'center',
-                                                gap: '16px',
-                                            }}
-                                        >
-                                            <Typography variant="body2">
-                                                {dayjs(
-                                                    currentYearLastProfit.month,
-                                                ).format('MMMM YYYY')}
-                                            </Typography>
-                                            {currentYearMonths.length > 1 && (
-                                                <Typography
-                                                    variant="caption"
-                                                    color="primary"
-                                                >
-                                                    {tc(
-                                                        ':count month|:count months',
-                                                        currentYearMonths.length,
-                                                    )}
-                                                </Typography>
-                                            )}
-                                        </div>
-
-                                        <div
-                                            style={{
-                                                display: 'flex',
-                                                flexDirection: 'column',
-                                                gap: '8px',
-                                                alignItems: 'center',
-                                            }}
-                                        >
-                                            <Chip
-                                                label={t(
-                                                    'Memberships: :amount MKD',
-                                                    {
-                                                        amount: formatCurrency(
-                                                            currentYearLastProfit.memberships,
-                                                        ),
-                                                    },
+                                        {rows.map((row) => (
+                                            <DrillRow
+                                                key={row.month}
+                                                title={
+                                                    <span className="capitalize">
+                                                        {dayjs(row.month).format(
+                                                            'MMMM YYYY',
+                                                        )}
+                                                    </span>
+                                                }
+                                                subtitle={`+${formatCurrency(row.memberships)} ${t('fees')} · −${formatCurrency(row.salaries + row.invoices)} ${t('costs')}`}
+                                                value={signed(row.profit)}
+                                                valueClassName={profitColor(
+                                                    row.profit,
                                                 )}
-                                                size="small"
-                                                sx={{
-                                                    ...chipSx,
-                                                    bgcolor:
-                                                        'rgba(33, 150, 243, 0.3)',
-                                                }}
+                                                onClick={() => setOpenMonth(row)}
                                             />
-                                            <Chip
-                                                label={t(
-                                                    'Salaries: :amount MKD',
-                                                    {
-                                                        amount: formatCurrency(
-                                                            currentYearLastProfit.salaries,
-                                                        ),
-                                                    },
-                                                )}
-                                                size="small"
-                                                sx={{
-                                                    ...chipSx,
-                                                    bgcolor:
-                                                        'rgba(244, 67, 54, 0.3)',
-                                                }}
-                                            />
-                                            <Chip
-                                                label={t(
-                                                    'Invoices: :amount MKD',
-                                                    {
-                                                        amount: formatCurrency(
-                                                            currentYearLastProfit.invoices,
-                                                        ),
-                                                    },
-                                                )}
-                                                size="small"
-                                                sx={{
-                                                    ...chipSx,
-                                                    bgcolor:
-                                                        'rgba(255, 152, 0, 0.3)',
-                                                }}
-                                            />
-                                            <Chip
-                                                label={t(
-                                                    'Profit: :amount MKD',
-                                                    {
-                                                        amount: formatCurrency(
-                                                            currentYearLastProfit.profit,
-                                                        ),
-                                                    },
-                                                )}
-                                                color="success"
-                                                size="small"
-                                                sx={chipSx}
-                                            />
-                                        </div>
-                                        {/* Says plainly that the whole history opens from here */}
-                                        <ShowHistoryButton
-                                            label={t('View full history')}
-                                            onClick={() =>
-                                                setShowHistoryModal(true)
-                                            }
-                                        />
-                                    </ListItem>
-                                </List>
-                            ) : (
-                                <Typography
-                                    variant="body2"
-                                    color="text.secondary"
-                                >
-                                    {t('No profit recorded for :year.', {
-                                        year: currentYear,
-                                    })}
-                                </Typography>
-                            )}
-                        </div>
-
-                        <Divider />
-
-                        <div className="flex flex-col gap-4">
-                            <Typography
-                                variant="caption"
-                                color="text.secondary"
-                                sx={{
-                                    textTransform: 'uppercase',
-                                    letterSpacing: 1,
-                                }}
-                            >
-                                {t('Profit History By Year')}
-                            </Typography>
-
-                            {sortedYears.length > 0 ? (
-                                <List disablePadding>
-                                    {sortedYears.map((year) => (
-                                        <ListItem
-                                            key={year}
-                                            divider
-                                            sx={{
-                                                px: 0,
-                                                cursor: 'pointer',
-                                                display: 'flex',
-                                                flexDirection: 'column',
-                                                height: 'auto',
-                                                gap: 2,
-                                                paddingY: 1.5,
-                                                alignItems: 'center',
-                                                '&:hover': {
-                                                    bgcolor: popupFg(0.05),
-                                                },
-                                            }}
-                                            onClick={() => {
-                                                setSelectedYear(year);
-                                                setShowYearDetailModal(true);
-                                            }}
-                                        >
-                                            <div
-                                                style={{
-                                                    display: 'flex',
-                                                    justifyContent: 'center',
-                                                    alignItems: 'center',
-                                                    gap: '16px',
-                                                }}
-                                            >
-                                                <Typography variant="body2">
-                                                    {year}
-                                                </Typography>
-                                                <Typography
-                                                    variant="caption"
-                                                    color="primary"
-                                                >
-                                                    {tc(
-                                                        ':count month|:count months',
-                                                        yearGroups[year]
-                                                            .monthCount,
-                                                    )}
-                                                </Typography>
-                                            </div>
-
-                                            <Chip
-                                                label={t(
-                                                    'Profit: :amount MKD',
-                                                    {
-                                                        amount: formatCurrency(
-                                                            yearGroups[year]
-                                                                .total,
-                                                        ),
-                                                    },
-                                                )}
-                                                color="success"
-                                                size="small"
-                                                sx={chipSx}
-                                            />
-                                            {/* Says plainly that the whole history opens from here */}
-                                            <ShowHistoryButton
-                                                label={t('View months')}
-                                                onClick={() => {
-                                                    setSelectedYear(year);
-                                                    setShowYearDetailModal(
-                                                        true,
-                                                    );
-                                                }}
-                                            />
-                                        </ListItem>
-                                    ))}
-                                </List>
-                            ) : (
-                                <Typography
-                                    variant="body2"
-                                    color="text.secondary"
-                                >
-                                    {t('No past-year profit history yet.')}
-                                </Typography>
-                            )}
-                        </div>
-                    </div>
+                                        ))}
+                                    </YearSection>
+                                ))}
+                            </ul>
+                        </>
+                    )}
                 </DialogContent>
             </Dialog>
 
+            {/* One month: where the profit comes from */}
             <Dialog
-                open={showHistoryModal}
-                onClose={() => setShowHistoryModal(false)}
+                open={!!openMonth}
+                onClose={() => setOpenMonth(null)}
                 disableRestoreFocus
                 fullWidth
-                maxWidth="sm"
-                PaperProps={{
-                    sx: { bgcolor: POPUP_BG },
-                }}
+                maxWidth="xs"
+                PaperProps={{ sx: { bgcolor: POPUP_BG } }}
             >
-                <DialogTitle sx={{ p: 0 }}>
-                    <div className="flex items-center justify-between px-4 py-3">
-                        <Typography variant="h6" fontWeight="bold">
-                            {t('Profit History By Month')}
-                        </Typography>
-                        <CloseButton
-                            onClick={() => setShowHistoryModal(false)}
+                {openMonth && (
+                    <>
+                        <PopupHeader
+                            icon={<TrendingUpIcon fontSize="small" />}
+                            title={t('Profit')}
+                            subtitle={dayjs(openMonth.month).format(
+                                'MMMM YYYY',
+                            )}
+                            onClose={() => setOpenMonth(null)}
                         />
-                    </div>
-                    <Divider />
-                </DialogTitle>
-
-                <DialogContent sx={{ p: 0 }}>
-                    <List disablePadding>
-                        {currentYearMonths.map((month) => {
-                            const monthData = groupedProfits[month];
-
-                            return (
-                                <ListItem
-                                    key={month}
-                                    divider
-                                    sx={{
-                                        px: 2,
-                                        py: 2,
-                                        display: 'flex',
-                                        flexDirection: 'column',
-                                        height: 'auto',
-                                        gap: 2,
-                                        alignItems: 'center',
-                                    }}
+                        <SummaryCard
+                            tone={openMonth.profit < 0 ? 'red' : 'green'}
+                            title={`${signed(openMonth.profit)} MKD`}
+                        >
+                            {openMonth.profit < 0
+                                ? t('More went out than came in')
+                                : t('More came in than went out')}
+                        </SummaryCard>
+                        <ul className="mb-3 border-t border-[var(--popup-border)]">
+                            {[
+                                {
+                                    label: t('Membership Fees'),
+                                    value: openMonth.memberships,
+                                    sign: 1,
+                                },
+                                {
+                                    label: t('Salaries'),
+                                    value: openMonth.salaries,
+                                    sign: -1,
+                                },
+                                {
+                                    label: t('Invoices'),
+                                    value: openMonth.invoices,
+                                    sign: -1,
+                                },
+                            ].map((part) => (
+                                <li
+                                    key={part.label}
+                                    className="flex items-center justify-between border-b border-[var(--popup-border)] px-[18px] py-3"
                                 >
-                                    <Typography variant="body2">
-                                        {dayjs(month).format('MMMM YYYY')}
-                                    </Typography>
-
-                                    <div
-                                        style={{
-                                            display: 'flex',
-                                            flexDirection: 'column',
-                                            gap: '8px',
-                                            alignItems: 'center',
-                                        }}
+                                    <span className="text-[15px] font-semibold text-[var(--popup-fg)]">
+                                        {part.label}
+                                    </span>
+                                    <span
+                                        className={`text-[15px] font-bold ${
+                                            part.sign > 0
+                                                ? 'text-green-600 dark:text-green-400'
+                                                : 'text-[var(--popup-fg)]'
+                                        }`}
                                     >
-                                        <Chip
-                                            label={t(
-                                                'Memberships: :amount MKD',
-                                                {
-                                                    amount: formatCurrency(
-                                                        monthData.memberships,
-                                                    ),
-                                                },
-                                            )}
-                                            size="small"
-                                            sx={{
-                                                ...chipSx,
-                                                bgcolor:
-                                                    'rgba(33, 150, 243, 0.3)',
-                                            }}
-                                        />
-                                        <Chip
-                                            label={t('Salaries: :amount MKD', {
-                                                amount: formatCurrency(
-                                                    monthData.salaries,
-                                                ),
-                                            })}
-                                            size="small"
-                                            sx={{
-                                                ...chipSx,
-                                                bgcolor:
-                                                    'rgba(244, 67, 54, 0.3)',
-                                            }}
-                                        />
-                                        <Chip
-                                            label={t('Invoices: :amount MKD', {
-                                                amount: formatCurrency(
-                                                    monthData.invoices,
-                                                ),
-                                            })}
-                                            size="small"
-                                            sx={{
-                                                ...chipSx,
-                                                bgcolor:
-                                                    'rgba(255, 152, 0, 0.3)',
-                                            }}
-                                        />
-                                        <Chip
-                                            label={t('Profit: :amount MKD', {
-                                                amount: formatCurrency(
-                                                    monthData.profit,
-                                                ),
-                                            })}
-                                            color="success"
-                                            size="small"
-                                            sx={chipSx}
-                                        />
-                                    </div>
-                                </ListItem>
-                            );
-                        })}
-                    </List>
-                </DialogContent>
-            </Dialog>
-
-            <Dialog
-                open={showYearDetailModal}
-                onClose={() => {
-                    setShowYearDetailModal(false);
-                    setSelectedYear(null);
-                }}
-                disableRestoreFocus
-                fullWidth
-                maxWidth="sm"
-                PaperProps={{
-                    sx: { bgcolor: POPUP_BG },
-                }}
-            >
-                <DialogTitle sx={{ p: 0 }}>
-                    <div className="flex items-center justify-between px-4 py-3">
-                        <Typography variant="h6" fontWeight="bold">
-                            {t('Profit History - :year', {
-                                year: selectedYear ?? '',
-                            })}
-                        </Typography>
-                        <CloseButton
-                            onClick={() => {
-                                setShowYearDetailModal(false);
-                                setSelectedYear(null);
-                            }}
-                        />
-                    </div>
-                    <Divider />
-                </DialogTitle>
-
-                <DialogContent sx={{ p: 0 }}>
-                    <List disablePadding>
-                        {yearMonths.map((month) => {
-                            const monthData = groupedProfits[month];
-
-                            return (
-                                <ListItem
-                                    key={month}
-                                    divider
-                                    sx={{
-                                        px: 2,
-                                        py: 2,
-                                        display: 'flex',
-                                        flexDirection: 'column',
-                                        height: 'auto',
-                                        gap: 2,
-                                        alignItems: 'center',
-                                    }}
-                                >
-                                    <Typography variant="body2">
-                                        {dayjs(month).format('MMMM YYYY')}
-                                    </Typography>
-
-                                    <div
-                                        style={{
-                                            display: 'flex',
-                                            flexDirection: 'column',
-                                            gap: '8px',
-                                            alignItems: 'center',
-                                        }}
-                                    >
-                                        <Chip
-                                            label={t(
-                                                'Memberships: :amount MKD',
-                                                {
-                                                    amount: formatCurrency(
-                                                        monthData.memberships,
-                                                    ),
-                                                },
-                                            )}
-                                            size="small"
-                                            sx={{
-                                                ...chipSx,
-                                                bgcolor:
-                                                    'rgba(33, 150, 243, 0.3)',
-                                            }}
-                                        />
-                                        <Chip
-                                            label={t('Salaries: :amount MKD', {
-                                                amount: formatCurrency(
-                                                    monthData.salaries,
-                                                ),
-                                            })}
-                                            size="small"
-                                            sx={{
-                                                ...chipSx,
-                                                bgcolor:
-                                                    'rgba(244, 67, 54, 0.3)',
-                                            }}
-                                        />
-                                        <Chip
-                                            label={t('Invoices: :amount MKD', {
-                                                amount: formatCurrency(
-                                                    monthData.invoices,
-                                                ),
-                                            })}
-                                            size="small"
-                                            sx={{
-                                                ...chipSx,
-                                                bgcolor:
-                                                    'rgba(255, 152, 0, 0.3)',
-                                            }}
-                                        />
-                                        <Chip
-                                            label={t('Profit: :amount MKD', {
-                                                amount: formatCurrency(
-                                                    monthData.profit,
-                                                ),
-                                            })}
-                                            color="success"
-                                            size="small"
-                                            sx={chipSx}
-                                        />
-                                    </div>
-                                </ListItem>
-                            );
-                        })}
-                    </List>
-                </DialogContent>
+                                        {part.sign > 0 ? '+' : '−'}
+                                        {formatCurrency(part.value)} MKD
+                                    </span>
+                                </li>
+                            ))}
+                        </ul>
+                    </>
+                )}
             </Dialog>
         </MuiThemeProvider>
     );
 }
+

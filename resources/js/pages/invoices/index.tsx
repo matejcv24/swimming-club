@@ -1,20 +1,16 @@
 import { Head, usePage } from '@inertiajs/react';
+import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
+import MoreVertIcon from '@mui/icons-material/MoreVert';
 import ReceiptLongIcon from '@mui/icons-material/ReceiptLong';
 import Button from '@mui/material/Button';
-import Chip from '@mui/material/Chip';
 import Dialog from '@mui/material/Dialog';
 import DialogContent from '@mui/material/DialogContent';
-import DialogTitle from '@mui/material/DialogTitle';
-import Divider from '@mui/material/Divider';
 import FormControl from '@mui/material/FormControl';
 import InputLabel from '@mui/material/InputLabel';
-import List from '@mui/material/List';
-import ListItem from '@mui/material/ListItem';
 import MenuItem from '@mui/material/MenuItem';
 import Select from '@mui/material/Select';
 import TextField from '@mui/material/TextField';
-import Typography from '@mui/material/Typography';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
@@ -29,13 +25,20 @@ import {
     popupFg,
 } from '@/components/mui-theme-provider';
 import {
-    CloseButton,
+    ActionMenu,
+    ConfirmDialog,
+    DrillRow,
+    EmptyState,
+    Note,
+    PopupButtons,
     PopupHeader,
-    ShowHistoryButton,
+    SectionLabel,
+    SummaryCard,
 } from '@/components/popup-ui';
 import { usePagePopup } from '@/hooks/use-page-popup';
 import { groupNameOf, useGroups } from '@/lib/groups';
 import { locale, pickerLocaleText, t, tc } from '@/lib/i18n';
+import { showToast } from '@/lib/toast';
 
 interface Invoice {
     id: number;
@@ -79,12 +82,6 @@ const formatCurrency = (value: number): string => {
     }).format(value);
 };
 
-const chipSx = {
-    minWidth: '180px',
-    display: 'flex',
-    justifyContent: 'center',
-};
-
 // Outlined fields with a floating label, as in the rest of the app
 const fieldSx = {
     '& .MuiOutlinedInput-root': {
@@ -102,8 +99,6 @@ export default function InvoicesIndex({ invoices }: Props) {
     const popup = usePagePopup();
     const page = usePage();
     const csrfToken = (page.props as any).csrf_token;
-
-    console.log('CSRF Token from props:', csrfToken);
 
     const groups = useGroups();
     const [invoiceList, setInvoiceList] = useState<Invoice[]>(
@@ -218,9 +213,14 @@ export default function InvoicesIndex({ invoices }: Props) {
                           )
                         : [withGroup, ...list],
                 );
+                showToast(
+                    t('The invoice for :month was saved', {
+                        month: invoiceMonth.format('MMMM'),
+                    }),
+                );
                 resetForm();
             } else {
-                console.error('Error saving invoice', response.status);
+                showToast(t('The invoice was not saved. Try again.'), 'error');
             }
         } catch (error) {
             console.error('Error saving invoice:', error);
@@ -262,8 +262,8 @@ export default function InvoicesIndex({ invoices }: Props) {
                         inv.id === updatedInvoice.id ? updatedInvoice : inv,
                     ),
                 );
-                setEditingInvoice(null);
-                setEditAmount('');
+                closeEdit();
+                showToast(t('The invoice was changed'));
             } else {
                 const errorData = await response.json();
                 console.error('Error updating invoice:', errorData);
@@ -273,9 +273,20 @@ export default function InvoicesIndex({ invoices }: Props) {
         }
     };
 
-    // The "are you sure" pop-up before deleting the invoice being edited
-    const [confirmDelete, setConfirmDelete] = useState(false);
+    // The invoice whose actions are open, and the one asked about before deleting
+    const [actionsFor, setActionsFor] = useState<Invoice | null>(null);
+    const [deleteTarget, setDeleteTarget] = useState<Invoice | null>(null);
     const [deletingInvoice, setDeletingInvoice] = useState(false);
+
+    const closeYear = () => {
+        setShowYearDetailModal(false);
+        setSelectedYear(null);
+    };
+
+    const closeEdit = () => {
+        setEditingInvoice(null);
+        setEditAmount('');
+    };
 
     const handleDeleteInvoice = async (id: number) => {
         setDeletingInvoice(true);
@@ -290,9 +301,8 @@ export default function InvoicesIndex({ invoices }: Props) {
 
             if (response.ok) {
                 setInvoiceList(invoiceList.filter((inv) => inv.id !== id));
-                setConfirmDelete(false);
-                setEditingInvoice(null);
-                setEditAmount('');
+                setDeleteTarget(null);
+                showToast(t('The invoice was deleted'), 'deleted');
             } else {
                 console.error('Error deleting invoice');
             }
@@ -321,531 +331,290 @@ export default function InvoicesIndex({ invoices }: Props) {
                     },
                 }}
             >
-                <DialogTitle sx={{ p: 0 }}>
-                    <PopupHeader
-                        icon={<ReceiptLongIcon fontSize="small" />}
-                        title={t('Invoices')}
-                        subtitle={t('Invoices by month, per group or in total')}
-                        onClose={popup.close}
-                    />
-                </DialogTitle>
+                <PopupHeader
+                    icon={<ReceiptLongIcon fontSize="small" />}
+                    title={t('Invoices')}
+                    subtitle={t('Invoices by month, per group or in total')}
+                    onClose={popup.close}
+                />
 
                 <DialogContent sx={{ p: 0, overflowY: 'auto', flex: 1 }}>
-                    <div className="flex flex-col gap-6 p-4">
-                        {/* Add Invoice Section */}
-                        <div className="flex flex-col gap-4">
-                            <Typography
-                                variant="caption"
-                                color="text.secondary"
-                                sx={{
-                                    textTransform: 'uppercase',
-                                    letterSpacing: 1,
-                                }}
-                            >
-                                {t('Record Invoice')}
-                            </Typography>
+                    <div className="flex flex-col gap-4 px-[18px] pt-1 pb-4">
+                        <SectionLabel>{t('Record Invoice')}</SectionLabel>
 
-                            <LocalizationProvider
-                                dateAdapter={AdapterDayjs}
-                                adapterLocale={locale}
-                                localeText={pickerLocaleText}
-                            >
-                                <DatePicker
-                                    label={t('Month')}
-                                    value={invoiceMonth}
-                                    onChange={(val) => setInvoiceMonth(val)}
-                                    views={['month', 'year']}
-                                    sx={fieldSx}
-                                />
-                            </LocalizationProvider>
+                        <LocalizationProvider
+                            dateAdapter={AdapterDayjs}
+                            adapterLocale={locale}
+                            localeText={pickerLocaleText}
+                        >
+                            <DatePicker
+                                label={t('Month')}
+                                value={invoiceMonth}
+                                onChange={(val) => setInvoiceMonth(val)}
+                                views={['month', 'year']}
+                                sx={fieldSx}
+                            />
+                        </LocalizationProvider>
 
-                            <FormControl fullWidth sx={fieldSx}>
-                                <InputLabel id="invoice-group-label" shrink>
-                                    {t('Group (optional)')}
-                                </InputLabel>
-                                <Select
-                                    labelId="invoice-group-label"
-                                    label={t('Group (optional)')}
-                                    notched
-                                    value={invoiceGroupId}
-                                    displayEmpty
-                                    onChange={(e) =>
-                                        setInvoiceGroupId(
-                                            String(e.target.value) === ''
-                                                ? ''
-                                                : Number(e.target.value),
-                                        )
-                                    }
-                                >
-                                    <MenuItem value="">
-                                        {t('No specific group (total)')}
-                                    </MenuItem>
-                                    {groups.map((group) => (
-                                        <MenuItem
-                                            key={group.id}
-                                            value={group.id}
-                                        >
-                                            {group.name}
-                                        </MenuItem>
-                                    ))}
-                                </Select>
-                            </FormControl>
-
-                            <TextField
-                                label={t('Amount (MKD)')}
-                                type="number"
-                                required
-                                value={invoiceAmount}
+                        <FormControl fullWidth sx={fieldSx}>
+                            <InputLabel id="invoice-group-label" shrink>
+                                {t('Group (optional)')}
+                            </InputLabel>
+                            <Select
+                                labelId="invoice-group-label"
+                                label={t('Group (optional)')}
+                                notched
+                                value={invoiceGroupId}
+                                displayEmpty
                                 onChange={(e) =>
-                                    setInvoiceAmount(e.target.value)
+                                    setInvoiceGroupId(
+                                        String(e.target.value) === ''
+                                            ? ''
+                                            : Number(e.target.value),
+                                    )
                                 }
-                                fullWidth
-                                inputProps={{ min: 0 }}
-                                sx={fieldSx}
-                            />
-
-                            <div className="flex gap-3">
-                                <Button
-                                    variant="outlined"
-                                    fullWidth
-                                    size="medium"
-                                    onClick={resetForm}
-                                >
-                                    {t('Cancel')}
-                                </Button>
-                                <Button
-                                    variant="contained"
-                                    fullWidth
-                                    size="medium"
-                                    onClick={handleSaveInvoice}
-                                    disabled={
-                                        !invoiceAmount ||
-                                        !invoiceMonth ||
-                                        isSaving
-                                    }
-                                >
-                                    {isSaving
-                                        ? t('Saving...')
-                                        : t('Save Invoice')}
-                                </Button>
-                            </div>
-                        </div>
-
-                        <Divider />
-
-                        <div className="flex flex-col gap-4">
-                            <Typography
-                                variant="caption"
-                                color="text.secondary"
-                                sx={{
-                                    textTransform: 'uppercase',
-                                    letterSpacing: 1,
-                                }}
                             >
-                                {t('Invoice History By Year')}
-                            </Typography>
+                                <MenuItem value="">
+                                    {t('No specific group (total)')}
+                                </MenuItem>
+                                {groups.map((group) => (
+                                    <MenuItem key={group.id} value={group.id}>
+                                        {group.name}
+                                    </MenuItem>
+                                ))}
+                            </Select>
+                        </FormControl>
 
-                            {sortedYears.length > 0 ? (
-                                <List disablePadding>
-                                    {sortedYears.map((year) => (
-                                        <ListItem
-                                            key={year}
-                                            divider
-                                            sx={{
-                                                px: 0,
-                                                cursor: 'pointer',
-                                                display: 'flex',
-                                                flexDirection: 'column',
-                                                height: 'auto',
-                                                gap: 2,
-                                                paddingY: 1.5,
-                                                alignItems: 'center',
-                                                '&:hover': {
-                                                    bgcolor: popupFg(0.05),
-                                                },
-                                            }}
-                                            onClick={() => {
-                                                setSelectedYear(year);
-                                                setShowYearDetailModal(true);
-                                            }}
-                                        >
-                                            <div
-                                                style={{
-                                                    display: 'flex',
-                                                    justifyContent: 'center',
-                                                    alignItems: 'center',
-                                                    gap: '16px',
-                                                }}
-                                            >
-                                                <Typography variant="body2">
-                                                    {year}
-                                                </Typography>
-                                                <Typography
-                                                    variant="caption"
-                                                    color="primary"
-                                                >
-                                                    {tc(
-                                                        ':count month|:count months',
-                                                        yearGroups[year]
-                                                            .monthCount,
-                                                    )}
-                                                </Typography>
-                                            </div>
-                                            <div
-                                                style={{
-                                                    display: 'flex',
-                                                    flexDirection: 'column',
-                                                    gap: '8px',
-                                                    alignItems: 'center',
-                                                }}
-                                            >
-                                                <Chip
-                                                    label={t(
-                                                        'Total: :amount MKD',
-                                                        {
-                                                            amount: formatCurrency(
-                                                                yearGroups[year]
-                                                                    .total,
-                                                            ),
-                                                        },
-                                                    )}
-                                                    color="success"
-                                                    size="small"
-                                                    sx={chipSx}
-                                                />
-                                            </div>
-                                            {/* Says plainly that the whole history opens from here */}
-                                            <ShowHistoryButton
-                                                label={t('View months')}
-                                                onClick={() => {
-                                                    setSelectedYear(year);
-                                                    setShowYearDetailModal(
-                                                        true,
-                                                    );
-                                                }}
-                                            />
-                                        </ListItem>
-                                    ))}
-                                </List>
-                            ) : (
-                                <Typography
-                                    variant="body2"
-                                    color="text.secondary"
-                                >
-                                    {t('No invoices recorded yet.')}
-                                </Typography>
-                            )}
-                        </div>
-                    </div>
-                </DialogContent>
-            </Dialog>
-
-            {/* Year Invoice History Modal */}
-            <Dialog
-                open={showYearDetailModal}
-                onClose={() => {
-                    setShowYearDetailModal(false);
-                    setSelectedYear(null);
-                }}
-                disableRestoreFocus
-                fullWidth
-                maxWidth="sm"
-                PaperProps={{
-                    sx: { bgcolor: POPUP_BG },
-                }}
-            >
-                <DialogTitle sx={{ p: 0 }}>
-                    <div className="flex items-center justify-between px-4 py-3">
-                        <Typography variant="h6" fontWeight="bold">
-                            {t('Invoice History By Month - :year', {
-                                year: selectedYear ?? '',
-                            })}
-                        </Typography>
-                        <CloseButton
-                            onClick={() => {
-                                setShowYearDetailModal(false);
-                                setSelectedYear(null);
-                            }}
+                        <TextField
+                            label={t('Amount (MKD)')}
+                            type="number"
+                            required
+                            value={invoiceAmount}
+                            onChange={(e) => setInvoiceAmount(e.target.value)}
+                            fullWidth
+                            inputProps={{ min: 0 }}
+                            sx={fieldSx}
                         />
-                    </div>
-                    <Divider />
-                </DialogTitle>
 
-                <DialogContent sx={{ p: 0 }}>
-                    <List disablePadding>
-                        {yearMonths.map((month) => {
-                            const monthData = groupedInvoices[month];
-
-                            return (
-                                <ListItem
-                                    key={month}
-                                    divider
-                                    sx={{
-                                        px: 2,
-                                        py: 2,
-                                        display: 'flex',
-                                        flexDirection: 'column',
-                                        height: 'auto',
-                                        gap: 2,
-                                        alignItems: 'center',
-                                    }}
-                                >
-                                    <div
-                                        style={{
-                                            display: 'flex',
-                                            justifyContent: 'center',
-                                            alignItems: 'center',
-                                            gap: '16px',
-                                        }}
-                                    >
-                                        <Typography variant="body2">
-                                            {dayjs(month).format('MMMM YYYY')}
-                                        </Typography>
-                                    </div>
-                                    <div
-                                        style={{
-                                            display: 'flex',
-                                            flexDirection: 'column',
-                                            gap: '8px',
-                                            alignItems: 'center',
-                                        }}
-                                    >
-                                        {monthData.invoices.map(
-                                            (invoice, index) => (
-                                                <Chip
-                                                    key={invoice.id}
-                                                    label={`${invoiceLabel(invoice)}: ${formatCurrency(invoice.amount)} MKD`}
-                                                    size="small"
-                                                    onClick={() => {
-                                                        setEditingInvoice(
-                                                            invoice,
-                                                        );
-                                                        setEditAmount(
-                                                            String(
-                                                                invoice.amount,
-                                                            ),
-                                                        );
-                                                    }}
-                                                    onDelete={() => {
-                                                        setEditingInvoice(
-                                                            invoice,
-                                                        );
-                                                        setEditAmount(
-                                                            String(
-                                                                invoice.amount,
-                                                            ),
-                                                        );
-                                                    }}
-                                                    deleteIcon={
-                                                        <EditIcon
-                                                            aria-label={t(
-                                                                'Edit :name invoice',
-                                                                {
-                                                                    name: invoiceLabel(
-                                                                        invoice,
-                                                                    ),
-                                                                },
-                                                            )}
-                                                        />
-                                                    }
-                                                    sx={{
-                                                        ...chipSx,
-                                                        bgcolor:
-                                                            index % 2 === 0
-                                                                ? 'rgba(33, 150, 243, 0.3)'
-                                                                : 'rgba(76, 175, 80, 0.3)',
-                                                    }}
-                                                />
-                                            ),
-                                        )}
-                                        <Chip
-                                            label={t('Total: :amount MKD', {
-                                                amount: formatCurrency(
-                                                    monthData.total,
-                                                ),
-                                            })}
-                                            color="success"
-                                            size="small"
-                                            sx={chipSx}
-                                        />
-                                    </div>
-                                </ListItem>
-                            );
-                        })}
-                    </List>
-                </DialogContent>
-            </Dialog>
-
-            {/* Edit Invoice Modal */}
-            {editingInvoice && (
-                <Dialog
-                    open={!!editingInvoice}
-                    onClose={() => {
-                        setEditingInvoice(null);
-                        setEditAmount('');
-                    }}
-                    disableRestoreFocus
-                    fullWidth
-                    maxWidth="sm"
-                    PaperProps={{
-                        sx: { bgcolor: POPUP_BG },
-                    }}
-                >
-                    <DialogTitle sx={{ p: 0 }}>
-                        <div className="flex items-center justify-between px-4 py-3">
-                            <Typography variant="h6" fontWeight="bold">
-                                {t('Edit Invoice')}
-                            </Typography>
-                            <CloseButton
-                                onClick={() => {
-                                    setEditingInvoice(null);
-                                    setEditAmount('');
-                                }}
-                            />
-                        </div>
-                        <Divider />
-                    </DialogTitle>
-
-                    <DialogContent>
-                        <div className="flex flex-col gap-6 py-4">
-                            <div
-                                style={{
-                                    display: 'flex',
-                                    gap: '16px',
-                                    alignItems: 'center',
-                                }}
+                        <div className="grid grid-cols-2 gap-3">
+                            <Button variant="outlined" onClick={resetForm}>
+                                {t('Cancel')}
+                            </Button>
+                            <Button
+                                variant="contained"
+                                onClick={handleSaveInvoice}
+                                disabled={
+                                    !invoiceAmount || !invoiceMonth || isSaving
+                                }
                             >
-                                <Typography
-                                    variant="body2"
-                                    color="text.secondary"
-                                >
-                                    {dayjs(editingInvoice.month).format(
-                                        'MMMM YYYY',
+                                {t('Save')}
+                            </Button>
+                        </div>
+
+                        <SectionLabel>{t('Invoice History By Year')}</SectionLabel>
+                    </div>
+
+                    {sortedYears.length > 0 ? (
+                        <ul className="border-t border-[var(--popup-border)]">
+                            {sortedYears.map((year) => (
+                                <DrillRow
+                                    key={year}
+                                    title={year}
+                                    subtitle={tc(
+                                        ':count month|:count months',
+                                        yearGroups[year].monthCount,
                                     )}
-                                </Typography>
-                                <Typography variant="body2" fontWeight="bold">
-                                    {invoiceLabel(editingInvoice)}
-                                </Typography>
-                            </div>
-
-                            <TextField
-                                label={t('Amount (MKD)')}
-                                type="number"
-                                required
-                                value={editAmount}
-                                onChange={(e) => setEditAmount(e.target.value)}
-                                fullWidth
-                                inputProps={{ min: 0 }}
-                                sx={fieldSx}
-                            />
-
-                            <div className="flex gap-3">
-                                <Button
-                                    variant="outlined"
-                                    size="medium"
+                                    value={`${formatCurrency(yearGroups[year].total)} MKD`}
                                     onClick={() => {
-                                        setEditingInvoice(null);
-                                        setEditAmount('');
+                                        setSelectedYear(year);
+                                        setShowYearDetailModal(true);
                                     }}
-                                >
-                                    {t('Cancel')}
-                                </Button>
-                                {/* Asks first (Delete Invoice pop-up below) */}
-                                <Button
-                                    variant="contained"
-                                    fullWidth
-                                    size="medium"
-                                    color="error"
-                                    onClick={() => setConfirmDelete(true)}
-                                >
-                                    {t('Delete')}
-                                </Button>
-                                <Button
-                                    variant="contained"
-                                    fullWidth
-                                    size="medium"
-                                    onClick={handleUpdateInvoice}
-                                    disabled={!editAmount}
-                                >
-                                    {t('Update')}
-                                </Button>
-                            </div>
-                        </div>
-                    </DialogContent>
-                </Dialog>
-            )}
-
-            {/* Delete Invoice Confirmation Modal (like Delete Member) */}
-            <Dialog
-                open={confirmDelete && !!editingInvoice}
-                onClose={() => !deletingInvoice && setConfirmDelete(false)}
-                disableRestoreFocus
-                fullWidth
-                maxWidth="xs"
-                PaperProps={{
-                    sx: { bgcolor: POPUP_BG },
-                }}
-            >
-                <DialogTitle sx={{ p: 0 }}>
-                    <div className="flex items-center justify-between px-4 py-3">
-                        <Typography variant="h6" fontWeight="bold">
-                            {t('Delete Invoice')}
-                        </Typography>
-                        <CloseButton
-                            onClick={() =>
-                                !deletingInvoice && setConfirmDelete(false)
-                            }
+                                />
+                            ))}
+                        </ul>
+                    ) : (
+                        <EmptyState
+                            icon={<ReceiptLongIcon />}
+                            title={t('No invoices recorded yet.')}
                         />
-                    </div>
-                    <Divider />
-                </DialogTitle>
-
-                <DialogContent>
-                    {editingInvoice && (
-                        <div className="flex flex-col gap-4 py-4">
-                            <Typography variant="body1">
-                                {t(
-                                    'Are you sure you want to delete the invoice',
-                                )}{' '}
-                                <strong>{invoiceLabel(editingInvoice)}</strong>{' '}
-                                {t('for')}{' '}
-                                <strong>
-                                    {dayjs(editingInvoice.month).format(
-                                        'MMMM YYYY',
-                                    )}
-                                </strong>
-                                ?
-                            </Typography>
-                            <Typography variant="body2" color="text.secondary">
-                                {t('This cannot be undone.')}
-                            </Typography>
-                            <div className="flex gap-3">
-                                <Button
-                                    variant="outlined"
-                                    fullWidth
-                                    size="medium"
-                                    onClick={() => setConfirmDelete(false)}
-                                    disabled={deletingInvoice}
-                                >
-                                    {t('No')}
-                                </Button>
-                                <Button
-                                    variant="contained"
-                                    color="error"
-                                    fullWidth
-                                    size="medium"
-                                    onClick={() =>
-                                        handleDeleteInvoice(editingInvoice.id)
-                                    }
-                                    disabled={deletingInvoice}
-                                >
-                                    {t('Yes')}
-                                </Button>
-                            </div>
-                        </div>
                     )}
                 </DialogContent>
             </Dialog>
+
+            {/* One year: the total, then each invoice by month */}
+            <Dialog
+                open={showYearDetailModal}
+                onClose={closeYear}
+                disableRestoreFocus
+                fullWidth
+                maxWidth="sm"
+                PaperProps={{ sx: { bgcolor: POPUP_BG } }}
+            >
+                <PopupHeader
+                    icon={<ReceiptLongIcon fontSize="small" />}
+                    title={t('Invoices')}
+                    subtitle={t(':year · by month', { year: selectedYear ?? '' })}
+                    onClose={closeYear}
+                />
+
+                <DialogContent sx={{ p: 0 }}>
+                    {selectedYear && yearGroups[selectedYear] && (
+                        <SummaryCard
+                            tone="blue"
+                            title={`${selectedYear}: ${formatCurrency(yearGroups[selectedYear].total)} MKD`}
+                        >
+                            {tc(
+                                ':count month|:count months',
+                                yearGroups[selectedYear].monthCount,
+                            )}{' '}
+                            ·{' '}
+                            {tc(
+                                ':count invoice|:count invoices',
+                                yearMonths.reduce(
+                                    (count, month) =>
+                                        count +
+                                        groupedInvoices[month].invoices.length,
+                                    0,
+                                ),
+                            )}
+                        </SummaryCard>
+                    )}
+                    <ul className="border-t border-[var(--popup-border)]">
+                        {yearMonths.flatMap((month) =>
+                            groupedInvoices[month].invoices.map((invoice) => (
+                                <li
+                                    key={invoice.id}
+                                    className="border-b border-[var(--popup-border)]"
+                                >
+                                    <button
+                                        type="button"
+                                        onClick={() => setActionsFor(invoice)}
+                                        className="flex w-full cursor-pointer items-center gap-3 px-[18px] py-3 text-left transition hover:bg-[var(--popup-ghost)]"
+                                    >
+                                        <span className="min-w-0 flex-1">
+                                            <span className="block text-[15px] font-semibold text-[var(--popup-fg)] capitalize">
+                                                {dayjs(month).format(
+                                                    'MMMM YYYY',
+                                                )}
+                                            </span>
+                                            <span className="block text-[13px] text-[var(--popup-muted)]">
+                                                {invoiceLabel(invoice)}
+                                            </span>
+                                        </span>
+                                        <span className="flex-none text-[15px] font-bold whitespace-nowrap text-[var(--popup-fg)]">
+                                            {formatCurrency(invoice.amount)} MKD
+                                        </span>
+                                        <MoreVertIcon
+                                            fontSize="small"
+                                            className="flex-none text-[var(--popup-muted)]"
+                                        />
+                                    </button>
+                                </li>
+                            )),
+                        )}
+                    </ul>
+                </DialogContent>
+            </Dialog>
+
+            {/* One invoice's actions: edit, delete */}
+            <ActionMenu
+                open={!!actionsFor}
+                title={
+                    actionsFor
+                        ? `${dayjs(actionsFor.month).format('MMMM YYYY')} · ${formatCurrency(actionsFor.amount)} MKD`
+                        : ''
+                }
+                subtitle={actionsFor ? invoiceLabel(actionsFor) : undefined}
+                onClose={() => setActionsFor(null)}
+                actions={[
+                    {
+                        label: t('Edit invoice'),
+                        icon: <EditIcon fontSize="small" />,
+                        onClick: () => {
+                            if (actionsFor) {
+                                setEditingInvoice(actionsFor);
+                                setEditAmount(String(actionsFor.amount));
+                            }
+                        },
+                    },
+                    {
+                        label: t('Delete invoice'),
+                        icon: <DeleteIcon fontSize="small" />,
+                        tone: 'danger',
+                        onClick: () => setDeleteTarget(actionsFor),
+                    },
+                ]}
+            />
+
+            {/* Edit Invoice Modal */}
+            <Dialog
+                open={!!editingInvoice}
+                onClose={closeEdit}
+                disableRestoreFocus
+                fullWidth
+                maxWidth="xs"
+                PaperProps={{ sx: { bgcolor: POPUP_BG } }}
+            >
+                <PopupHeader
+                    icon={<EditIcon fontSize="small" />}
+                    title={t('Edit invoice')}
+                    subtitle={
+                        editingInvoice
+                            ? `${dayjs(editingInvoice.month).format('MMMM YYYY')} · ${invoiceLabel(editingInvoice)}`
+                            : ''
+                    }
+                    onClose={closeEdit}
+                />
+                <div className="px-[18px] pt-2 pb-2">
+                    <TextField
+                        label={t('Amount (MKD)')}
+                        type="number"
+                        required
+                        value={editAmount}
+                        onChange={(e) => setEditAmount(e.target.value)}
+                        fullWidth
+                        inputProps={{ min: 0 }}
+                        sx={fieldSx}
+                    />
+                </div>
+                <PopupButtons>
+                    <Button variant="outlined" onClick={closeEdit}>
+                        {t('Cancel')}
+                    </Button>
+                    <Button
+                        variant="contained"
+                        onClick={handleUpdateInvoice}
+                        disabled={!editAmount}
+                    >
+                        {t('Save')}
+                    </Button>
+                </PopupButtons>
+            </Dialog>
+
+            {/* Deleting an invoice: asked once */}
+            <ConfirmDialog
+                open={!!deleteTarget}
+                icon={<DeleteIcon fontSize="small" />}
+                title={t('Delete invoice?')}
+                subtitle={
+                    deleteTarget
+                        ? `${invoiceLabel(deleteTarget)} · ${dayjs(deleteTarget.month).format('MMMM YYYY')}`
+                        : undefined
+                }
+                confirmLabel={t('Delete')}
+                busy={deletingInvoice}
+                onConfirm={() =>
+                    deleteTarget && handleDeleteInvoice(deleteTarget.id)
+                }
+                onClose={() => setDeleteTarget(null)}
+            >
+                <p>
+                    {t(
+                        'Profit and reports will no longer count it.',
+                    )}
+                </p>
+                <Note tone="error">{t('This cannot be undone.')}</Note>
+            </ConfirmDialog>
         </MuiThemeProvider>
     );
 }
