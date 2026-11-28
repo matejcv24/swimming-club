@@ -44,20 +44,11 @@ class ClubController extends Controller
             'email' => ['required', 'email', 'max:255'],
             // Images only (no SVG: it can carry scripts)
             'logo' => ['nullable', 'file', 'mimes:png,jpg,jpeg,webp', 'max:2048'],
-            // The emails to parents the club sends (both on unless switched off)
-            'payment_confirmation_emails' => ['sometimes', 'boolean'],
-            'payment_reminder_emails' => ['sometimes', 'boolean'],
         ]);
 
         $club = Club::current();
         $club->name = trim($validated['name']);
         $club->email = trim($validated['email']);
-
-        foreach (['payment_confirmation_emails', 'payment_reminder_emails'] as $switch) {
-            if (array_key_exists($switch, $validated)) {
-                $club->{$switch} = (bool) $validated[$switch];
-            }
-        }
 
         if ($request->hasFile('logo')) {
             $this->replaceLogo($club, $request->file('logo'));
@@ -66,6 +57,24 @@ class ClubController extends Controller
         $club->save();
 
         return back()->with('success', 'Club settings saved!');
+    }
+
+    /**
+     * The payment emails to parents (Account settings, admins): whether the club
+     * sends them, and whether they go out by themselves. Only what is sent changes.
+     */
+    public function updateEmails(Request $request)
+    {
+        $switches = $request->validate([
+            'payment_confirmation_emails' => ['sometimes', 'boolean'],
+            'payment_reminder_emails' => ['sometimes', 'boolean'],
+            'auto_payment_confirmation' => ['sometimes', 'boolean'],
+            'auto_payment_reminder' => ['sometimes', 'boolean'],
+        ]);
+
+        Club::current()->update(array_map(fn ($value) => (bool) $value, $switches));
+
+        return back()->with('success', 'Email settings saved!');
     }
 
     /** Deletes the logo (the page asks "are you sure?" first). */

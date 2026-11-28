@@ -9,4 +9,8 @@ export type ClubSharedData = {
     payment_confirmation_emails: boolean;
     /** The club sends reminders for unpaid fees (Club settings). */
     payment_reminder_emails: boolean;
+    /** Confirmations go out by themselves as a payment is saved. */
+    auto_payment_confirmation: boolean;
+    /** Reminders go out by themselves every morning. */
+    auto_payment_reminder: boolean;
 };

@@ -27,6 +27,8 @@ export type SavedFee = {
     /** Where a confirmation would go (null: no email saved) */
     email: string | null;
     email_of: 'parent' | 'member' | null;
+    /** The club sends confirmations by itself, and this one already went out */
+    auto_sent?: boolean;
 };
 
 /** One payment, as the pop-up shows it at the top. */

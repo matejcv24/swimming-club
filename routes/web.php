@@ -84,6 +84,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::middleware(['role:admin'])->group(function () {
         // The club's name, email and logo: only admins change them
         Route::post('/club', [ClubController::class, 'update'])->name('club.update');
+        Route::patch('/club/emails', [ClubController::class, 'updateEmails'])->name('club.emails');
         Route::delete('/club/logo', [ClubController::class, 'destroyLogo'])->name('club.logo.destroy');
 
         Route::get('/staff', [StaffController::class, 'index'])->name('staff.index');

@@ -1309,7 +1309,7 @@ export default function StaffIndex({ staff, invitations }: Props) {
                     ) : (
                         <>
                             <SummaryCard
-                                tone="blue"
+                                tone="red"
                                 title={t('Last salary: :month', {
                                     month: dayjs(salaries[0].month).format(
                                         'MMMM YYYY',
@@ -1384,7 +1384,7 @@ export default function StaffIndex({ staff, invitations }: Props) {
                                                                 </span>
                                                             )}
                                                         </span>
-                                                        <span className="flex-none text-[15px] font-bold whitespace-nowrap text-green-600 dark:text-green-400">
+                                                        <span className="flex-none text-[15px] font-bold whitespace-nowrap text-red-500 dark:text-red-400">
                                                             {formatCurrency(
                                                                 Number(
                                                                     salary.amount,

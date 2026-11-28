@@ -4,7 +4,6 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
 import EmailIcon from '@mui/icons-material/Email';
 import HistoryIcon from '@mui/icons-material/History';
-import MoreVertIcon from '@mui/icons-material/MoreVert';
 import Autocomplete from '@mui/material/Autocomplete';
 import Button from '@mui/material/Button';
 import Dialog from '@mui/material/Dialog';
@@ -30,6 +29,13 @@ import {
     POPUP_FG,
     popupFg,
 } from '@/components/mui-theme-provider';
+import {
+    formatCurrency,
+    methodLabel,
+    PaymentHistoryContent,
+    period,
+} from '@/components/payment-history';
+import type { Fee } from '@/components/payment-history';
 import { ConfirmationDialog } from '@/components/payment-saved-dialog';
 import type {
     ConfirmationPayment,
@@ -44,7 +50,6 @@ import {
     PopupHeader,
     SectionLabel,
     SummaryCard,
-    YearSection,
 } from '@/components/popup-ui';
 import { CardsSkeleton } from '@/components/skeletons';
 import { usePagePopup } from '@/hooks/use-page-popup';
@@ -62,25 +67,6 @@ interface Member {
     name: string;
     group_id: number | null;
     status: 'active' | 'inactive';
-}
-
-interface Fee {
-    id: number;
-    member_id: number;
-    member_name?: string | null;
-    group_id: number | null;
-    // The group as it was, so payments of a deleted group keep its name
-    group?: { id: number; name: string } | null;
-    amount: number;
-    payment_method: 'cash' | 'card';
-    start_date: string;
-    end_date: string;
-    /** When the "payment received" email went out (null: not sent) */
-    confirmation_sent_at?: string | null;
-    member?: {
-        id: number;
-        name: string;
-    };
 }
 
 interface YearGroup {
@@ -113,19 +99,6 @@ const inputSx = {
     '& .MuiSvgIcon-root': { color: POPUP_FG },
 };
 
-const methodLabel = (method: 'cash' | 'card') =>
-    method === 'card' ? t('Card') : t('Cash');
-
-/** "07.06 – 07.07.2026" (both years only when they differ). */
-const period = (fee: Fee) => {
-    const start = dayjs(fee.start_date);
-    const end = dayjs(fee.end_date);
-
-    return start.year() === end.year()
-        ? `${start.format('DD.MM')} – ${end.format('DD.MM.YYYY')}`
-        : `${start.format('DD.MM.YYYY')} – ${end.format('DD.MM.YYYY')}`;
-};
-
 /** A payment as the confirmation pop-up shows it. */
 const toPayment = (fee: Fee, member: string): ConfirmationPayment => ({
     id: fee.id,
@@ -135,128 +108,6 @@ const toPayment = (fee: Fee, member: string): ConfirmationPayment => ({
     start_date: fee.start_date,
     end_date: fee.end_date,
 });
-
-/** The payments by year (of their start), newest year first. */
-const feeYears = (fees: Fee[]): [string, Fee[]][] => {
-    const years = new Map<string, Fee[]>();
-
-    fees.forEach((fee) => {
-        const year = dayjs(fee.start_date).format('YYYY');
-        years.set(year, [...(years.get(year) ?? []), fee]);
-    });
-
-    return [...years.entries()].sort(([a], [b]) => b.localeCompare(a));
-};
-
-/** Top of the history: paid until (green) or expired (red), how many, how much. */
-function HistorySummary({ fees }: { fees: Fee[] }) {
-    const paidUntil = fees.reduce(
-        (latest, fee) =>
-            !latest || dayjs(fee.end_date).isAfter(latest)
-                ? dayjs(fee.end_date)
-                : latest,
-        null as dayjs.Dayjs | null,
-    );
-    const total = fees.reduce((sum, fee) => sum + Number(fee.amount), 0);
-    const active = !!paidUntil && !paidUntil.isBefore(dayjs(), 'day');
-
-    return (
-        <SummaryCard
-            tone={active ? 'green' : 'red'}
-            title={
-                active
-                    ? t('Paid until :date', {
-                          date: paidUntil.format('DD.MM.YYYY'),
-                      })
-                    : t('The membership fee expired on :date', {
-                          date: paidUntil?.format('DD.MM.YYYY') ?? '',
-                      })
-            }
-        >
-            {tc(':count payment|:count payments', fees.length)} ·{' '}
-            {formatCurrency(total)} MKD
-        </SummaryCard>
-    );
-}
-
-/**
- * One payment: the period, whether its confirmation was sent, the amount and
- * how it was paid. Admins tap it (or ⋮) for send, edit and delete.
- */
-function HistoryRow({
-    fee,
-    canManage,
-    onOpen,
-}: {
-    fee: Fee;
-    canManage: boolean;
-    onOpen: () => void;
-}) {
-    const content = (
-        <>
-            <span className="min-w-0 flex-1">
-                <span className="block text-[15px] font-semibold text-[var(--popup-fg)]">
-                    {period(fee)}
-                </span>
-                {fee.confirmation_sent_at ? (
-                    <span className="mt-0.5 block text-[13px] font-semibold text-green-600 dark:text-green-400">
-                        {t('Confirmation sent on :date', {
-                            date: dayjs(fee.confirmation_sent_at).format(
-                                'DD.MM.YYYY',
-                            ),
-                        })}
-                    </span>
-                ) : (
-                    <span className="mt-0.5 block text-[13px] text-[var(--popup-muted)]">
-                        {t('No confirmation')}
-                    </span>
-                )}
-            </span>
-            <span className="flex-none text-right">
-                <span className="block text-[15px] font-bold text-green-600 dark:text-green-400">
-                    {formatCurrency(Number(fee.amount))} MKD
-                </span>
-                <span className="block text-[13px] text-[var(--popup-muted)]">
-                    {methodLabel(fee.payment_method)}
-                </span>
-            </span>
-        </>
-    );
-
-    if (!canManage) {
-        return (
-            <li className="flex items-center gap-3 border-b border-[var(--popup-border)] px-[18px] py-3">
-                {content}
-            </li>
-        );
-    }
-
-    return (
-        <li className="border-b border-[var(--popup-border)]">
-            <button
-                type="button"
-                onClick={onOpen}
-                aria-label={t('Payment :period, actions', {
-                    period: period(fee),
-                })}
-                className="flex w-full cursor-pointer items-center gap-3 px-[18px] py-3 text-left transition hover:bg-[var(--popup-ghost)]"
-            >
-                {content}
-                <MoreVertIcon
-                    fontSize="small"
-                    className="flex-none text-[var(--popup-muted)]"
-                />
-            </button>
-        </li>
-    );
-}
-
-const formatCurrency = (value: number): string => {
-    return new Intl.NumberFormat('en-US', {
-        minimumFractionDigits: 0,
-        maximumFractionDigits: 2,
-    }).format(value);
-};
 
 export default function MembershipFeesIndex({
     members,
@@ -490,7 +341,21 @@ export default function MembershipFeesIndex({
                         | null
                         | undefined;
 
-                    if (saved) {
+                    if (saved?.auto_sent) {
+                        // Already emailed by itself: just say so
+                        showToast(
+                            t('The confirmation was sent to :email', {
+                                email: saved.email ?? '',
+                            }),
+                            'sent',
+                        );
+
+                        if (openedToAdd) {
+                            popup.close();
+
+                            return;
+                        }
+                    } else if (saved) {
                         setConfirmFor({
                             payment: {
                                 id: saved.id,
@@ -859,41 +724,15 @@ export default function MembershipFeesIndex({
                 />
 
                 <DialogContent sx={{ p: 0 }}>
-                    {/* Paid until, how many payments, how much in total */}
-                    {fees.length > 0 ? (
-                        <HistorySummary fees={fees} />
-                    ) : (
-                        !loadingFees && (
-                            <EmptyState
-                                icon={<CreditCardIcon />}
-                                title={t('No payments recorded yet.')}
-                            />
-                        )
-                    )}
-                    <ul className="border-t border-[var(--popup-border)]">
-                        {feeYears(fees).map(([year, yearFees], index) => (
-                            <YearSection
-                                key={year}
-                                year={year}
-                                summary={`${yearFees.length} · ${formatCurrency(
-                                    yearFees.reduce(
-                                        (sum, fee) => sum + Number(fee.amount),
-                                        0,
-                                    ),
-                                )} MKD`}
-                                defaultOpen={index === 0}
-                            >
-                                {yearFees.map((fee) => (
-                                    <HistoryRow
-                                        key={fee.id}
-                                        fee={fee}
-                                        canManage={userRole === 'admin'}
-                                        onOpen={() => setActionsFee(fee)}
-                                    />
-                                ))}
-                            </YearSection>
-                        ))}
-                    </ul>
+                    <PaymentHistoryContent
+                        fees={fees}
+                        loading={loadingFees}
+                        onOpen={
+                            userRole === 'admin'
+                                ? (fee) => setActionsFee(fee)
+                                : undefined
+                        }
+                    />
                 </DialogContent>
             </Dialog>
 

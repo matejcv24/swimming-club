@@ -625,7 +625,7 @@ export default function MembersIndex({ members, userRole }: Props) {
                         />
 
                         <OptionalSection
-                            label={t('Contact details')}
+                            label={t("Member's contact details")}
                             hint={t('phone, email')}
                             open={editShowContact}
                             filled={!!(editForm.phone || editForm.email)}
@@ -835,7 +835,7 @@ export default function MembersIndex({ members, userRole }: Props) {
                             />
 
                             <OptionalSection
-                                label={t('Contact details')}
+                                label={t("Member's contact details")}
                                 hint={t('phone, email')}
                                 open={showContact}
                                 filled={!!(form.phone || form.email)}

@@ -83,6 +83,8 @@ class HandleInertiaRequests extends Middleware
                         'logo_url' => null,
                         'payment_confirmation_emails' => false,
                         'payment_reminder_emails' => false,
+                        'auto_payment_confirmation' => false,
+                        'auto_payment_reminder' => false,
                     ];
                 }
 
@@ -93,6 +95,9 @@ class HandleInertiaRequests extends Middleware
                     // Whether the club sends these emails (Club settings)
                     'payment_confirmation_emails' => (bool) $club->payment_confirmation_emails,
                     'payment_reminder_emails' => (bool) $club->payment_reminder_emails,
+                    // ...and whether they go out by themselves
+                    'auto_payment_confirmation' => (bool) $club->auto_payment_confirmation,
+                    'auto_payment_reminder' => (bool) $club->auto_payment_reminder,
                 ];
             },
             // "My clubs" in the avatar menu (empty: the person has one club)
