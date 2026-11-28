@@ -784,5 +784,6 @@
     "Member's contact details": "Контакт податоци за член",
     "Send automatically": "Испраќај автоматски",
     "The confirmation was sent to :email": "Потврдата е испратена до :email",
-    "The email settings were saved": "Поставките за е-пошта се зачувани"
+    "The email settings were saved": "Поставките за е-пошта се зачувани",
+    "Emails": "Е-пошта"
 }

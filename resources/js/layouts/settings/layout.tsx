@@ -11,7 +11,7 @@ export default function SettingsLayout({ children }: PropsWithChildren) {
                 description={t('Your name, email and password')}
             />
 
-            <section className="max-w-xl space-y-12">{children}</section>
+            <section className="max-w-5xl">{children}</section>
         </div>
     );
 }

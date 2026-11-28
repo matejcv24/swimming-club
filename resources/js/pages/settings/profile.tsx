@@ -43,7 +43,8 @@ export default function Profile({
 
             <h1 className="sr-only">{t('Account settings')}</h1>
 
-            <div className="flex flex-col gap-4">
+            {/* Phones: one under another; computers: two by two */}
+            <div className="grid items-start gap-4 lg:grid-cols-2">
                 <ProfileCard
                     mustVerifyEmail={mustVerifyEmail}
                     status={status}
@@ -293,20 +294,18 @@ function EmailsCard() {
     return (
         <Card
             icon={<MailOutlineIcon fontSize="small" />}
-            title={t('Emails to parents')}
+            title={t('Emails')}
             subtitle={t('For the whole club: every admin sees the same')}
         >
             <ul className="border-t border-[var(--popup-border)]">
                 <SwitchRow
                     label={t('Payment confirmation')}
-                    hint={t('Admins can email it to the parent after a payment.')}
                     checked={values.payment_confirmation_emails}
                     onChange={() => toggle('payment_confirmation_emails')}
                 />
                 <SwitchRow
                     indented
                     label={t('Send automatically')}
-                    hint={t('As soon as a payment is saved.')}
                     checked={
                         values.payment_confirmation_emails &&
                         values.auto_payment_confirmation
@@ -316,16 +315,12 @@ function EmailsCard() {
                 />
                 <SwitchRow
                     label={t('Reminder for an unpaid fee')}
-                    hint={t('Admins can send it from Unpaid fees.')}
                     checked={values.payment_reminder_emails}
                     onChange={() => toggle('payment_reminder_emails')}
                 />
                 <SwitchRow
                     indented
                     label={t('Send automatically')}
-                    hint={t(
-                        'Every morning, once to each member whose fee ran out.',
-                    )}
                     checked={
                         values.payment_reminder_emails &&
                         values.auto_payment_reminder
@@ -341,14 +336,12 @@ function EmailsCard() {
 /** A setting with a short explanation and its switch; "automatic" ones indented. */
 function SwitchRow({
     label,
-    hint,
     checked,
     disabled = false,
     indented = false,
     onChange,
 }: {
     label: string;
-    hint: string;
     checked: boolean;
     disabled?: boolean;
     indented?: boolean;
@@ -365,15 +358,10 @@ function SwitchRow({
                         className="absolute inset-y-0 left-7 border-l-2 border-[var(--popup-border)]"
                     />
                 )}
-                <span className="min-w-0 flex-1">
-                    <span
-                        className={`block font-semibold ${indented ? 'text-sm' : 'text-[15px]'}`}
-                    >
-                        {label}
-                    </span>
-                    <span className="block text-[12.5px] text-[var(--popup-muted)]">
-                        {hint}
-                    </span>
+                <span
+                    className={`min-w-0 flex-1 font-semibold ${indented ? 'text-sm' : 'text-[15px]'}`}
+                >
+                    {label}
                 </span>
                 <Switch
                     checked={checked}
