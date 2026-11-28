@@ -309,6 +309,8 @@ export default function TrainingsIndex({
     const [daySections, setDaySections] = useState<DaySection[] | null>(null);
     // The day was opened from the calendar: Save and Cancel go back to it
     const [fromCalendar, setFromCalendar] = useState(false);
+    // ...through "Which group?": closing goes back to that day's tiles
+    const [fromTiles, setFromTiles] = useState(false);
     // The group (or subgroup) picked on an overview to edit. The chosen view
     // ("All", or a group) stays as it is, and so do the calendar's dots.
     const [editTarget, setEditTarget] = useState<{
@@ -464,15 +466,19 @@ export default function TrainingsIndex({
                 targets[0].groupId,
                 targets[0].subgroupId,
                 date,
+                false,
             );
 
             return;
         }
 
-        // What each group and time slot already has on that day, for the tiles
         setDaySections(null);
         setShowPickTarget(true);
+        await loadDaySections(date);
+    };
 
+    // What each group and time slot already has on a day, for the tiles
+    const loadDaySections = async (date: Dayjs) => {
         try {
             const response = await fetch(
                 `/trainings/by-date?date=${date.format('YYYY-MM-DD')}&summary=1`,
@@ -647,6 +653,7 @@ export default function TrainingsIndex({
         groupId: number,
         subgroupId: number | null,
         date: Dayjs | null = selectedDate,
+        viaTiles = true,
     ) => {
         if (!date) {
             return;
@@ -654,6 +661,7 @@ export default function TrainingsIndex({
 
         setShowPickTarget(false);
         setFromCalendar(true);
+        setFromTiles(viaTiles);
         setReturnTo(null);
         setEditTarget({ groupId, subgroupId });
         await loadAttendance(date, groupId, subgroupId, false);
@@ -721,6 +729,14 @@ export default function TrainingsIndex({
         }
 
         setShowAttendanceModal(false);
+
+        // Opened from a tile: back to that day's tiles, with what is entered now
+        if (fromTiles && selectedDate) {
+            setShowPickTarget(true);
+            void loadDaySections(selectedDate);
+        }
+
+        setFromTiles(false);
         setFromCalendar(false);
         setOpenSection(null);
         setOverview(null);

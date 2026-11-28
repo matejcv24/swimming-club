@@ -28,9 +28,15 @@ createInertiaApp({
     withApp(app) {
         // The language the server chose for this page, before anything is drawn:
         // the server's pre-render and the browser then show the same text
-        const page = (
-            app.props as { initialPage?: { props?: { locale?: Locale } } }
-        ).initialPage;
+        // With strictMode the app comes wrapped in <StrictMode>: the page is on
+        // the wrapped element. Without it, the server (no document) always drew
+        // Macedonian and an English page failed to hydrate.
+        type AppProps = {
+            initialPage?: { props?: { locale?: Locale } };
+            children?: { props?: AppProps };
+        };
+        const props = app.props as AppProps;
+        const page = props.initialPage ?? props.children?.props?.initialPage;
 
         if (page?.props?.locale) {
             setLocale(page.props.locale);
