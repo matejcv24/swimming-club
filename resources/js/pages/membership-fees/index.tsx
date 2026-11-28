@@ -553,9 +553,7 @@ export default function MembershipFeesIndex({
 
                         {selectedMember && (
                             <div className="flex flex-col gap-2">
-                                <SectionLabel>
-                                    {t('Last payment')}
-                                </SectionLabel>
+                                <SectionLabel>{t('Last payment')}</SectionLabel>
                                 {loadingFees ? (
                                     <CardsSkeleton cards={1} />
                                 ) : fees.length === 0 ? (
@@ -904,7 +902,9 @@ export default function MembershipFeesIndex({
                 <PopupHeader
                     icon={<CreditCardIcon fontSize="small" />}
                     title={t('Membership Fees')}
-                    subtitle={t(':year · by month', { year: selectedYear ?? '' })}
+                    subtitle={t(':year · by month', {
+                        year: selectedYear ?? '',
+                    })}
                     onClose={() => {
                         setShowYearHistoryModal(false);
                         setSelectedYear(null);
@@ -970,8 +970,15 @@ export default function MembershipFeesIndex({
                 disableRestoreFocus
                 fullWidth
                 maxWidth="sm"
+                // A fixed height, like every window with a search: searching
+                // changes the list, not the size of the window
                 PaperProps={{
-                    sx: { bgcolor: POPUP_BG },
+                    sx: {
+                        bgcolor: POPUP_BG,
+                        height: '80vh',
+                        display: 'flex',
+                        flexDirection: 'column',
+                    },
                 }}
             >
                 <PopupHeader
@@ -990,7 +997,8 @@ export default function MembershipFeesIndex({
                     }}
                 />
 
-                <DialogContent sx={{ p: 0 }}>
+                {/* The group and the search stay in place; the payments scroll */}
+                <div className="flex-none">
                     {/* Room above the field for its label, which sits on the border */}
                     <div className="px-[18px] pt-3 pb-3">
                         <FormControl fullWidth size="small" sx={inputSx}>
@@ -1025,6 +1033,9 @@ export default function MembershipFeesIndex({
                             placeholder={t('Search members...')}
                         />
                     </div>
+                </div>
+
+                <DialogContent sx={{ p: 0, flex: 1, overflowY: 'auto' }}>
                     <SummaryCard
                         tone="green"
                         title={`${formatCurrency(filteredSelectedMonthTotal)} MKD`}
