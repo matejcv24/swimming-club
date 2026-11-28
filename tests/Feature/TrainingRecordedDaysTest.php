@@ -42,10 +42,17 @@ class TrainingRecordedDaysTest extends TestCase
 
     public function test_coaches_only_see_their_groups_days()
     {
+        $admin = User::factory()->create(['role' => 'admin']);
         $coach = User::factory()->create(['role' => 'coach', 'all_groups' => false]);
         $coach->coachGroups()->sync([$this->group('Small pool')]);
+        $parent = ClubParent::create(['name' => 'Parent', 'phone' => '070000000']);
+        $ana = Member::create(['name' => 'Ana', 'group_id' => $this->group('Small pool'), 'status' => 'active', 'parent_id' => $parent->id]);
+        $dime = Member::create(['name' => 'Dime', 'group_id' => $this->group('Big pool'), 'status' => 'active', 'parent_id' => $parent->id]);
+        $this->actingAs($admin)->post('/trainings', ['date' => '2026-11-03', 'group_id' => $this->group('Small pool'), 'member_ids' => [$ana->id]]);
+        $this->actingAs($admin)->post('/trainings', ['date' => '2026-11-04', 'group_id' => $this->group('Big pool'), 'member_ids' => [$dime->id]]);
 
-        $this->actingAs($coach)->getJson('/trainings/days?month=2026-11')->assertForbidden();
+        // Without a group: the days of their own groups only
+        $this->assertSame(['2026-11-03'], $this->actingAs($coach)->getJson('/trainings/days?month=2026-11')->assertOk()->json('days'));
         $this->actingAs($coach)->getJson('/trainings/days?month=2026-11&group_id='.$this->group('Big pool'))->assertForbidden();
         $this->actingAs($coach)->getJson('/trainings/days?month=2026-11&group_id='.$this->group('Small pool'))->assertOk();
     }

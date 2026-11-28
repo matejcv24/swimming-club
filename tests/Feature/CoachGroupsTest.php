@@ -179,7 +179,12 @@ class CoachGroupsTest extends TestCase
         $this->actingAs($allGroupsCoach)->get('/trainings')->assertInertia(fn (Assert $page) => $page->where('canSeeAllGroups', true));
 
         $coach = $this->smallPoolCoach();
-        $this->actingAs($coach)->getJson('/trainings/by-date?date=2026-11-10&summary=1')->assertForbidden();
+        // Without a group: only their own groups' trainings of the day
+        $this->actingAs($coach)->getJson('/trainings/by-date?date=2026-11-10&summary=1')
+            ->assertJsonCount(1, 'sections')
+            ->assertJsonPath('sections.0.group_name', 'Small pool');
+        // ...but never a day's attendance without a group
+        $this->actingAs($coach)->getJson('/trainings/by-date?date=2026-11-10')->assertJsonValidationErrors('group_id');
         $this->actingAs($coach)->get('/trainings')->assertInertia(fn (Assert $page) => $page->where('canSeeAllGroups', false));
         // A single group's day still works for them
         $this->actingAs($coach)->getJson("/trainings/by-date?date=2026-11-10&group_id={$small}&summary=1")->assertJsonCount(1, 'sections');

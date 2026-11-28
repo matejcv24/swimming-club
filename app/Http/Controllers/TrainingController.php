@@ -146,14 +146,17 @@ class TrainingController extends Controller
 
         $groupId = isset($validated['group_id']) ? (int) $validated['group_id'] : null;
 
-        // "All" is only for those who see every group
+        // Without a group: the summary of every group this person sees (coaches:
+        // their own), or the attendance of a club without groups (admins)
         abort_unless(
-            $groupId === null ? Auth::user()->visibleGroupIds() === null : Auth::user()->canSeeGroup($groupId),
+            $groupId === null
+                ? $request->boolean('summary') || Auth::user()->visibleGroupIds() === null
+                : Auth::user()->canSeeGroup($groupId),
             403,
         );
 
         if ($request->boolean('summary')) {
-            return response()->json(['sections' => $this->daySummary($validated['date'], $groupId)]);
+            return response()->json(['sections' => $this->daySummary($validated['date'], $groupId, Auth::user()->visibleGroupIds())]);
         }
 
         $training = $this->trainingOn($validated['date'], $groupId, $validated['subgroup_id'] ?? null);
@@ -191,16 +194,16 @@ class TrainingController extends Controller
 
         $groupId = isset($validated['group_id']) ? (int) $validated['group_id'] : null;
 
-        abort_unless(
-            $groupId === null ? Auth::user()->visibleGroupIds() === null : Auth::user()->canSeeGroup($groupId),
-            403,
-        );
+        // Without a group: the days of every group this person sees (coaches: their own)
+        abort_unless($groupId === null || Auth::user()->canSeeGroup($groupId), 403);
+        $visible = Auth::user()->visibleGroupIds();
 
         $month = Carbon::createFromFormat('Y-m', $validated['month'])->startOfMonth();
 
         $days = Training::whereBetween('date', [$month->toDateString(), $month->copy()->endOfMonth()->toDateString()])
             ->when($request->boolean('no_group'), fn ($query) => $query->whereNull('group_id'))
             ->when($groupId !== null, fn ($query) => $query->where('group_id', $groupId))
+            ->when($groupId === null && $visible !== null, fn ($query) => $query->whereIn('group_id', $visible))
             ->when($validated['subgroup_id'] ?? null, fn ($query, $subgroupId) => $query->where('subgroup_id', $subgroupId))
             ->whereHas('attendances')
             ->distinct()
@@ -233,10 +236,11 @@ class TrainingController extends Controller
      *
      * @return list<array{subgroup_id: int|null, name: string|null, members: list<array<string, mixed>>}>
      */
-    private function daySummary(string $date, ?int $groupId): array
+    private function daySummary(string $date, ?int $groupId, ?array $visibleGroupIds = null): array
     {
         return Training::whereDate('date', $date)
             ->when($groupId !== null, fn ($query) => $query->where('group_id', $groupId))
+            ->when($groupId === null && $visibleGroupIds !== null, fn ($query) => $query->whereIn('group_id', $visibleGroupIds))
             ->with(['group', 'subgroup', 'attendances.member.parent'])
             ->get()
             ->sortBy(fn (Training $training) => [
