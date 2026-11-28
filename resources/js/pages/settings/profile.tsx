@@ -43,8 +43,7 @@ export default function Profile({
 
             <h1 className="sr-only">{t('Account settings')}</h1>
 
-            {/* Phones: one under another; computers: two by two */}
-            <div className="grid items-start gap-4 lg:grid-cols-2">
+            <div className="flex flex-col gap-4">
                 <ProfileCard
                     mustVerifyEmail={mustVerifyEmail}
                     status={status}
