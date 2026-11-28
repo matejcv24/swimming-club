@@ -144,15 +144,15 @@ class GroupTest extends TestCase
         $this->actingAs($admin)->postJson('/invoices', ['month' => '2026-10-01', 'amount' => 5000])->assertCreated();
         $this->actingAs($admin)->postJson('/invoices', ['month' => '2026-10-01', 'group_id' => $big, 'amount' => 12000])->assertCreated();
 
-        // Recording the same month and group again updates it
-        $this->actingAs($admin)->postJson('/invoices', ['month' => '2026-10-01', 'group_id' => $big, 'amount' => 13000])->assertOk();
-        $this->actingAs($admin)->postJson('/invoices', ['month' => '2026-10-01', 'amount' => 6000])->assertOk();
+        // A month can have several invoices, also for the same group: each is kept
+        $this->actingAs($admin)->postJson('/invoices', ['month' => '2026-10-01', 'group_id' => $big, 'amount' => 13000])->assertCreated();
+        $this->actingAs($admin)->postJson('/invoices', ['month' => '2026-10-01', 'amount' => 6000])->assertCreated();
 
-        $this->assertSame(2, Invoice::count());
+        $this->assertSame(4, Invoice::count());
         $this->actingAs($admin)
             ->getJson('/invoices/by-month/2026-10-01')
-            ->assertJsonPath('total', 19000)
-            ->assertJsonCount(2, 'invoices');
+            ->assertJsonPath('total', 36000)
+            ->assertJsonCount(4, 'invoices');
     }
 
     public function test_even_the_last_group_can_be_deleted_its_members_going_to_all_groups()
