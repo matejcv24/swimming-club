@@ -785,5 +785,9 @@
     "Send automatically": "Испраќај автоматски",
     "The confirmation was sent to :email": "Потврдата е испратена до :email",
     "The email settings were saved": "Поставките за е-пошта се зачувани",
-    "Emails": "Е-пошта"
+    "Emails": "Е-пошта",
+    "Choose a day": "Изберете ден",
+    "The attendance was saved": "Присуството е зачувано",
+    "Already present (:count)": "Веќе присутни (:count)",
+    "Other members": "Останати членови"
 }

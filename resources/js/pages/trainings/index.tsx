@@ -14,17 +14,11 @@ import Checkbox from '@mui/material/Checkbox';
 import Dialog from '@mui/material/Dialog';
 import DialogContent from '@mui/material/DialogContent';
 import DialogTitle from '@mui/material/DialogTitle';
-import FormControl from '@mui/material/FormControl';
-import InputLabel from '@mui/material/InputLabel';
 import List from '@mui/material/List';
 import ListItem from '@mui/material/ListItem';
 import ListItemAvatar from '@mui/material/ListItemAvatar';
 import ListItemButton from '@mui/material/ListItemButton';
 import ListItemText from '@mui/material/ListItemText';
-import MenuItem from '@mui/material/MenuItem';
-import Select from '@mui/material/Select';
-import ToggleButton from '@mui/material/ToggleButton';
-import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
 import Typography from '@mui/material/Typography';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import { DateCalendar } from '@mui/x-date-pickers/DateCalendar';
@@ -33,7 +27,8 @@ import { PickersDay } from '@mui/x-date-pickers/PickersDay';
 import type { PickersDayProps } from '@mui/x-date-pickers/PickersDay';
 import dayjs from 'dayjs';
 import type { Dayjs } from 'dayjs';
-import { useCallback, useEffect, useState } from 'react';
+import { Fragment, useCallback, useEffect, useState } from 'react';
+import type { ReactNode } from 'react';
 import { DashboardBackground } from '@/components/dashboard-background';
 import { MemberDetailsDialog } from '@/components/member-details-dialog';
 import type { MemberDetails } from '@/components/member-details-dialog';
@@ -54,9 +49,10 @@ import {
 } from '@/components/popup-ui';
 import { ListSkeleton } from '@/components/skeletons';
 import { usePagePopup } from '@/hooks/use-page-popup';
-import { groupWithSubgroupName, subgroupsOf, useGroups } from '@/lib/groups';
+import { groupWithSubgroupName, useGroups } from '@/lib/groups';
 import type { ClubGroup } from '@/lib/groups';
 import { locale, pickerLocaleText, t, tc } from '@/lib/i18n';
+import { showToast } from '@/lib/toast';
 
 interface Member {
     id: number;
@@ -190,6 +186,27 @@ function Faces({ members }: { members: MemberDetails[] }) {
     );
 }
 
+/** A heading inside the list to tick: who is already present, and the rest. */
+function ListHeading({
+    tone = 'muted',
+    children,
+}: {
+    tone?: 'green' | 'muted';
+    children: ReactNode;
+}) {
+    return (
+        <li
+            className={`border-b border-[var(--popup-border)] px-[18px] pt-3 pb-1.5 text-[11.5px] font-bold tracking-[1px] uppercase ${
+                tone === 'green'
+                    ? 'text-green-600 dark:text-green-400'
+                    : 'text-[var(--popup-muted)]'
+            }`}
+        >
+            {children}
+        </li>
+    );
+}
+
 /** How many came, as a small blue pill. */
 function CountPill({ count }: { count: number }) {
     return (
@@ -207,19 +224,6 @@ const CARD_SX = {
     gap: 1.5,
     textAlign: 'left',
     borderRadius: '12px',
-} as const;
-
-/** The subgroup buttons: one joined bar, the picked one filled. */
-const SEGMENT_SX = {
-    '& .MuiToggleButton-root': {
-        color: POPUP_FG,
-        borderColor: popupFg(0.3),
-        textTransform: 'none',
-        fontWeight: 600,
-        py: 0.75,
-    },
-    '& .MuiToggleButton-root.Mui-selected, & .MuiToggleButton-root.Mui-selected:hover':
-        { bgcolor: '#1b8fd6', color: '#fff' },
 } as const;
 
 /** A calendar day, with a dot when attendance is recorded on it. */
@@ -300,6 +304,11 @@ export default function TrainingsIndex({
     // Adding attendance on a group's overview: a subgroup must be picked first
     // Editing from the "All" overview: a group (or subgroup) is picked first
     const [showPickTarget, setShowPickTarget] = useState(false);
+    // What is already entered on the chosen day, per group and time slot (null:
+    // loading), for the tiles of "Which group?"
+    const [daySections, setDaySections] = useState<DaySection[] | null>(null);
+    // The day was opened from the calendar: Save and Cancel go back to it
+    const [fromCalendar, setFromCalendar] = useState(false);
     // The group (or subgroup) picked on an overview to edit. The chosen view
     // ("All", or a group) stays as it is, and so do the calendar's dots.
     const [editTarget, setEditTarget] = useState<{
@@ -329,34 +338,17 @@ export default function TrainingsIndex({
         ? null
         : (resolveChoice(groups, choice) ??
           resolveChoice(groups, defaultChoice));
-    const activeChoice: Choice = showAll
-        ? 'all'
-        : resolved
-          ? groupChoice(resolved.groupId, resolved.subgroupId)
-          : '';
     const activeGroupId = resolved?.groupId ?? null;
     const activeSubgroupId = resolved?.subgroupId ?? null;
 
-    // The dots follow what is chosen: every group, a whole group or a subgroup
+    // The dots: every day with attendance, in all the groups this person sees
     useEffect(() => {
-        if (!showAll && activeGroupId === null) {
-            return;
-        }
-
         const params = new URLSearchParams({ month: viewMonth });
 
         // No groups: only the days with attendance recorded for everyone, so a dot
         // always opens a day with names in it
         if (noGroups) {
             params.set('no_group', '1');
-        }
-
-        if (activeGroupId !== null) {
-            params.set('group_id', String(activeGroupId));
-        }
-
-        if (activeSubgroupId !== null) {
-            params.set('subgroup_id', String(activeSubgroupId));
         }
 
         const request = new AbortController();
@@ -368,15 +360,7 @@ export default function TrainingsIndex({
             .catch(() => {});
 
         return () => request.abort();
-    }, [
-        showAll,
-        noGroups,
-        activeGroupId,
-        activeSubgroupId,
-        viewMonth,
-        daysVersion,
-    ]);
-    const subgroups = subgroupsOf(groups, activeGroupId);
+    }, [noGroups, viewMonth, daysVersion]);
     // A subgroup is optional for members, so every subgroup's training lists
     // all members of its main group
     // Members of all groups (no single group) train in every group
@@ -443,37 +427,61 @@ export default function TrainingsIndex({
         [],
     );
 
+    // Where attendance is entered: every group without time slots, and each slot
+    const targets = groups.flatMap((group) =>
+        group.subgroups.length === 0
+            ? [{ groupId: group.id, subgroupId: null as number | null }]
+            : group.subgroups.map((subgroup) => ({
+                  groupId: group.id,
+                  subgroupId: subgroup.id as number | null,
+              })),
+    );
+
+    /**
+     * A date first: then which group or time slot (its tile says what is already
+     * entered), then the list to tick. With only one place to enter attendance
+     * (or no groups at all) the list opens at once.
+     */
     const handleDateClick = async (date: Dayjs | null) => {
         if (!date) {
             return;
         }
 
+        setSelectedDate(date);
         setEditTarget(null);
         setReturnTo(null);
 
-        // No groups: a day is everyone's attendance, like one group's
         if (noGroups) {
+            setFromCalendar(true);
             await loadAttendance(date, null, null, false);
+            setEditMode(true);
 
             return;
         }
 
-        if (showAll) {
-            await loadAttendance(date, null, null, true);
+        if (targets.length === 1) {
+            await pickTargetAndEdit(
+                targets[0].groupId,
+                targets[0].subgroupId,
+                date,
+            );
 
             return;
         }
 
-        if (activeGroupId === null) {
-            return;
-        }
+        // What each group and time slot already has on that day, for the tiles
+        setDaySections(null);
+        setShowPickTarget(true);
 
-        await loadAttendance(
-            date,
-            activeGroupId,
-            activeSubgroupId,
-            subgroups.length > 0 && activeSubgroupId === null,
-        );
+        try {
+            const response = await fetch(
+                `/trainings/by-date?date=${date.format('YYYY-MM-DD')}&summary=1`,
+            );
+            const data = await response.json();
+            setDaySections(data.sections ?? []);
+        } catch {
+            setDaySections([]);
+        }
     };
 
     useEffect(() => {
@@ -565,6 +573,15 @@ export default function TrainingsIndex({
                     setDaysVersion((version) => version + 1);
                     setAttendanceSearch('');
 
+                    if (fromCalendar) {
+                        showToast(
+                            `${t('The attendance was saved')} · ${tc(':count present|:count present', checkedIds.length)}`,
+                        );
+                        closeAttendance();
+
+                        return;
+                    }
+
                     const saved = {
                         groupId: dayGroupId,
                         subgroupId: daySubgroupId,
@@ -605,6 +622,10 @@ export default function TrainingsIndex({
 
     // "5 present" or "Not entered" under a time slot's tile
     const slotStatus = (groupId: number, subgroupId: number | null) => {
+        if (daySections === null) {
+            return '…';
+        }
+
         const count = recordedCount(groupId, subgroupId);
 
         return count > 0
@@ -612,35 +633,30 @@ export default function TrainingsIndex({
             : t('Not entered');
     };
 
-    // How many came to a target's training on the open day (from the overview)
+    // How many came to a group's (or time slot's) training on the chosen day
     const recordedCount = (groupId: number, subgroupId: number | null) =>
-        overview?.find(
+        daySections?.find(
             (section) =>
                 section.group_id === groupId &&
                 section.subgroup_id === subgroupId,
         )?.members.length ?? 0;
 
-    // From the "All" overview's edit button: that group's day, ready to tick
+    // A tile (or the only group): that group's day, ready to tick, with whoever
+    // is already recorded ticked
     const pickTargetAndEdit = async (
         groupId: number,
         subgroupId: number | null,
+        date: Dayjs | null = selectedDate,
     ) => {
-        if (!selectedDate) {
+        if (!date) {
             return;
         }
 
         setShowPickTarget(false);
-        setReturnTo(
-            overview
-                ? {
-                      overviewGroupId: showAll ? null : activeGroupId,
-                      overview,
-                      openSection,
-                  }
-                : null,
-        );
+        setFromCalendar(true);
+        setReturnTo(null);
         setEditTarget({ groupId, subgroupId });
-        await loadAttendance(selectedDate, groupId, subgroupId, false);
+        await loadAttendance(date, groupId, subgroupId, false);
         setEditMode(true);
     };
 
@@ -672,8 +688,15 @@ export default function TrainingsIndex({
         }
     };
 
-    // Leave edit mode without saving: back to what is recorded for the day
+    // Leave edit mode without saving: back to the calendar (or to the day as
+    // recorded, when it was opened from a link)
     const cancelEdit = () => {
+        if (fromCalendar) {
+            closeAttendance();
+
+            return;
+        }
+
         setCheckedIds(savedIds);
         setEditMode(false);
         setAttendanceSearch('');
@@ -698,6 +721,7 @@ export default function TrainingsIndex({
         }
 
         setShowAttendanceModal(false);
+        setFromCalendar(false);
         setOpenSection(null);
         setOverview(null);
         setEditMode(false);
@@ -728,10 +752,22 @@ export default function TrainingsIndex({
     const dayMembers = [...groupMembers, ...attended.filter(movedAway)].sort(
         (a, b) => a.name.localeCompare(b.name),
     );
-    const shownMembers = dayMembers.filter(
-        (m) =>
-            (editMode || checkedIds.includes(m.id)) &&
-            m.name.toLowerCase().includes(attendanceSearch.toLowerCase()),
+    // Ticking: whoever is already recorded comes first, under its own heading
+    const presentFirst = editMode && savedIds.length > 0;
+    const shownMembers = dayMembers
+        .filter(
+            (m) =>
+                (editMode || checkedIds.includes(m.id)) &&
+                m.name.toLowerCase().includes(attendanceSearch.toLowerCase()),
+        )
+        .sort((a, b) =>
+            presentFirst
+                ? Number(!savedIds.includes(a.id)) -
+                  Number(!savedIds.includes(b.id))
+                : 0,
+        );
+    const firstOther = shownMembers.findIndex(
+        (member) => !savedIds.includes(member.id),
     );
 
     return (
@@ -759,108 +795,10 @@ export default function TrainingsIndex({
                     <PopupHeader
                         icon={<CalendarMonthIcon fontSize="small" />}
                         title={t('Trainings')}
-                        subtitle={t(
-                            'Group and day',
-                        )}
+                        subtitle={t('Choose a day')}
                         onClose={popup.close}
                     />
-                    {groups.length > 0 ? (
-                        <div className="px-[18px] pb-3">
-                            <FormControl fullWidth size="small">
-                                <InputLabel
-                                    id="training-group-label"
-                                    shrink
-                                    sx={{ color: popupFg(0.5) }}
-                                >
-                                    {t('Group')}
-                                </InputLabel>
-                                <Select
-                                    labelId="training-group-label"
-                                    label={t('Group')}
-                                    notched
-                                    displayEmpty
-                                    value={
-                                        showAll
-                                            ? 'all'
-                                            : activeGroupId === null
-                                              ? ''
-                                              : groupChoice(activeGroupId, null)
-                                    }
-                                    onChange={(e) =>
-                                        setChoice(String(e.target.value))
-                                    }
-                                    renderValue={(value) =>
-                                        value === ''
-                                            ? t('Choose a group')
-                                            : value === 'all'
-                                              ? t('All')
-                                              : (groups.find(
-                                                    (g) =>
-                                                        g.id === activeGroupId,
-                                                )?.name ?? '')
-                                    }
-                                    sx={{
-                                        color:
-                                            activeChoice === ''
-                                                ? popupFg(0.5)
-                                                : POPUP_FG,
-                                        '& .MuiOutlinedInput-notchedOutline': {
-                                            borderColor: popupFg(0.3),
-                                        },
-                                        '& .MuiSvgIcon-root': {
-                                            color: POPUP_FG,
-                                        },
-                                    }}
-                                >
-                                    {canSeeAllGroups && (
-                                        <MenuItem value="all">
-                                            {t('All')}
-                                        </MenuItem>
-                                    )}
-                                    {groups.map((group) => (
-                                        <MenuItem
-                                            key={group.id}
-                                            value={groupChoice(group.id, null)}
-                                        >
-                                            {group.name}
-                                        </MenuItem>
-                                    ))}
-                                </Select>
-                            </FormControl>
-                            {/* Subgroups: pick one to record its attendance. None picked
-                                (tap the picked one again): the whole group, read-only */}
-                            {activeGroupId !== null && subgroups.length > 0 && (
-                                <ToggleButtonGroup
-                                    exclusive
-                                    fullWidth
-                                    size="small"
-                                    value={activeChoice}
-                                    onChange={(_, value: Choice | null) =>
-                                        setChoice(
-                                            value ??
-                                                groupChoice(
-                                                    activeGroupId,
-                                                    null,
-                                                ),
-                                        )
-                                    }
-                                    sx={{ mt: 1.5, ...SEGMENT_SX }}
-                                >
-                                    {subgroups.map((subgroup) => (
-                                        <ToggleButton
-                                            key={subgroup.id}
-                                            value={groupChoice(
-                                                activeGroupId,
-                                                subgroup.id,
-                                            )}
-                                        >
-                                            {subgroup.name}
-                                        </ToggleButton>
-                                    ))}
-                                </ToggleButtonGroup>
-                            )}
-                        </div>
-                    ) : (
+                    {groups.length === 0 && !noGroups && (
                         <p className="px-[18px] pb-3 text-sm text-[var(--popup-muted)]">
                             {canManageGroups ? (
                                 <>
@@ -881,15 +819,7 @@ export default function TrainingsIndex({
 
                 {/* Date Calendar */}
                 <DialogContent sx={{ p: 0, overflowY: 'auto' }}>
-                    {activeChoice === '' ? (
-                        groups.length > 0 && (
-                            <p className="px-6 py-12 text-center text-sm text-[var(--popup-muted)]">
-                                {t(
-                                    'Choose a group above to see its trainings and add attendance.',
-                                )}
-                            </p>
-                        )
-                    ) : (
+                    {groups.length === 0 && !noGroups ? null : (
                         <LocalizationProvider
                             dateAdapter={AdapterDayjs}
                             adapterLocale={locale}
@@ -1285,68 +1215,83 @@ export default function TrainingsIndex({
                     ) : (
                         <List disablePadding>
                             {shownMembers.map((member, index) => (
-                                <ListItem
-                                    key={member.id}
-                                    divider
-                                    onClick={() => toggleMember(member.id)}
-                                    sx={{
-                                        px: 2.25,
-                                        cursor: editMode
-                                            ? 'pointer'
-                                            : 'default',
-                                    }}
-                                    secondaryAction={
-                                        editMode ? (
-                                            <Checkbox
-                                                edge="end"
-                                                checked={checkedIds.includes(
-                                                    member.id,
-                                                )}
-                                                onChange={() =>
-                                                    toggleMember(member.id)
-                                                }
-                                                // The row toggles too: keep one click from toggling twice
-                                                onClick={(e) =>
-                                                    e.stopPropagation()
-                                                }
-                                                inputProps={{
-                                                    'aria-label': t(
-                                                        ':name attended',
-                                                        { name: member.name },
-                                                    ),
-                                                }}
-                                            />
-                                        ) : undefined
-                                    }
-                                >
-                                    <ListItemAvatar>
-                                        <Avatar sx={avatarSx(index)}>
-                                            {getInitials(member.name)}
-                                        </Avatar>
-                                    </ListItemAvatar>
-                                    <ListItemText
-                                        primary={
-                                            <Typography
-                                                variant="body1"
-                                                fontWeight="bold"
-                                            >
-                                                {member.name}
-                                            </Typography>
+                                <Fragment key={member.id}>
+                                    {presentFirst && index === 0 && (
+                                        <ListHeading tone="green">
+                                            {t('Already present (:count)', {
+                                                count: savedIds.length,
+                                            })}
+                                        </ListHeading>
+                                    )}
+                                    {presentFirst && index === firstOther && (
+                                        <ListHeading>
+                                            {t('Other members')}
+                                        </ListHeading>
+                                    )}
+                                    <ListItem
+                                        divider
+                                        onClick={() => toggleMember(member.id)}
+                                        sx={{
+                                            px: 2.25,
+                                            cursor: editMode
+                                                ? 'pointer'
+                                                : 'default',
+                                        }}
+                                        secondaryAction={
+                                            editMode ? (
+                                                <Checkbox
+                                                    edge="end"
+                                                    checked={checkedIds.includes(
+                                                        member.id,
+                                                    )}
+                                                    onChange={() =>
+                                                        toggleMember(member.id)
+                                                    }
+                                                    // The row toggles too: keep one click from toggling twice
+                                                    onClick={(e) =>
+                                                        e.stopPropagation()
+                                                    }
+                                                    inputProps={{
+                                                        'aria-label': t(
+                                                            ':name attended',
+                                                            {
+                                                                name: member.name,
+                                                            },
+                                                        ),
+                                                    }}
+                                                />
+                                            ) : undefined
                                         }
-                                        secondary={
-                                            // Came that day, but trains in another group now
-                                            movedAway(member)
-                                                ? t('Now in :group', {
-                                                      group: groupWithSubgroupName(
-                                                          groups,
-                                                          member.group_id,
-                                                          member.subgroup_id,
-                                                      ),
-                                                  })
-                                                : undefined
-                                        }
-                                    />
-                                </ListItem>
+                                    >
+                                        <ListItemAvatar>
+                                            <Avatar sx={avatarSx(index)}>
+                                                {getInitials(member.name)}
+                                            </Avatar>
+                                        </ListItemAvatar>
+                                        <ListItemText
+                                            primary={
+                                                <Typography
+                                                    variant="body1"
+                                                    fontWeight="bold"
+                                                >
+                                                    {member.name}
+                                                </Typography>
+                                            }
+                                            secondary={
+                                                // Came that day, but trains in another group now
+                                                movedAway(member)
+                                                    ? t('Now in :group', {
+                                                          group: groupWithSubgroupName(
+                                                              groups,
+                                                              member.group_id,
+                                                              member.subgroup_id,
+                                                          ),
+                                                      })
+                                                    : undefined
+                                            }
+                                        />
+                                    </ListItem>
+                                </Fragment>
                             ))}
                         </List>
                     )}
@@ -1441,67 +1386,62 @@ export default function TrainingsIndex({
                     {t('Attendance is entered separately for each time slot.')}
                 </Note>
                 <div className="max-h-[60vh] overflow-y-auto pb-3">
-                    {groups
-                        .filter(
-                            (group) => showAll || group.id === activeGroupId,
-                        )
-                        .map((group) => (
-                            <section
-                                key={group.id}
-                                className="border-t border-[var(--popup-border)] px-[18px] pt-3 pb-3.5"
-                            >
-                                <div className="mb-2.5">
-                                    <SectionLabel>{group.name}</SectionLabel>
-                                </div>
-                                <div className="grid grid-cols-2 gap-2.5">
-                                    {group.subgroups.length === 0 ? (
+                    {groups.map((group) => (
+                        <section
+                            key={group.id}
+                            className="border-t border-[var(--popup-border)] px-[18px] pt-3 pb-3.5"
+                        >
+                            <div className="mb-2.5">
+                                <SectionLabel>{group.name}</SectionLabel>
+                            </div>
+                            <div className="grid grid-cols-2 gap-2.5">
+                                {group.subgroups.length === 0 ? (
+                                    <Tile
+                                        wide
+                                        name={t('Whole group')}
+                                        status={slotStatus(group.id, null)}
+                                        statusTone={
+                                            recordedCount(group.id, null) > 0
+                                                ? 'green'
+                                                : 'muted'
+                                        }
+                                        onClick={() =>
+                                            void pickTargetAndEdit(
+                                                group.id,
+                                                null,
+                                            )
+                                        }
+                                    />
+                                ) : (
+                                    group.subgroups.map((subgroup) => (
                                         <Tile
-                                            wide
-                                            name={t('Whole group')}
-                                            status={slotStatus(group.id, null)}
+                                            key={subgroup.id}
+                                            label={t('Time slot')}
+                                            name={subgroup.name}
+                                            status={slotStatus(
+                                                group.id,
+                                                subgroup.id,
+                                            )}
                                             statusTone={
-                                                recordedCount(group.id, null) >
-                                                0
+                                                recordedCount(
+                                                    group.id,
+                                                    subgroup.id,
+                                                ) > 0
                                                     ? 'green'
                                                     : 'muted'
                                             }
                                             onClick={() =>
                                                 void pickTargetAndEdit(
                                                     group.id,
-                                                    null,
+                                                    subgroup.id,
                                                 )
                                             }
                                         />
-                                    ) : (
-                                        group.subgroups.map((subgroup) => (
-                                            <Tile
-                                                key={subgroup.id}
-                                                label={t('Time slot')}
-                                                name={subgroup.name}
-                                                status={slotStatus(
-                                                    group.id,
-                                                    subgroup.id,
-                                                )}
-                                                statusTone={
-                                                    recordedCount(
-                                                        group.id,
-                                                        subgroup.id,
-                                                    ) > 0
-                                                        ? 'green'
-                                                        : 'muted'
-                                                }
-                                                onClick={() =>
-                                                    void pickTargetAndEdit(
-                                                        group.id,
-                                                        subgroup.id,
-                                                    )
-                                                }
-                                            />
-                                        ))
-                                    )}
-                                </div>
-                            </section>
-                        ))}
+                                    ))
+                                )}
+                            </div>
+                        </section>
+                    ))}
                 </div>
             </Dialog>
 
