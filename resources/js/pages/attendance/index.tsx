@@ -23,6 +23,7 @@ import {
     EmptyState,
     PillSearchField,
     PopupHeader,
+    SelectClear,
 } from '@/components/popup-ui';
 import { usePagePopup } from '@/hooks/use-page-popup';
 import { groupNameOf, useGroups } from '@/lib/groups';
@@ -135,6 +136,15 @@ export default function AttendanceIndex({ members }: Props) {
                                     labelId="attendance-group-label"
                                     label={t('Group')}
                                     value={activeFilter}
+                                    endAdornment={
+                                        showAll && activeFilter !== 'all' ? (
+                                            <SelectClear
+                                                onClear={() =>
+                                                    setGroupFilter('all')
+                                                }
+                                            />
+                                        ) : undefined
+                                    }
                                     onChange={(e) =>
                                         setGroupFilter(
                                             e.target.value === 'all'

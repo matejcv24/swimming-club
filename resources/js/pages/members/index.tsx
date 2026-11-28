@@ -35,12 +35,13 @@ import {
 import {
     AddButton,
     avatarSx,
-    FIELD_SX,
     ConfirmDialog,
     EmptyState,
-    PillSearchField,
+    FIELD_SX,
     GroupChip,
+    PillSearchField,
     PopupHeader,
+    SelectClear,
 } from '@/components/popup-ui';
 import { usePagePopup } from '@/hooks/use-page-popup';
 import type { ClubGroup } from '@/lib/groups';
@@ -672,6 +673,19 @@ export default function MembersIndex({ members, userRole }: Props) {
                             <Select
                                 labelId="edit-pool-label"
                                 value={editForm.group_id}
+                                endAdornment={
+                                    editForm.group_id !== '' ? (
+                                        <SelectClear
+                                            onClear={() =>
+                                                setEditForm({
+                                                    ...editForm,
+                                                    group_id: '',
+                                                    subgroup_id: '',
+                                                })
+                                            }
+                                        />
+                                    ) : undefined
+                                }
                                 displayEmpty
                                 notched
                                 label={t('Group')}
@@ -897,6 +911,19 @@ export default function MembersIndex({ members, userRole }: Props) {
                                 <Select
                                     labelId="pool-label"
                                     value={form.group_id}
+                                    endAdornment={
+                                        form.group_id !== '' ? (
+                                            <SelectClear
+                                                onClear={() =>
+                                                    setForm({
+                                                        ...form,
+                                                        group_id: '',
+                                                        subgroup_id: '',
+                                                    })
+                                                }
+                                            />
+                                        ) : undefined
+                                    }
                                     displayEmpty
                                     notched
                                     label={t('Group')}
@@ -1316,6 +1343,11 @@ function SubgroupSelect({
             <Select
                 labelId={id}
                 value={value}
+                endAdornment={
+                    value !== '' ? (
+                        <SelectClear onClear={() => onChange('')} />
+                    ) : undefined
+                }
                 label={t('Subgroup (optional)')}
                 displayEmpty
                 notched

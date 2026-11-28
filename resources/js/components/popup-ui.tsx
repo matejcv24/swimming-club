@@ -11,17 +11,14 @@ import Button from '@mui/material/Button';
 import Dialog from '@mui/material/Dialog';
 import IconButton from '@mui/material/IconButton';
 import type { IconButtonProps } from '@mui/material/IconButton';
+import InputAdornment from '@mui/material/InputAdornment';
 import InputBase from '@mui/material/InputBase';
 import Tab from '@mui/material/Tab';
 import Tabs from '@mui/material/Tabs';
 import Tooltip from '@mui/material/Tooltip';
 import { useEffect, useRef, useState } from 'react';
 import type { ReactElement, ReactNode } from 'react';
-import {
-    POPUP_BG,
-    POPUP_FG,
-    popupFg,
-} from '@/components/mui-theme-provider';
+import { POPUP_BG, POPUP_FG, popupFg } from '@/components/mui-theme-provider';
 import { t } from '@/lib/i18n';
 import { clearOnClick } from '@/lib/search-field';
 
@@ -376,6 +373,30 @@ export function StatusDot({ active }: { active: boolean }) {
             />
             {active ? t('Active') : t('Inactive')}
         </span>
+    );
+}
+
+/**
+ * The X inside a dropdown once something is chosen: back to nothing (or "All").
+ * Give it to a Select as `endAdornment` only while there is something to clear.
+ */
+export function SelectClear({ onClear }: { onClear: () => void }) {
+    return (
+        <InputAdornment position="end" sx={{ mr: 2.5 }}>
+            <IconButton
+                size="small"
+                aria-label={t('Clear')}
+                // Not opening the dropdown: only clearing it
+                onMouseDown={(event) => event.stopPropagation()}
+                onClick={(event) => {
+                    event.stopPropagation();
+                    onClear();
+                }}
+                sx={{ color: 'var(--popup-muted)', p: 0.5 }}
+            >
+                <CloseIcon sx={{ fontSize: 18 }} />
+            </IconButton>
+        </InputAdornment>
     );
 }
 
