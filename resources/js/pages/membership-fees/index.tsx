@@ -47,6 +47,7 @@ import {
     DrillRow,
     EmptyState,
     Note,
+    PillSearchField,
     PopupHeader,
     SectionLabel,
     SummaryCard,
@@ -164,6 +165,7 @@ export default function MembershipFeesIndex({
     const [selectedYear, setSelectedYear] = useState<string | null>(null);
     const [selectedMonth, setSelectedMonth] = useState<string | null>(null);
     const [monthPoolFilter, setMonthPoolFilter] = useState<GroupFilter>('all');
+    const [monthSearch, setMonthSearch] = useState('');
 
     const groupedFeesByMonth = useMemo(() => {
         const grouped: Record<string, MonthGroup> = {};
@@ -250,6 +252,13 @@ export default function MembershipFeesIndex({
                 0,
             ),
         [filteredSelectedMonthFees],
+    );
+
+    // The month's payments, narrowed by a member's name
+    const searchedMonthFees = filteredSelectedMonthFees.filter((fee) =>
+        (fee.member?.name ?? fee.member_name ?? '')
+            .toLowerCase()
+            .includes(monthSearch.trim().toLowerCase()),
     );
 
     const handleMemberSelect = useCallback(
@@ -956,6 +965,7 @@ export default function MembershipFeesIndex({
                     setShowMonthDetailModal(false);
                     setSelectedMonth(null);
                     setMonthPoolFilter('all');
+                    setMonthSearch('');
                 }}
                 disableRestoreFocus
                 fullWidth
@@ -976,11 +986,13 @@ export default function MembershipFeesIndex({
                         setShowMonthDetailModal(false);
                         setSelectedMonth(null);
                         setMonthPoolFilter('all');
+                        setMonthSearch('');
                     }}
                 />
 
                 <DialogContent sx={{ p: 0 }}>
-                    <div className="px-[18px] pt-1 pb-3">
+                    {/* Room above the field for its label, which sits on the border */}
+                    <div className="px-[18px] pt-3 pb-3">
                         <FormControl fullWidth size="small" sx={inputSx}>
                             <InputLabel id="month-pool-filter-label">
                                 {t('Group')}
@@ -1006,6 +1018,13 @@ export default function MembershipFeesIndex({
                             </Select>
                         </FormControl>
                     </div>
+                    <div className="pb-3">
+                        <PillSearchField
+                            value={monthSearch}
+                            onChange={setMonthSearch}
+                            placeholder={t('Search members...')}
+                        />
+                    </div>
                     <SummaryCard
                         tone="green"
                         title={`${formatCurrency(filteredSelectedMonthTotal)} MKD`}
@@ -1020,9 +1039,13 @@ export default function MembershipFeesIndex({
                             icon={<CreditCardIcon />}
                             title={t('No payments recorded for this group.')}
                         />
+                    ) : searchedMonthFees.length === 0 ? (
+                        <p className="py-8 text-center text-sm text-[var(--popup-muted)]">
+                            {t('No members match your search.')}
+                        </p>
                     ) : (
                         <ul className="border-t border-[var(--popup-border)]">
-                            {filteredSelectedMonthFees.map((fee) => (
+                            {searchedMonthFees.map((fee) => (
                                 <li
                                     key={fee.id}
                                     className="flex items-center gap-3 border-b border-[var(--popup-border)] px-[18px] py-3"
