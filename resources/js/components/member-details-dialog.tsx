@@ -1,3 +1,4 @@
+import { router } from '@inertiajs/react';
 import CalendarMonthIcon from '@mui/icons-material/CalendarMonth';
 import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
@@ -176,6 +177,15 @@ export function MemberDetailsDialog<T extends MemberDetails>({
             <MemberPaymentsDialog
                 member={history === 'payments' ? member : null}
                 onClose={() => setHistory(null)}
+                // A new payment for this member; afterwards back to their card
+                onAdd={
+                    member
+                        ? () =>
+                              router.visit(
+                                  `/membership-fees?add=1&member=${member.id}&from=members`,
+                              )
+                        : undefined
+                }
             />
             <MemberAttendanceDialog
                 member={history === 'attendance' ? member : null}

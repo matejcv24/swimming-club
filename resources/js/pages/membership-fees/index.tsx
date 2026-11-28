@@ -1,4 +1,6 @@
 import { Head, router, usePage } from '@inertiajs/react';
+import AddIcon from '@mui/icons-material/Add';
+import AddCardIcon from '@mui/icons-material/AddCard';
 import CreditCardIcon from '@mui/icons-material/CreditCard';
 import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
@@ -9,7 +11,6 @@ import Button from '@mui/material/Button';
 import Dialog from '@mui/material/Dialog';
 import DialogContent from '@mui/material/DialogContent';
 import DialogTitle from '@mui/material/DialogTitle';
-import Divider from '@mui/material/Divider';
 import FormControl from '@mui/material/FormControl';
 import InputLabel from '@mui/material/InputLabel';
 import MenuItem from '@mui/material/MenuItem';
@@ -43,6 +44,7 @@ import type {
 } from '@/components/payment-saved-dialog';
 import {
     ActionMenu,
+    AddButton,
     ConfirmDialog,
     DrillRow,
     EmptyState,
@@ -124,6 +126,10 @@ export default function MembershipFeesIndex({
             typeof window !== 'undefined' &&
             new URLSearchParams(window.location.search).get('add') === '1',
     );
+    // The "Add payment" form: from the quick action, the "+" of this window or
+    // the "+" of a member's history (where it goes back to afterwards)
+    const [addMode, setAddMode] = useState(openedToAdd);
+    const [addFrom, setAddFrom] = useState<'overview' | 'history' | null>(null);
     const groups = useGroups();
     // The club may have switched confirmation emails off (Club settings)
     const { club } = usePage().props as { club: ClubSharedData | null };
@@ -305,13 +311,20 @@ export default function MembershipFeesIndex({
         const memberId = params.get('member');
         const shouldOpenHistory = params.get('history') === '1';
 
-        if (!memberId || !shouldOpenHistory) {
+        if (!memberId || (!shouldOpenHistory && !openedToAdd)) {
             return;
         }
 
         const notificationMember = members.find(
             (member) => member.id === Number(memberId),
         );
+
+        // "+" in a member's history (from their card): the form, member picked
+        if (notificationMember && openedToAdd && !shouldOpenHistory) {
+            queueMicrotask(() => void handleMemberSelect(notificationMember));
+
+            return;
+        }
 
         // From a coach's payment notification: that payment's confirmation email,
         // ready to send (admins; once sent, just the history)
@@ -326,7 +339,7 @@ export default function MembershipFeesIndex({
                 setShowHistoryModal(true);
             });
         }
-    }, [handleMemberSelect, members, userRole]);
+    }, [handleMemberSelect, members, userRole, openedToAdd]);
 
     const handleSave = () => {
         if (!selectedMember || !startDate || !endDate) {
@@ -358,12 +371,7 @@ export default function MembershipFeesIndex({
                             }),
                             'sent',
                         );
-
-                        if (openedToAdd) {
-                            popup.close();
-
-                            return;
-                        }
+                        finishNewPayment();
                     } else if (saved) {
                         setConfirmFor({
                             payment: {
@@ -378,29 +386,66 @@ export default function MembershipFeesIndex({
                         });
                     }
 
-                    if (openedToAdd) {
-                        // The pop-up closes after the "payment saved" one
-                        return;
-                    }
-
-                    handleMemberSelect(selectedMember);
-                    setAmount('');
-                    setPaymentMethod('cash');
-                    setStartDate(null);
-                    setEndDate(null);
+                    // Otherwise the confirmation pop-up is next; closing it finishes
                 },
             },
         );
     };
 
-    // Done with the new payment: back to the dashboard (its quick action) or the form
+    const resetForm = () => {
+        setAmount('');
+        setPaymentMethod('cash');
+        setStartDate(null);
+        setEndDate(null);
+    };
+
+    // The quick action (or a member's card) opened only the form: back there
+    const leaveAdd = () => {
+        const params = new URLSearchParams(window.location.search);
+
+        if (params.get('from') === 'members' && params.get('member')) {
+            router.visit(`/members?member=${params.get('member')}`, {
+                preserveScroll: true,
+            });
+        } else {
+            popup.close();
+        }
+    };
+
+    // The form from this window's "+" (none picked yet) or a history's "+"
+    const openAdd = (from: 'overview' | 'history') => {
+        resetForm();
+        setAddFrom(from);
+        setShowHistoryModal(false);
+        setAddMode(true);
+    };
+
+    // Leaving the form: back to where it was opened from
+    const closeAdd = () => {
+        resetForm();
+        setAddMode(false);
+
+        if (addFrom === 'history') {
+            setShowHistoryModal(true);
+        }
+
+        setAddFrom(null);
+    };
+
+    // Done with the new payment: back to where the form was opened from
     const finishNewPayment = () => {
         if (openedToAdd) {
-            popup.close();
-        } else if (selectedMember) {
-            // The history shows "confirmation sent" right away
-            handleMemberSelect(selectedMember);
+            leaveAdd();
+
+            return;
         }
+
+        if (selectedMember) {
+            // The history shows the new payment (and "confirmation sent") at once
+            void handleMemberSelect(selectedMember);
+        }
+
+        closeAdd();
     };
 
     // The confirmation pop-up closed (sent or not)
@@ -491,17 +536,12 @@ export default function MembershipFeesIndex({
 
     const handleCancel = () => {
         if (openedToAdd) {
-            popup.close();
+            leaveAdd();
 
             return;
         }
 
-        setSelectedMember(null);
-        setFees([]);
-        setAmount('');
-        setPaymentMethod('cash');
-        setStartDate(null);
-        setEndDate(null);
+        closeAdd();
     };
 
     return (
@@ -522,12 +562,30 @@ export default function MembershipFeesIndex({
                 }}
             >
                 <DialogTitle sx={{ p: 0 }}>
-                    <PopupHeader
-                        icon={<CreditCardIcon fontSize="small" />}
-                        title={t('Membership Fees')}
-                        subtitle={t('Record and review payments')}
-                        onClose={popup.close}
-                    />
+                    {addMode ? (
+                        <PopupHeader
+                            icon={<AddCardIcon fontSize="small" />}
+                            title={t('Add payment')}
+                            subtitle={
+                                selectedMember?.name ?? t('Choose the member')
+                            }
+                            onClose={handleCancel}
+                        />
+                    ) : (
+                        <PopupHeader
+                            icon={<CreditCardIcon fontSize="small" />}
+                            title={t('Membership Fees')}
+                            subtitle={t('Review payments')}
+                            actions={
+                                <AddButton
+                                    label={t('Add payment')}
+                                    icon={<AddIcon fontSize="small" />}
+                                    onClick={() => openAdd('overview')}
+                                />
+                            }
+                            onClose={popup.close}
+                        />
+                    )}
                 </DialogTitle>
 
                 <DialogContent sx={{ overflowY: 'auto', px: '18px' }}>
@@ -540,7 +598,11 @@ export default function MembershipFeesIndex({
                             renderInput={(params) => (
                                 <TextField
                                     {...params}
-                                    label={t('Search member')}
+                                    label={
+                                        addMode
+                                            ? t('Member')
+                                            : t('Search member')
+                                    }
                                     variant="outlined"
                                     sx={inputSx}
                                     {...clearOnClick(
@@ -551,7 +613,7 @@ export default function MembershipFeesIndex({
                             )}
                         />
 
-                        {selectedMember && (
+                        {selectedMember && !addMode && (
                             <div className="flex flex-col gap-2">
                                 <SectionLabel>{t('Last payment')}</SectionLabel>
                                 {loadingFees ? (
@@ -580,97 +642,105 @@ export default function MembershipFeesIndex({
                             </div>
                         )}
 
-                        <SectionLabel>{t('Record New Payment')}</SectionLabel>
+                        {addMode && (
+                            <>
+                                <div className="flex gap-3">
+                                    <TextField
+                                        label={t('Amount (MKD)')}
+                                        variant="outlined"
+                                        type="number"
+                                        value={amount}
+                                        onChange={(e) =>
+                                            setAmount(e.target.value)
+                                        }
+                                        sx={{
+                                            ...inputSx,
+                                            flex: '1 1 0',
+                                            minWidth: 0,
+                                        }}
+                                    />
+                                    <FormControl
+                                        sx={{
+                                            flex: '0 0 9rem',
+                                            ...inputSx,
+                                        }}
+                                    >
+                                        <InputLabel id="payment-method-label">
+                                            {t('Method')}
+                                        </InputLabel>
+                                        <Select
+                                            labelId="payment-method-label"
+                                            value={paymentMethod}
+                                            label={t('Method')}
+                                            onChange={(e) =>
+                                                setPaymentMethod(
+                                                    e.target.value as
+                                                        | 'cash'
+                                                        | 'card',
+                                                )
+                                            }
+                                        >
+                                            <MenuItem value="cash">
+                                                {t('Cash')}
+                                            </MenuItem>
+                                            <MenuItem value="card">
+                                                {t('Card')}
+                                            </MenuItem>
+                                        </Select>
+                                    </FormControl>
+                                </div>
 
-                        <div className="flex gap-3">
-                            <TextField
-                                label={t('Amount (MKD)')}
-                                variant="outlined"
-                                type="number"
-                                value={amount}
-                                onChange={(e) => setAmount(e.target.value)}
-                                sx={{ ...inputSx, flex: '1 1 0', minWidth: 0 }}
-                            />
-                            <FormControl
-                                sx={{
-                                    flex: '0 0 9rem',
-                                    ...inputSx,
-                                }}
-                            >
-                                <InputLabel id="payment-method-label">
-                                    {t('Method')}
-                                </InputLabel>
-                                <Select
-                                    labelId="payment-method-label"
-                                    value={paymentMethod}
-                                    label={t('Method')}
-                                    onChange={(e) =>
-                                        setPaymentMethod(
-                                            e.target.value as 'cash' | 'card',
-                                        )
-                                    }
+                                <LocalizationProvider
+                                    dateAdapter={AdapterDayjs}
+                                    adapterLocale={locale}
+                                    localeText={pickerLocaleText}
                                 >
-                                    <MenuItem value="cash">
-                                        {t('Cash')}
-                                    </MenuItem>
-                                    <MenuItem value="card">
-                                        {t('Card')}
-                                    </MenuItem>
-                                </Select>
-                            </FormControl>
-                        </div>
+                                    <DatePicker
+                                        label={t('Start Date')}
+                                        value={startDate}
+                                        onChange={(val) => setStartDate(val)}
+                                        sx={inputSx}
+                                        format="DD.MM.YYYY"
+                                    />
+                                    <DatePicker
+                                        label={t('End Date')}
+                                        value={endDate}
+                                        onChange={(val) => setEndDate(val)}
+                                        minDate={startDate ?? undefined}
+                                        sx={inputSx}
+                                        format="DD.MM.YYYY"
+                                    />
+                                </LocalizationProvider>
 
-                        <LocalizationProvider
-                            dateAdapter={AdapterDayjs}
-                            adapterLocale={locale}
-                            localeText={pickerLocaleText}
-                        >
-                            <DatePicker
-                                label={t('Start Date')}
-                                value={startDate}
-                                onChange={(val) => setStartDate(val)}
-                                sx={inputSx}
-                                format="DD.MM.YYYY"
-                            />
-                            <DatePicker
-                                label={t('End Date')}
-                                value={endDate}
-                                onChange={(val) => setEndDate(val)}
-                                minDate={startDate ?? undefined}
-                                sx={inputSx}
-                                format="DD.MM.YYYY"
-                            />
-                        </LocalizationProvider>
+                                <div className="flex gap-3">
+                                    <Button
+                                        variant="outlined"
+                                        fullWidth
+                                        size="medium"
+                                        onClick={handleCancel}
+                                    >
+                                        {t('Cancel')}
+                                    </Button>
+                                    <Button
+                                        variant="contained"
+                                        fullWidth
+                                        size="medium"
+                                        onClick={handleSave}
+                                        disabled={
+                                            !selectedMember ||
+                                            !amount ||
+                                            !startDate ||
+                                            !endDate
+                                        }
+                                    >
+                                        {t('Save')}
+                                    </Button>
+                                </div>
+                            </>
+                        )}
 
-                        <div className="flex gap-3">
-                            <Button
-                                variant="outlined"
-                                fullWidth
-                                size="medium"
-                                onClick={handleCancel}
-                            >
-                                {t('Cancel')}
-                            </Button>
-                            <Button
-                                variant="contained"
-                                fullWidth
-                                size="medium"
-                                onClick={handleSave}
-                                disabled={
-                                    !selectedMember ||
-                                    !amount ||
-                                    !startDate ||
-                                    !endDate
-                                }
-                            >
-                                {t('Save')}
-                            </Button>
-                        </div>
-
-                        {/* The yearly history: not when only adding a payment */}
-                        {!openedToAdd && <Divider />}
-
-                        {userRole === 'admin' && !openedToAdd && (
+                        {/* The yearly overview: admins, not while adding */}
+                        {userRole === 'admin' && !addMode && (
                             <div className="flex flex-col gap-2">
                                 <SectionLabel>
                                     {t('Membership Fees By Year')}
@@ -727,6 +797,13 @@ export default function MembershipFeesIndex({
                     icon={<HistoryIcon fontSize="small" />}
                     title={t('Payment history')}
                     subtitle={selectedMember?.name ?? ''}
+                    actions={
+                        <AddButton
+                            label={t('Add payment')}
+                            icon={<AddIcon fontSize="small" />}
+                            onClick={() => openAdd('history')}
+                        />
+                    }
                     onClose={() => setShowHistoryModal(false)}
                 />
 

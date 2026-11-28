@@ -789,5 +789,7 @@
     "Choose a day": "Изберете ден",
     "The attendance was saved": "Присуството е зачувано",
     "Already present (:count)": "Веќе присутни (:count)",
-    "Other members": "Останати членови"
+    "Other members": "Останати членови",
+    "Choose the member": "Изберете член",
+    "Review payments": "Преглед на уплати"
 }
