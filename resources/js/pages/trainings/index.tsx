@@ -873,7 +873,7 @@ export default function TrainingsIndex({
                 PaperProps={{
                     sx: {
                         bgcolor: POPUP_BG,
-                        height: '70vh',
+                        height: '80vh',
                         display: 'flex',
                         flexDirection: 'column',
                     },
