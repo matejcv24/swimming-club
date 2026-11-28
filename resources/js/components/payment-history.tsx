@@ -1,3 +1,4 @@
+import AddIcon from '@mui/icons-material/Add';
 import CreditCardIcon from '@mui/icons-material/CreditCard';
 import HistoryIcon from '@mui/icons-material/History';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
@@ -7,6 +8,7 @@ import dayjs from 'dayjs';
 import { useEffect, useState } from 'react';
 import { POPUP_BG } from '@/components/mui-theme-provider';
 import {
+    AddButton,
     EmptyState,
     PopupHeader,
     SummaryCard,
@@ -233,9 +235,12 @@ export function PaymentHistoryContent({
 export function MemberPaymentsDialog({
     member,
     onClose,
+    onAdd,
 }: {
     member: { id: number; name: string } | null;
     onClose: () => void;
+    /** The "+" in the header: a new payment for this member. */
+    onAdd?: () => void;
 }) {
     const [fees, setFees] = useState<Fee[]>([]);
     const [loadedFor, setLoadedFor] = useState<number | null>(null);
@@ -284,6 +289,15 @@ export function MemberPaymentsDialog({
                 icon={<HistoryIcon fontSize="small" />}
                 title={t('Payment history')}
                 subtitle={member?.name ?? ''}
+                actions={
+                    onAdd && (
+                        <AddButton
+                            label={t('Add payment')}
+                            icon={<AddIcon fontSize="small" />}
+                            onClick={onAdd}
+                        />
+                    )
+                }
                 onClose={onClose}
             />
             <DialogContent sx={{ p: 0 }}>
