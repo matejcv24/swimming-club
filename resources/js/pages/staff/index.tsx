@@ -61,6 +61,7 @@ import {
     EmptyState,
     FIELD_SX,
     PopupHeader,
+    SelectClear,
     SummaryCard,
     YearSection,
 } from '@/components/popup-ui';
@@ -1126,7 +1127,9 @@ export default function StaffIndex({ staff, invitations }: Props) {
                                         </CardAction>
                                         <CardAction
                                             tone="danger"
-                                            icon={<DeleteIcon fontSize="small" />}
+                                            icon={
+                                                <DeleteIcon fontSize="small" />
+                                            }
                                             onClick={() => {
                                                 const member = person;
                                                 setPerson(null);
@@ -1304,7 +1307,9 @@ export default function StaffIndex({ staff, invitations }: Props) {
                         <EmptyState
                             icon={<PaymentsIcon />}
                             title={t('No salaries entered yet')}
-                            text={t('They show up here once the first is entered.')}
+                            text={t(
+                                'They show up here once the first is entered.',
+                            )}
                         />
                     ) : (
                         <>
@@ -1478,74 +1483,74 @@ export default function StaffIndex({ staff, invitations }: Props) {
                 </DialogTitle>
                 {editingSalary && (
                     <DialogContent sx={{ px: 2.25, pt: 0.5 }}>
-                            <form
-                                onSubmit={saveSalaryEdit}
-                                // Room above the first field for its floating label
-                                className="flex flex-col gap-5 pt-3 pb-2"
+                        <form
+                            onSubmit={saveSalaryEdit}
+                            // Room above the first field for its floating label
+                            className="flex flex-col gap-5 pt-3 pb-2"
+                        >
+                            <TextField
+                                label={t('Amount (MKD)')}
+                                type="number"
+                                value={editingSalary.amount}
+                                onChange={(e) =>
+                                    setEditingSalary({
+                                        ...editingSalary,
+                                        amount: e.target.value,
+                                    })
+                                }
+                                error={!!editingSalary.errors.amount}
+                                helperText={editingSalary.errors.amount}
+                                required
+                                fullWidth
+                                slotProps={{
+                                    htmlInput: {
+                                        min: 0,
+                                        inputMode: 'decimal',
+                                    },
+                                }}
+                                sx={FIELD_SX}
+                            />
+                            <LocalizationProvider
+                                dateAdapter={AdapterDayjs}
+                                adapterLocale={locale}
+                                localeText={pickerLocaleText}
                             >
-                                <TextField
-                                    label={t('Amount (MKD)')}
-                                    type="number"
-                                    value={editingSalary.amount}
-                                    onChange={(e) =>
+                                <DatePicker
+                                    label={t('Month')}
+                                    value={editingSalary.month}
+                                    onChange={(value) =>
+                                        value &&
                                         setEditingSalary({
                                             ...editingSalary,
-                                            amount: e.target.value,
+                                            month: value,
                                         })
                                     }
-                                    error={!!editingSalary.errors.amount}
-                                    helperText={editingSalary.errors.amount}
-                                    required
-                                    fullWidth
-                                    slotProps={{
-                                        htmlInput: {
-                                            min: 0,
-                                            inputMode: 'decimal',
-                                        },
-                                    }}
-                                    sx={FIELD_SX}
+                                    views={['month', 'year']}
+                                    sx={datePickerSx}
                                 />
-                                <LocalizationProvider
-                                    dateAdapter={AdapterDayjs}
-                                    adapterLocale={locale}
-                                    localeText={pickerLocaleText}
+                            </LocalizationProvider>
+                            <div className="flex gap-3">
+                                <Button
+                                    type="button"
+                                    variant="outlined"
+                                    fullWidth
+                                    onClick={() => setEditingSalary(null)}
                                 >
-                                    <DatePicker
-                                        label={t('Month')}
-                                        value={editingSalary.month}
-                                        onChange={(value) =>
-                                            value &&
-                                            setEditingSalary({
-                                                ...editingSalary,
-                                                month: value,
-                                            })
-                                        }
-                                        views={['month', 'year']}
-                                        sx={datePickerSx}
-                                    />
-                                </LocalizationProvider>
-                                <div className="flex gap-3">
-                                    <Button
-                                        type="button"
-                                        variant="outlined"
-                                        fullWidth
-                                        onClick={() => setEditingSalary(null)}
-                                    >
-                                        {t('Cancel')}
-                                    </Button>
-                                    <Button
-                                        type="submit"
-                                        variant="contained"
-                                        fullWidth
-                                        disabled={
-                                            editingSalary.saving ||
-                                            editingSalary.amount === ''
-                                        }
-                                    >
-                                        {t('Save')}
-                                    </Button>
-                                </div>
-                            </form>
+                                    {t('Cancel')}
+                                </Button>
+                                <Button
+                                    type="submit"
+                                    variant="contained"
+                                    fullWidth
+                                    disabled={
+                                        editingSalary.saving ||
+                                        editingSalary.amount === ''
+                                    }
+                                >
+                                    {t('Save')}
+                                </Button>
+                            </div>
+                        </form>
                     </DialogContent>
                 )}
             </Dialog>
@@ -1635,6 +1640,18 @@ export default function StaffIndex({ staff, invitations }: Props) {
                                     labelId="salary-person"
                                     label={t('Staff member')}
                                     value={salaryEntry.userId}
+                                    endAdornment={
+                                        salaryEntry.userId !== '' ? (
+                                            <SelectClear
+                                                onClear={() =>
+                                                    setSalaryEntry({
+                                                        ...salaryEntry,
+                                                        userId: '',
+                                                    })
+                                                }
+                                            />
+                                        ) : undefined
+                                    }
                                     onChange={(e) =>
                                         setSalaryEntry({
                                             ...salaryEntry,

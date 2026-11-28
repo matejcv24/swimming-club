@@ -33,6 +33,7 @@ import {
     PopupButtons,
     PopupHeader,
     SectionLabel,
+    SelectClear,
     SummaryCard,
 } from '@/components/popup-ui';
 import { usePagePopup } from '@/hooks/use-page-popup';
@@ -365,6 +366,15 @@ export default function InvoicesIndex({ invoices }: Props) {
                                 label={t('Group (optional)')}
                                 notched
                                 value={invoiceGroupId}
+                                endAdornment={
+                                    invoiceGroupId !== '' ? (
+                                        <SelectClear
+                                            onClear={() =>
+                                                setInvoiceGroupId('')
+                                            }
+                                        />
+                                    ) : undefined
+                                }
                                 displayEmpty
                                 onChange={(e) =>
                                     setInvoiceGroupId(
@@ -411,7 +421,9 @@ export default function InvoicesIndex({ invoices }: Props) {
                             </Button>
                         </div>
 
-                        <SectionLabel>{t('Invoice History By Year')}</SectionLabel>
+                        <SectionLabel>
+                            {t('Invoice History By Year')}
+                        </SectionLabel>
                     </div>
 
                     {sortedYears.length > 0 ? (
@@ -454,7 +466,9 @@ export default function InvoicesIndex({ invoices }: Props) {
                 <PopupHeader
                     icon={<ReceiptLongIcon fontSize="small" />}
                     title={t('Invoices')}
-                    subtitle={t(':year · by month', { year: selectedYear ?? '' })}
+                    subtitle={t(':year · by month', {
+                        year: selectedYear ?? '',
+                    })}
                     onClose={closeYear}
                 />
 
@@ -609,11 +623,7 @@ export default function InvoicesIndex({ invoices }: Props) {
                 }
                 onClose={() => setDeleteTarget(null)}
             >
-                <p>
-                    {t(
-                        'Profit and reports will no longer count it.',
-                    )}
-                </p>
+                <p>{t('Profit and reports will no longer count it.')}</p>
                 <Note tone="error">{t('This cannot be undone.')}</Note>
             </ConfirmDialog>
         </MuiThemeProvider>

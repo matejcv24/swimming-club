@@ -35,6 +35,7 @@ import {
     FIELD_SX,
     Hint,
     PopupHeader,
+    SelectClear,
 } from '@/components/popup-ui';
 import { usePagePopup } from '@/hooks/use-page-popup';
 import { useGroups } from '@/lib/groups';
@@ -90,8 +91,7 @@ export default function UnpaidFeesIndex({ unpaidMembers }: Props) {
     // Only admins (and the owner) send payment reminders, and only when the club
     // hasn't switched them off (Club settings)
     const canRemind =
-        auth?.user?.role === 'admin' &&
-        (club?.payment_reminder_emails ?? true);
+        auth?.user?.role === 'admin' && (club?.payment_reminder_emails ?? true);
     // 'all' or one group's id
     const [groupFilter, setGroupFilter] = useState<'all' | number>('all');
     const activeFilter =
@@ -325,6 +325,15 @@ export default function UnpaidFeesIndex({ unpaidMembers }: Props) {
                                 labelId="unpaid-group-label"
                                 label={t('Group')}
                                 value={activeFilter}
+                                endAdornment={
+                                    activeFilter !== 'all' ? (
+                                        <SelectClear
+                                            onClear={() =>
+                                                setGroupFilter('all')
+                                            }
+                                        />
+                                    ) : undefined
+                                }
                                 onChange={(e) =>
                                     setGroupFilter(
                                         e.target.value === 'all'

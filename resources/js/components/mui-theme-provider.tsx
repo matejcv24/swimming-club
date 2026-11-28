@@ -124,6 +124,16 @@ const components: Components<Theme> = {
             },
         },
     },
+    // A searched-for choice (e.g. a member) shows its X at once, also on phones
+    // (MUI shows it only on hover or focus); tapping it clears the choice
+    MuiAutocomplete: {
+        styleOverrides: {
+            clearIndicator: {
+                visibility: 'visible',
+                color: 'var(--popup-muted)',
+            },
+        },
+    },
     MuiChip: {
         styleOverrides: { root: { fontWeight: 700 } },
     },

@@ -52,6 +52,7 @@ import {
     PillSearchField,
     PopupHeader,
     SectionLabel,
+    SelectClear,
     SummaryCard,
 } from '@/components/popup-ui';
 import { CardsSkeleton } from '@/components/skeletons';
@@ -1085,6 +1086,15 @@ export default function MembershipFeesIndex({
                             <Select
                                 labelId="month-pool-filter-label"
                                 value={monthPoolFilter}
+                                endAdornment={
+                                    monthPoolFilter !== 'all' ? (
+                                        <SelectClear
+                                            onClear={() =>
+                                                setMonthPoolFilter('all')
+                                            }
+                                        />
+                                    ) : undefined
+                                }
                                 label={t('Group')}
                                 onChange={(e) =>
                                     setMonthPoolFilter(
