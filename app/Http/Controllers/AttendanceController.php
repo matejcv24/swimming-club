@@ -47,8 +47,14 @@ class AttendanceController extends Controller
             ->where('attendances.member_id', $member->id)
             ->where('attendances.present', true)
             ->orderByDesc('trainings.date')
-            ->get(['attendances.id', 'trainings.date'])
-            ->map(fn ($row) => ['id' => $row->id, 'date' => $row->date]);
+            ->get(['attendances.id', 'trainings.date', 'trainings.group_id', 'trainings.subgroup_id'])
+            // The group and time slot too, so each date says where it was
+            ->map(fn ($row) => [
+                'id' => $row->id,
+                'date' => $row->date,
+                'group_id' => $row->group_id,
+                'subgroup_id' => $row->subgroup_id,
+            ]);
 
         return response()->json(['attendances' => $rows]);
     }

@@ -4,6 +4,7 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
 import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 import GroupsIcon from '@mui/icons-material/Groups';
+import MoreVertIcon from '@mui/icons-material/MoreVert';
 import PersonAddAlt1Icon from '@mui/icons-material/PersonAddAlt1';
 import WarningAmberIcon from '@mui/icons-material/WarningAmber';
 import Avatar from '@mui/material/Avatar';
@@ -11,14 +12,8 @@ import Button from '@mui/material/Button';
 import Dialog from '@mui/material/Dialog';
 import DialogContent from '@mui/material/DialogContent';
 import DialogTitle from '@mui/material/DialogTitle';
-import Divider from '@mui/material/Divider';
 import FormControl from '@mui/material/FormControl';
-import IconButton from '@mui/material/IconButton';
 import InputLabel from '@mui/material/InputLabel';
-import List from '@mui/material/List';
-import ListItemAvatar from '@mui/material/ListItemAvatar';
-import ListItemButton from '@mui/material/ListItemButton';
-import ListItemText from '@mui/material/ListItemText';
 import MenuItem from '@mui/material/MenuItem';
 import Select from '@mui/material/Select';
 import Switch from '@mui/material/Switch';
@@ -26,6 +21,7 @@ import Tab from '@mui/material/Tab';
 import Tabs from '@mui/material/Tabs';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
+import dayjs from 'dayjs';
 import { useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 import { DashboardBackground } from '@/components/dashboard-background';
@@ -39,18 +35,18 @@ import {
 import {
     AddButton,
     avatarSx,
-    CloseButton,
     FIELD_SX,
-    Hint,
+    ConfirmDialog,
+    EmptyState,
     PillSearchField,
     GroupChip,
     PopupHeader,
-    StatusDot,
 } from '@/components/popup-ui';
 import { usePagePopup } from '@/hooks/use-page-popup';
 import type { ClubGroup } from '@/lib/groups';
 import { groupWithSubgroupName, subgroupsOf, useGroups } from '@/lib/groups';
 import { t } from '@/lib/i18n';
+import { showToast } from '@/lib/toast';
 
 interface Member {
     id: number;
@@ -60,12 +56,29 @@ interface Member {
     group_id: number | null;
     subgroup_id: number | null;
     status: 'active' | 'inactive';
+    /** End of the latest membership fee (null: never paid). */
+    membership_fees_max_end_date?: string | null;
     parent: {
         id: number;
         name: string;
         phone: string;
         email: string | null;
     };
+}
+
+/** This month's fee: paid (green) or not (red). */
+function PaidPill({ paid }: { paid: boolean }) {
+    return (
+        <span
+            className={`rounded-full px-2.5 py-0.5 text-xs font-bold whitespace-nowrap ${
+                paid
+                    ? 'bg-green-500/15 text-green-600 dark:text-green-400'
+                    : 'bg-red-500/15 text-red-600 dark:text-red-400'
+            }`}
+        >
+            {paid ? t('Paid') : t('Not paid')}
+        </span>
+    );
 }
 
 interface Props {
@@ -287,6 +300,9 @@ export default function MembersIndex({ members, userRole }: Props) {
             {
                 onError: (errors) => readDuplicate(errors, 'add'),
                 onSuccess: () => {
+                    showToast(
+                        t(':name was added to members', { name: form.name }),
+                    );
                     setDuplicate(null);
                     closeAdd();
                     setForm({
@@ -316,18 +332,31 @@ export default function MembersIndex({ members, userRole }: Props) {
         router.delete(`/members/${deleteMember.id}`, {
             preserveScroll: true,
             onSuccess: () => {
-                if (selectedMember?.id === deleteMember.id) {
+                const removed = deleteMember;
+
+                if (selectedMember?.id === removed.id) {
                     setSelectedMember(null);
                 }
 
                 setDeleteMember(null);
+                // The member is only hidden: Undo brings them back with their history
+                showToast(
+                    t(':name was deleted', { name: removed.name }),
+                    'deleted',
+                    () =>
+                        router.post(
+                            `/members/${removed.id}/restore`,
+                            {},
+                            { preserveScroll: true },
+                        ),
+                );
             },
             onFinish: () => setDeleting(false),
         });
     };
 
-    const handleEditClick = (e: React.MouseEvent, member: Member) => {
-        e.stopPropagation();
+    const handleEditClick = (e: React.MouseEvent | null, member: Member) => {
+        e?.stopPropagation();
         setEditMember(member);
         setEditForm({
             name: member.name,
@@ -376,6 +405,11 @@ export default function MembersIndex({ members, userRole }: Props) {
             {
                 onError: (errors) => readDuplicate(errors, 'edit'),
                 onSuccess: () => {
+                    showToast(
+                        t('The changes for :name were saved', {
+                            name: editForm.name,
+                        }),
+                    );
                     setDuplicate(null);
                     setEditMember(null);
                 },
@@ -450,42 +484,47 @@ export default function MembersIndex({ members, userRole }: Props) {
                 {/* Members List */}
                 <DialogContent sx={{ p: 0, overflowY: 'auto' }}>
                     {filteredMembers.length === 0 ? (
-                        <Typography
-                            variant="body2"
-                            color="text.secondary"
-                            sx={{ textAlign: 'center', mt: 6 }}
-                        >
-                            {t('No members found.')}
-                        </Typography>
+                        <EmptyState
+                            icon={<GroupsIcon />}
+                            title={
+                                search
+                                    ? t('No members found.')
+                                    : memberStatusTab === 0
+                                      ? t('No active members yet')
+                                      : t('No inactive members')
+                            }
+                        />
                     ) : (
-                        <List disablePadding>
-                            {filteredMembers.map((member, index) => (
-                                <ListItemButton
-                                    key={member.id}
-                                    divider
-                                    onClick={() => setSelectedMember(member)}
-                                    sx={{
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        px: 2.25,
-                                    }}
-                                >
-                                    <ListItemAvatar>
-                                        <Avatar sx={avatarSx(index)}>
-                                            {getInitials(member.name)}
-                                        </Avatar>
-                                    </ListItemAvatar>
-                                    <ListItemText
-                                        primary={
-                                            <Typography
-                                                variant="body1"
-                                                fontWeight="bold"
-                                            >
+                        <ul className="border-t border-[var(--popup-border)]">
+                            {filteredMembers.map((member, index) => {
+                                const paid =
+                                    !!member.membership_fees_max_end_date &&
+                                    !dayjs(
+                                        member.membership_fees_max_end_date,
+                                    ).isBefore(dayjs(), 'day');
+
+                                return (
+                                    <li
+                                        key={member.id}
+                                        className="border-b border-[var(--popup-border)]"
+                                    >
+                                        <button
+                                            type="button"
+                                            onClick={() =>
+                                                setSelectedMember(member)
+                                            }
+                                            className="flex w-full cursor-pointer items-center gap-3 px-[18px] py-2.5 text-left transition hover:bg-[var(--popup-ghost)]"
+                                        >
+                                            <Avatar sx={avatarSx(index)}>
+                                                {getInitials(member.name)}
+                                            </Avatar>
+                                            <span className="min-w-0 flex-1 truncate text-[15px] font-bold text-[var(--popup-fg)]">
                                                 {member.name}
-                                            </Typography>
-                                        }
-                                        secondary={
-                                            <span className="mt-1 flex items-center gap-2">
+                                            </span>
+                                            <span className="flex flex-none flex-col items-end gap-1">
+                                                {member.status === 'active' && (
+                                                    <PaidPill paid={paid} />
+                                                )}
                                                 <GroupChip
                                                     name={groupWithSubgroupName(
                                                         groups,
@@ -493,123 +532,49 @@ export default function MembersIndex({ members, userRole }: Props) {
                                                         member.subgroup_id,
                                                     )}
                                                 />
-                                                <StatusDot
-                                                    active={
-                                                        member.status ===
-                                                        'active'
-                                                    }
-                                                />
                                             </span>
-                                        }
-                                        secondaryTypographyProps={{
-                                            component: 'span',
-                                        }}
-                                    />
-                                    {/* Edit + Delete icons */}
-                                    <div className="ml-auto flex items-center gap-1">
-                                        <Hint title={t('Edit member')}>
-                                            <IconButton
-                                                size="small"
-                                                color="primary"
-                                                aria-label={t('Edit :name', {
-                                                    name: member.name,
-                                                })}
-                                                onClick={(e) =>
-                                                    handleEditClick(e, member)
-                                                }
-                                            >
-                                                <EditIcon fontSize="small" />
-                                            </IconButton>
-                                        </Hint>
-                                        {userRole === 'admin' && (
-                                            <Hint title={t('Delete member')}>
-                                                <IconButton
-                                                    size="small"
-                                                    color="error"
-                                                    aria-label={t(
-                                                        'Delete member',
-                                                    )}
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        setDeleteMember(member);
-                                                    }}
-                                                >
-                                                    <DeleteIcon fontSize="small" />
-                                                </IconButton>
-                                            </Hint>
-                                        )}
-                                    </div>
-                                </ListItemButton>
-                            ))}
-                        </List>
+                                            <MoreVertIcon
+                                                fontSize="small"
+                                                className="flex-none text-[var(--popup-muted)]"
+                                            />
+                                        </button>
+                                    </li>
+                                );
+                            })}
+                        </ul>
                     )}
                 </DialogContent>
             </Dialog>
 
             {/* Delete Member Confirmation Modal */}
             {userRole === 'admin' && (
-                <Dialog
+                <ConfirmDialog
                     open={!!deleteMember}
+                    icon={<DeleteIcon fontSize="small" />}
+                    title={t('Delete member?')}
+                    subtitle={deleteMember?.name}
+                    confirmLabel={t('Delete')}
+                    busy={deleting}
+                    onConfirm={handleDeleteConfirm}
                     onClose={() => setDeleteMember(null)}
-                    disableRestoreFocus
-                    fullWidth
-                    maxWidth="xs"
-                    PaperProps={{
-                        sx: { bgcolor: POPUP_BG },
-                    }}
                 >
-                    <DialogTitle sx={{ p: 0 }}>
-                        <div className="flex items-center justify-between px-4 py-3">
-                            <Typography variant="h6" fontWeight="bold">
-                                {t('Delete Member')}
-                            </Typography>
-                            <CloseButton
-                                onClick={() => setDeleteMember(null)}
-                            />
-                        </div>
-                        <Divider />
-                    </DialogTitle>
-
-                    <DialogContent>
-                        <div className="flex flex-col gap-4 py-4">
-                            <Typography variant="body1">
-                                {t('Are you sure you want to delete')}{' '}
-                                <strong>{deleteMember?.name}</strong>?
-                            </Typography>
-                            <Typography variant="body2" color="text.secondary">
-                                {t(
-                                    'The member is removed from the lists. Their payments and attendance stay, so profit and reports don’t change.',
-                                )}
-                            </Typography>
-                            <div className="flex gap-3">
-                                <Button
-                                    variant="outlined"
-                                    fullWidth
-                                    size="medium"
-                                    onClick={() => setDeleteMember(null)}
-                                    disabled={deleting}
-                                >
-                                    {t('No')}
-                                </Button>
-                                <Button
-                                    variant="contained"
-                                    color="error"
-                                    fullWidth
-                                    size="medium"
-                                    onClick={handleDeleteConfirm}
-                                    disabled={deleting}
-                                >
-                                    {t('Yes')}
-                                </Button>
-                            </div>
-                        </div>
-                    </DialogContent>
-                </Dialog>
+                    <p>
+                        {t(
+                            'The member is removed from the lists. Their payments and attendance stay, so profit and reports don’t change.',
+                        )}
+                    </p>
+                </ConfirmDialog>
             )}
 
             {/* Member Detail Modal */}
             <MemberDetailsDialog
                 member={selectedMember}
+                onEdit={(member) => handleEditClick(null, member)}
+                onDelete={
+                    userRole === 'admin'
+                        ? (member) => setDeleteMember(member)
+                        : undefined
+                }
                 onClose={() => {
                     setSelectedMember(null);
 
@@ -825,7 +790,7 @@ export default function MembersIndex({ members, userRole }: Props) {
                                 size="medium"
                                 disabled={!hasEditChanges}
                             >
-                                {t('Save Changes')}
+                                {t('Save')}
                             </Button>
                         </div>
                     </form>
@@ -1054,7 +1019,7 @@ export default function MembersIndex({ members, userRole }: Props) {
                                     fullWidth
                                     size="medium"
                                 >
-                                    {t('Save Member')}
+                                    {t('Save')}
                                 </Button>
                             </div>
                         </form>

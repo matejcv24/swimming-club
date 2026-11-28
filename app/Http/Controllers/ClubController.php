@@ -44,11 +44,20 @@ class ClubController extends Controller
             'email' => ['required', 'email', 'max:255'],
             // Images only (no SVG: it can carry scripts)
             'logo' => ['nullable', 'file', 'mimes:png,jpg,jpeg,webp', 'max:2048'],
+            // The emails to parents the club sends (both on unless switched off)
+            'payment_confirmation_emails' => ['sometimes', 'boolean'],
+            'payment_reminder_emails' => ['sometimes', 'boolean'],
         ]);
 
         $club = Club::current();
         $club->name = trim($validated['name']);
         $club->email = trim($validated['email']);
+
+        foreach (['payment_confirmation_emails', 'payment_reminder_emails'] as $switch) {
+            if (array_key_exists($switch, $validated)) {
+                $club->{$switch} = (bool) $validated[$switch];
+            }
+        }
 
         if ($request->hasFile('logo')) {
             $this->replaceLogo($club, $request->file('logo'));

@@ -1,4 +1,5 @@
 import { Head, router, usePage } from '@inertiajs/react';
+import CheckIcon from '@mui/icons-material/Check';
 import EmailIcon from '@mui/icons-material/Email';
 import MarkEmailReadIcon from '@mui/icons-material/MarkEmailRead';
 import UnsubscribeIcon from '@mui/icons-material/Unsubscribe';
@@ -29,10 +30,16 @@ import {
     POPUP_FG,
     popupFg,
 } from '@/components/mui-theme-provider';
-import { FIELD_SX, Hint, PopupHeader } from '@/components/popup-ui';
+import {
+    EmptyState,
+    FIELD_SX,
+    Hint,
+    PopupHeader,
+} from '@/components/popup-ui';
 import { usePagePopup } from '@/hooks/use-page-popup';
 import { useGroups } from '@/lib/groups';
 import { t, tc } from '@/lib/i18n';
+import { showToast } from '@/lib/toast';
 
 interface UnpaidMember {
     id: number;
@@ -76,11 +83,15 @@ export default function UnpaidFeesIndex({ unpaidMembers }: Props) {
     // Fades in and out over the dashboard
     const popup = usePagePopup();
     const groups = useGroups();
-    const { auth } = usePage().props as {
+    const { auth, club } = usePage().props as {
         auth?: { user?: { role?: string } | null };
+        club?: { payment_reminder_emails?: boolean } | null;
     };
-    // Only admins (and the owner) send payment reminders
-    const canRemind = auth?.user?.role === 'admin';
+    // Only admins (and the owner) send payment reminders, and only when the club
+    // hasn't switched them off (Club settings)
+    const canRemind =
+        auth?.user?.role === 'admin' &&
+        (club?.payment_reminder_emails ?? true);
     // 'all' or one group's id
     const [groupFilter, setGroupFilter] = useState<'all' | number>('all');
     const activeFilter =
@@ -218,7 +229,10 @@ export default function UnpaidFeesIndex({ unpaidMembers }: Props) {
             { text, subject },
             {
                 preserveScroll: true,
-                onSuccess: () => setPreview(null),
+                onSuccess: () => {
+                    setPreview(null);
+                    showToast(t('The reminder was sent'), 'sent');
+                },
                 onError: (errors) =>
                     setError(
                         errors.reminder ??
@@ -349,15 +363,18 @@ export default function UnpaidFeesIndex({ unpaidMembers }: Props) {
 
                 <DialogContent sx={{ p: 0, overflowY: 'auto', flex: 1 }}>
                     {members.length === 0 ? (
-                        <Typography
-                            variant="body2"
-                            color="text.secondary"
-                            sx={{ textAlign: 'center', mt: 6 }}
-                        >
-                            {activeFilter === 'all'
-                                ? t('No overdue members.')
-                                : t('No overdue members in this group.')}
-                        </Typography>
+                        <EmptyState
+                            tone="green"
+                            icon={<CheckIcon />}
+                            title={t('Everyone has paid')}
+                            text={
+                                activeFilter === 'all'
+                                    ? t(
+                                          'No member is late with a payment. When someone is, they show up here.',
+                                      )
+                                    : t('No overdue members in this group.')
+                            }
+                        />
                     ) : (
                         <List disablePadding>
                             {members.map((member) => (

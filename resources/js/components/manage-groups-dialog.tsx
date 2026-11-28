@@ -1,47 +1,36 @@
 import { router } from '@inertiajs/react';
 import AddIcon from '@mui/icons-material/Add';
-import AddCircleIcon from '@mui/icons-material/AddCircle';
-import CheckIcon from '@mui/icons-material/Check';
-import CloseIcon from '@mui/icons-material/Close';
 import DeleteIcon from '@mui/icons-material/Delete';
+import EditIcon from '@mui/icons-material/Edit';
 import GroupsIcon from '@mui/icons-material/Groups';
+import MoreVertIcon from '@mui/icons-material/MoreVert';
+import PeopleIcon from '@mui/icons-material/People';
 import Button from '@mui/material/Button';
 import Dialog from '@mui/material/Dialog';
 import type { DialogProps } from '@mui/material/Dialog';
 import DialogContent from '@mui/material/DialogContent';
-import DialogTitle from '@mui/material/DialogTitle';
-import Divider from '@mui/material/Divider';
 import FormControl from '@mui/material/FormControl';
-import IconButton from '@mui/material/IconButton';
-import InputBase from '@mui/material/InputBase';
 import InputLabel from '@mui/material/InputLabel';
 import MenuItem from '@mui/material/MenuItem';
 import Select from '@mui/material/Select';
-import Tooltip from '@mui/material/Tooltip';
-import Typography from '@mui/material/Typography';
-import { useEffect, useRef, useState } from 'react';
-import {
-    GroupMembersDialog,
-    MembersLink,
-} from '@/components/group-members-dialog';
+import TextField from '@mui/material/TextField';
+import { useState } from 'react';
+import { GroupMembersDialog } from '@/components/group-members-dialog';
 import type { MembersOf } from '@/components/group-members-dialog';
 import type { MemberDetails } from '@/components/member-details-dialog';
 import { POPUP_BG } from '@/components/mui-theme-provider';
-import { CloseButton, PopupHeader, SlidingText } from '@/components/popup-ui';
+import {
+    ActionMenu,
+    ConfirmDialog,
+    EmptyState,
+    FIELD_SX,
+    Note,
+    PopupButtons,
+    PopupHeader,
+} from '@/components/popup-ui';
 import type { ClubGroup, ClubSubgroup } from '@/lib/groups';
 import { t, tc } from '@/lib/i18n';
-
-const fieldSx = {
-    height: 40,
-    px: 1.75,
-    borderRadius: 999,
-    bgcolor: 'var(--popup-ghost)',
-    border: '1px solid var(--popup-border)',
-    color: 'var(--popup-fg)',
-    fontSize: 14,
-    '& input::placeholder': { color: 'var(--popup-muted)', opacity: 1 },
-    '&.Mui-focused': { borderColor: '#1690c8' },
-};
+import { showToast } from '@/lib/toast';
 
 const visitOptions = { preserveScroll: true, preserveState: true } as const;
 
@@ -84,18 +73,22 @@ export function ManageGroupsDialog({
                 ? member.group_id === id || member.group_id === null
                 : member.subgroup_id === id,
         ).length;
-    const [newName, setNewName] = useState('');
-    const [names, setNames] = useState<Record<number, string>>({});
-    // The group a new subgroup is being added to, and its name so far
-    const [addingTo, setAddingTo] = useState<number | null>(null);
-    const [newSubgroupName, setNewSubgroupName] = useState('');
+    // Adding a group or a time slot, or renaming one: a small form with one field
+    const [editor, setEditor] = useState<{
+        mode: 'group' | 'subgroup' | 'rename';
+        /** The group a new time slot goes into */
+        group?: ClubGroup;
+        /** What is being renamed */
+        item?: ClubSubgroup;
+        value: string;
+    } | null>(null);
+    // The group or time slot whose ⋮ menu is open
+    const [menuFor, setMenuFor] = useState<Deleting | null>(null);
     const [deleting, setDeleting] = useState<Deleting | null>(null);
     const [moveTo, setMoveTo] = useState<number | 'all' | ''>('');
     const [error, setError] = useState<string | null>(null);
     const [deleteError, setDeleteError] = useState<string | null>(null);
     const [busy, setBusy] = useState(false);
-
-    const nameOf = (item: ClubSubgroup) => names[item.id] ?? item.name;
 
     const visit = (onError: (message: string) => void) => ({
         ...visitOptions,
@@ -109,80 +102,60 @@ export function ManageGroupsDialog({
         onFinish: () => setBusy(false),
     });
 
-    const addGroup = () => {
-        if (newName.trim() === '') {
-            return;
-        }
-
-        router.post(
-            '/groups',
-            { name: newName.trim() },
-            { ...visit(setError), onSuccess: () => setNewName('') },
-        );
-    };
-
-    const startSubgroup = (group: ClubGroup) => {
-        setAddingTo(group.id);
-        setNewSubgroupName('');
+    const openEditor = (
+        mode: 'group' | 'subgroup' | 'rename',
+        options: { group?: ClubGroup; item?: ClubSubgroup } = {},
+    ) => {
         setError(null);
+        setEditor({ mode, ...options, value: options.item?.name ?? '' });
     };
 
-    // On phones, bring the new subgroup's field to the middle of the screen once
-    // it opens and the keyboard has come up
-    const newSubgroupRef = useRef<HTMLLIElement>(null);
-    useEffect(() => {
-        if (
-            addingTo === null ||
-            !window.matchMedia('(pointer: coarse)').matches
-        ) {
+    const saveEditor = () => {
+        if (!editor || editor.value.trim() === '') {
             return;
         }
 
-        const timer = window.setTimeout(
-            () =>
-                newSubgroupRef.current?.scrollIntoView({
-                    block: 'center',
-                    behavior: 'smooth',
-                }),
-            350,
-        );
+        const name = editor.value.trim();
+        const done = (message: string) => () => {
+            setEditor(null);
+            showToast(message);
+        };
 
-        return () => window.clearTimeout(timer);
-    }, [addingTo]);
-
-    const addSubgroup = (group: ClubGroup) => {
-        if (newSubgroupName.trim() === '') {
-            return;
-        }
-
-        router.post(
-            '/groups',
-            { name: newSubgroupName.trim(), parent_id: group.id },
-            {
-                ...visit(setError),
-                onSuccess: () => {
-                    setAddingTo(null);
-                    setNewSubgroupName('');
+        if (editor.mode === 'rename' && editor.item) {
+            router.put(
+                `/groups/${editor.item.id}`,
+                { name },
+                {
+                    ...visit(setError),
+                    onSuccess: done(t('The name was saved')),
                 },
-            },
-        );
-    };
-
-    const rename = (item: ClubSubgroup) => {
-        router.put(
-            `/groups/${item.id}`,
-            { name: nameOf(item).trim() },
-            {
-                ...visit(setError),
-                onSuccess: () =>
-                    setNames((current) => {
-                        const rest = { ...current };
-                        delete rest[item.id];
-
-                        return rest;
-                    }),
-            },
-        );
+            );
+        } else if (editor.mode === 'subgroup' && editor.group) {
+            router.post(
+                '/groups',
+                { name, parent_id: editor.group.id },
+                {
+                    ...visit(setError),
+                    onSuccess: done(
+                        t('The time slot :name was added to :group', {
+                            name,
+                            group: editor.group.name,
+                        }),
+                    ),
+                },
+            );
+        } else {
+            router.post(
+                '/groups',
+                { name },
+                {
+                    ...visit(setError),
+                    onSuccess: done(
+                        t('The group :name was added', { name }),
+                    ),
+                },
+            );
+        }
     };
 
     /**
@@ -240,46 +213,14 @@ export function ManageGroupsDialog({
                 deleting.item.members_count > 0
                     ? { move_to_group_id: moveTo }
                     : {},
-            onSuccess: () => setDeleting(null),
+            onSuccess: () => {
+                showToast(
+                    t('Deleted: :name', { name: deleting.item.name }),
+                    'deleted',
+                );
+                setDeleting(null);
+            },
         });
-    };
-
-    const renameField = (item: ClubSubgroup, label: string) => {
-        const changed =
-            nameOf(item).trim() !== item.name && nameOf(item).trim() !== '';
-
-        return (
-            <>
-                <InputBase
-                    fullWidth
-                    value={nameOf(item)}
-                    onChange={(e) =>
-                        setNames({ ...names, [item.id]: e.target.value })
-                    }
-                    onKeyDown={(e) => {
-                        if (e.key === 'Enter' && changed) {
-                            rename(item);
-                        }
-                    }}
-                    inputProps={{ 'aria-label': label, maxLength: 60 }}
-                    sx={fieldSx}
-                />
-                {changed && (
-                    <Tooltip title={t('Save name')}>
-                        <IconButton
-                            color="primary"
-                            aria-label={t('Save name of :name', {
-                                name: item.name,
-                            })}
-                            disabled={busy}
-                            onClick={() => rename(item)}
-                        >
-                            <CheckIcon fontSize="small" />
-                        </IconButton>
-                    </Tooltip>
-                )}
-            </>
-        );
     };
 
     const destinations = deleting ? destinationsFor(deleting) : [];
@@ -288,6 +229,14 @@ export function ManageGroupsDialog({
             ? (groups.find((g) => g.id === deleting.item.id)?.subgroups ?? [])
             : [];
     const needsMove = (deleting?.item.members_count ?? 0) > 0;
+
+    const editorTitle = !editor
+        ? ''
+        : editor.mode === 'rename'
+          ? t('Rename')
+          : editor.mode === 'subgroup'
+            ? t('New time slot')
+            : t('New group');
 
     return (
         <>
@@ -300,432 +249,352 @@ export function ManageGroupsDialog({
                 maxWidth="sm"
                 PaperProps={{ sx: { bgcolor: POPUP_BG, maxHeight: '85vh' } }}
             >
-                <DialogTitle sx={{ p: 0 }}>
-                    <PopupHeader
-                        icon={<GroupsIcon fontSize="small" />}
-                        title={t('Groups')}
-                        subtitle={t(
-                            'Groups and their subgroups, e.g. Big pool → 18:00',
-                        )}
-                        onClose={onClose}
-                    />
-                </DialogTitle>
+                <PopupHeader
+                    icon={<GroupsIcon fontSize="small" />}
+                    title={t('Groups')}
+                    subtitle={`${tc(':count group|:count groups', groups.length)} · ${tc(
+                        ':count subgroup|:count subgroups',
+                        groups.reduce(
+                            (count, group) => count + group.subgroups.length,
+                            0,
+                        ),
+                    )}`}
+                    onClose={onClose}
+                />
 
-                <DialogContent sx={{ px: 2.25, pb: 2.25 }}>
-                    <div className="flex flex-col gap-4">
-                        {/* Add a group */}
-                        <form
-                            className="flex items-center gap-2"
-                            onSubmit={(e) => {
-                                e.preventDefault();
-                                addGroup();
-                            }}
-                        >
-                            <InputBase
-                                fullWidth
-                                value={newName}
-                                onChange={(e) => setNewName(e.target.value)}
-                                placeholder={t('New group name')}
-                                inputProps={{
-                                    'aria-label': t('New group name'),
-                                    maxLength: 60,
-                                }}
-                                sx={fieldSx}
-                            />
-                            <Tooltip title={t('Add group')}>
-                                {/* A disabled button needs a wrapper for its hint */}
-                                <span className="flex-none">
-                                    <Button
-                                        type="submit"
-                                        variant="contained"
-                                        aria-label={t('Add group')}
-                                        disabled={busy || newName.trim() === ''}
-                                        sx={{
-                                            minWidth: 0,
-                                            px: 1.25,
-                                            height: 40,
-                                        }}
-                                    >
-                                        <AddIcon />
-                                    </Button>
-                                </span>
-                            </Tooltip>
-                        </form>
+                {/* Adding is always in sight, never in a menu */}
+                <div className="px-[18px] pb-3">
+                    <Button
+                        variant="outlined"
+                        fullWidth
+                        startIcon={<AddIcon />}
+                        onClick={() => openEditor('group')}
+                    >
+                        {t('New group')}
+                    </Button>
+                </div>
 
-                        {error && (
-                            <p
-                                role="alert"
-                                className="rounded-xl bg-red-500/10 px-3 py-2 text-sm text-red-500"
-                            >
-                                {error}
-                            </p>
-                        )}
-
-                        {groups.length === 0 && (
-                            <p className="py-6 text-center text-sm text-[var(--popup-muted)]">
-                                {t('No groups yet. Add the first one above.')}
-                            </p>
-                        )}
-
-                        {/* The club's groups and their subgroups */}
-                        <ul className="flex flex-col gap-2">
+                <DialogContent sx={{ p: 0 }}>
+                    {groups.length === 0 ? (
+                        <EmptyState
+                            icon={<GroupsIcon />}
+                            title={t('No groups yet')}
+                            text={t(
+                                'Add the first one, e.g. by age or level.',
+                            )}
+                        />
+                    ) : (
+                        <ul className="border-t border-[var(--popup-border)]">
                             {groups.map((group) => (
-                                <li
-                                    key={group.id}
-                                    className="rounded-2xl border border-[var(--popup-border)] p-3"
-                                >
-                                    <div className="flex items-center gap-1.5">
-                                        {renameField(
-                                            group,
-                                            t('Name of group :name', {
-                                                name: group.name,
-                                            }),
-                                        )}
-                                        <Tooltip title={t('Add subgroup')}>
-                                            <IconButton
-                                                color="primary"
-                                                aria-label={t(
-                                                    'Add subgroup to :name',
-                                                    { name: group.name },
-                                                )}
-                                                disabled={busy}
-                                                onClick={() =>
-                                                    startSubgroup(group)
+                                <li key={group.id}>
+                                    <GroupRow
+                                        name={group.name}
+                                        detail={[
+                                            membersLabel(
+                                                activeIn('group', group.id),
+                                            ),
+                                            group.subgroups.length > 0 &&
+                                                tc(
+                                                    ':count subgroup|:count subgroups',
+                                                    group.subgroups.length,
+                                                ),
+                                        ]
+                                            .filter(Boolean)
+                                            .join(' · ')}
+                                        onOpen={() =>
+                                            setMembersOf({
+                                                kind: 'group',
+                                                id: group.id,
+                                                title: group.name,
+                                            })
+                                        }
+                                        onMenu={() =>
+                                            setMenuFor({
+                                                item: group,
+                                                parent: null,
+                                            })
+                                        }
+                                    />
+                                    {group.subgroups.map((subgroup) => {
+                                        const count = activeIn(
+                                            'subgroup',
+                                            subgroup.id,
+                                        );
+
+                                        return (
+                                            <GroupRow
+                                                key={subgroup.id}
+                                                indented
+                                                name={subgroup.name}
+                                                detail={
+                                                    count > 0
+                                                        ? membersLabel(count)
+                                                        : t('No members yet')
                                                 }
-                                            >
-                                                <AddCircleIcon fontSize="small" />
-                                            </IconButton>
-                                        </Tooltip>
-                                        <Tooltip title={t('Delete group')}>
-                                            <IconButton
-                                                color="error"
-                                                aria-label={t(
-                                                    'Delete group :name',
-                                                    { name: group.name },
-                                                )}
-                                                disabled={busy}
-                                                onClick={() =>
-                                                    startDelete(group, null)
+                                                onOpen={() =>
+                                                    setMembersOf({
+                                                        kind: 'subgroup',
+                                                        id: subgroup.id,
+                                                        title: `${group.name} · ${subgroup.name}`,
+                                                    })
                                                 }
-                                            >
-                                                <DeleteIcon fontSize="small" />
-                                            </IconButton>
-                                        </Tooltip>
-                                    </div>
-                                    <p className="mt-1.5 px-1 text-xs text-[var(--popup-muted)]">
-                                        <MembersLink
-                                            count={activeIn('group', group.id)}
-                                            onClick={() =>
-                                                setMembersOf({
-                                                    kind: 'group',
-                                                    id: group.id,
-                                                    title: group.name,
-                                                })
-                                            }
+                                                onMenu={() =>
+                                                    setMenuFor({
+                                                        item: subgroup,
+                                                        parent: group,
+                                                    })
+                                                }
+                                            />
+                                        );
+                                    })}
+                                    <button
+                                        type="button"
+                                        onClick={() =>
+                                            openEditor('subgroup', { group })
+                                        }
+                                        className="relative flex w-full cursor-pointer items-center gap-2 border-b border-[var(--popup-border)] py-2.5 pr-[18px] pl-11 text-left text-sm font-bold text-hydra-blue hover:bg-[var(--popup-ghost)] dark:text-sky-300"
+                                    >
+                                        <span
+                                            aria-hidden
+                                            className="absolute top-0 left-7 h-1/2 border-l-2 border-[var(--popup-border)]"
                                         />
-                                        {group.subgroups.length > 0 &&
-                                            ` · ${tc(':count subgroup|:count subgroups', group.subgroups.length)}`}
-                                    </p>
-
-                                    {(group.subgroups.length > 0 ||
-                                        addingTo === group.id) && (
-                                        <ul className="mt-2.5 ml-3 flex flex-col gap-2 border-l-2 border-[var(--popup-border)] pl-3">
-                                            {group.subgroups.map((subgroup) => (
-                                                <li key={subgroup.id}>
-                                                    <div className="flex items-center gap-1.5">
-                                                        {renameField(
-                                                            subgroup,
-                                                            t(
-                                                                'Name of subgroup :subgroup of :group',
-                                                                {
-                                                                    subgroup:
-                                                                        subgroup.name,
-                                                                    group: group.name,
-                                                                },
-                                                            ),
-                                                        )}
-                                                        <Tooltip
-                                                            title={t(
-                                                                'Delete subgroup',
-                                                            )}
-                                                        >
-                                                            <IconButton
-                                                                color="error"
-                                                                aria-label={t(
-                                                                    'Delete subgroup :subgroup of :group',
-                                                                    {
-                                                                        subgroup:
-                                                                            subgroup.name,
-                                                                        group: group.name,
-                                                                    },
-                                                                )}
-                                                                disabled={busy}
-                                                                onClick={() =>
-                                                                    startDelete(
-                                                                        subgroup,
-                                                                        group,
-                                                                    )
-                                                                }
-                                                            >
-                                                                <DeleteIcon fontSize="small" />
-                                                            </IconButton>
-                                                        </Tooltip>
-                                                    </div>
-                                                    <p className="mt-1 px-1 text-xs text-[var(--popup-muted)]">
-                                                        <MembersLink
-                                                            count={activeIn(
-                                                                'subgroup',
-                                                                subgroup.id,
-                                                            )}
-                                                            onClick={() =>
-                                                                setMembersOf({
-                                                                    kind: 'subgroup',
-                                                                    id: subgroup.id,
-                                                                    title: `${group.name} · ${subgroup.name}`,
-                                                                })
-                                                            }
-                                                        />
-                                                    </p>
-                                                </li>
-                                            ))}
-
-                                            {/* New subgroup */}
-                                            {addingTo === group.id && (
-                                                <li ref={newSubgroupRef}>
-                                                    <form
-                                                        className="flex items-center gap-1.5"
-                                                        onSubmit={(e) => {
-                                                            e.preventDefault();
-                                                            addSubgroup(group);
-                                                        }}
-                                                    >
-                                                        <div className="relative min-w-0 flex-1">
-                                                            <InputBase
-                                                                fullWidth
-                                                                autoFocus
-                                                                value={
-                                                                    newSubgroupName
-                                                                }
-                                                                onChange={(e) =>
-                                                                    setNewSubgroupName(
-                                                                        e.target
-                                                                            .value,
-                                                                    )
-                                                                }
-                                                                inputProps={{
-                                                                    'aria-label':
-                                                                        t(
-                                                                            'New subgroup name for :name',
-                                                                            {
-                                                                                name: group.name,
-                                                                            },
-                                                                        ),
-                                                                    maxLength: 60,
-                                                                }}
-                                                                sx={fieldSx}
-                                                            />
-                                                            {/* The hint, sliding to show all of it when the field is narrow */}
-                                                            {newSubgroupName ===
-                                                                '' && (
-                                                                <SlidingText className="pointer-events-none absolute inset-y-0 right-[15px] left-[15px] flex items-center text-sm text-[var(--popup-muted)] pointer-coarse:text-base">
-                                                                    {t(
-                                                                        'New subgroup name, e.g. 18:00',
-                                                                    )}
-                                                                </SlidingText>
-                                                            )}
-                                                        </div>
-                                                        <Tooltip
-                                                            title={t(
-                                                                'Add subgroup',
-                                                            )}
-                                                        >
-                                                            <span>
-                                                                <IconButton
-                                                                    type="submit"
-                                                                    color="primary"
-                                                                    aria-label={t(
-                                                                        'Save subgroup',
-                                                                    )}
-                                                                    disabled={
-                                                                        busy ||
-                                                                        newSubgroupName.trim() ===
-                                                                            ''
-                                                                    }
-                                                                >
-                                                                    <CheckIcon fontSize="small" />
-                                                                </IconButton>
-                                                            </span>
-                                                        </Tooltip>
-                                                        <Tooltip
-                                                            title={t('Cancel')}
-                                                        >
-                                                            <IconButton
-                                                                aria-label={t(
-                                                                    'Cancel new subgroup',
-                                                                )}
-                                                                onClick={() =>
-                                                                    setAddingTo(
-                                                                        null,
-                                                                    )
-                                                                }
-                                                            >
-                                                                <CloseIcon fontSize="small" />
-                                                            </IconButton>
-                                                        </Tooltip>
-                                                    </form>
-                                                </li>
-                                            )}
-                                        </ul>
-                                    )}
+                                        <AddIcon sx={{ fontSize: 17 }} />
+                                        {t('Add subgroup to :name', {
+                                            name: group.name,
+                                        })}
+                                    </button>
                                 </li>
                             ))}
                         </ul>
-                    </div>
+                    )}
                 </DialogContent>
             </Dialog>
 
-            {/* Delete Group Confirmation Modal */}
+            {/* A group's or time slot's ⋮: members, rename, delete */}
+            <ActionMenu
+                open={!!menuFor}
+                title={
+                    menuFor?.parent
+                        ? `${menuFor.parent.name} · ${menuFor.item.name}`
+                        : (menuFor?.item.name ?? '')
+                }
+                subtitle={
+                    menuFor
+                        ? membersLabel(
+                              activeIn(
+                                  menuFor.parent ? 'subgroup' : 'group',
+                                  menuFor.item.id,
+                              ),
+                          )
+                        : undefined
+                }
+                onClose={() => setMenuFor(null)}
+                actions={
+                    menuFor
+                        ? [
+                              {
+                                  label: menuFor.parent
+                                      ? t('Members of the time slot')
+                                      : t('Members of the group'),
+                                  icon: <PeopleIcon fontSize="small" />,
+                                  tone: 'primary',
+                                  onClick: () =>
+                                      setMembersOf({
+                                          kind: menuFor.parent
+                                              ? 'subgroup'
+                                              : 'group',
+                                          id: menuFor.item.id,
+                                          title: menuFor.parent
+                                              ? `${menuFor.parent.name} · ${menuFor.item.name}`
+                                              : menuFor.item.name,
+                                      }),
+                              },
+                              {
+                                  label: t('Rename'),
+                                  icon: <EditIcon fontSize="small" />,
+                                  onClick: () =>
+                                      openEditor('rename', {
+                                          item: menuFor.item,
+                                      }),
+                              },
+                              {
+                                  label: menuFor.parent
+                                      ? t('Delete subgroup')
+                                      : t('Delete group'),
+                                  icon: <DeleteIcon fontSize="small" />,
+                                  tone: 'danger',
+                                  onClick: () =>
+                                      startDelete(menuFor.item, menuFor.parent),
+                              },
+                          ]
+                        : []
+                }
+            />
+
+            {/* New group, new time slot or a new name: one field */}
             <Dialog
-                open={!!deleting}
-                onClose={closeDelete}
+                open={!!editor}
+                onClose={() => !busy && setEditor(null)}
                 disableRestoreFocus
                 fullWidth
                 maxWidth="xs"
                 PaperProps={{ sx: { bgcolor: POPUP_BG } }}
             >
-                <DialogTitle sx={{ p: 0 }}>
-                    <div className="flex items-center justify-between px-4 py-3">
-                        <Typography variant="h6" fontWeight="bold">
-                            {deleting?.parent
-                                ? t('Delete Subgroup')
-                                : t('Delete Group')}
-                        </Typography>
-                        <CloseButton onClick={closeDelete} />
+                <PopupHeader
+                    icon={
+                        editor?.mode === 'rename' ? (
+                            <EditIcon fontSize="small" />
+                        ) : (
+                            <AddIcon fontSize="small" />
+                        )
+                    }
+                    title={editorTitle}
+                    subtitle={
+                        editor?.mode === 'subgroup'
+                            ? editor.group?.name
+                            : editor?.mode === 'rename'
+                              ? editor.item?.name
+                              : t('E.g. by age or level')
+                    }
+                    onClose={() => !busy && setEditor(null)}
+                />
+                <form
+                    onSubmit={(e) => {
+                        e.preventDefault();
+                        saveEditor();
+                    }}
+                >
+                    <div className="flex flex-col gap-3 px-[18px] pt-2 pb-2">
+                        <TextField
+                            autoFocus
+                            fullWidth
+                            label={t('Name')}
+                            placeholder={
+                                editor?.mode === 'subgroup'
+                                    ? t('E.g. 18:00')
+                                    : undefined
+                            }
+                            value={editor?.value ?? ''}
+                            onChange={(e) =>
+                                editor &&
+                                setEditor({ ...editor, value: e.target.value })
+                            }
+                            slotProps={{ htmlInput: { maxLength: 60 } }}
+                            sx={FIELD_SX}
+                        />
+                        {error && <Note tone="error">{error}</Note>}
                     </div>
-                    <Divider />
-                </DialogTitle>
-
-                <DialogContent>
-                    {deleting && (
-                        <div className="flex flex-col gap-4 py-4">
-                            <Typography variant="body1">
-                                {t('Are you sure you want to delete')}{' '}
-                                <strong>
-                                    {deleting.parent
-                                        ? `${deleting.parent.name} · ${deleting.item.name}`
-                                        : deleting.item.name}
-                                </strong>
-                                ?
-                            </Typography>
-
-                            {deletingSubgroups.length > 0 && (
-                                <Typography
-                                    variant="body2"
-                                    color="text.secondary"
-                                >
-                                    {t(
-                                        'Its subgroups (:names) will be deleted too.',
-                                        {
-                                            names: deletingSubgroups
-                                                .map((s) => s.name)
-                                                .join(', '),
-                                        },
-                                    )}
-                                </Typography>
-                            )}
-
-                            {needsMove &&
-                                (destinations.length > 0 ? (
-                                    <FormControl fullWidth size="small">
-                                        <InputLabel id="move-members-label">
-                                            {t('Move its :members to', {
-                                                members: membersLabel(
-                                                    deleting.item.members_count,
-                                                ),
-                                            })}
-                                        </InputLabel>
-                                        <Select
-                                            labelId="move-members-label"
-                                            label={t('Move its :members to', {
-                                                members: membersLabel(
-                                                    deleting.item.members_count,
-                                                ),
-                                            })}
-                                            value={moveTo}
-                                            onChange={(e) =>
-                                                setMoveTo(
-                                                    e.target.value === 'all'
-                                                        ? 'all'
-                                                        : Number(
-                                                              e.target.value,
-                                                          ),
-                                                )
-                                            }
-                                        >
-                                            {destinations.map((d) => (
-                                                <MenuItem
-                                                    key={d.id}
-                                                    value={d.id}
-                                                >
-                                                    {d.label}
-                                                </MenuItem>
-                                            ))}
-                                        </Select>
-                                    </FormControl>
-                                ) : (
-                                    <Typography variant="body2" color="error">
-                                        {t(
-                                            'Add another group first, so its members have somewhere to go.',
-                                        )}
-                                    </Typography>
-                                ))}
-
-                            <Typography variant="body2" color="text.secondary">
-                                {t(
-                                    'Past trainings, payments and invoices keep its name.',
-                                )}
-                            </Typography>
-
-                            {deleteError && (
-                                <Typography
-                                    variant="body2"
-                                    color="error"
-                                    role="alert"
-                                >
-                                    {deleteError}
-                                </Typography>
-                            )}
-
-                            <div className="flex gap-3">
-                                <Button
-                                    variant="outlined"
-                                    fullWidth
-                                    size="medium"
-                                    onClick={closeDelete}
-                                    disabled={busy}
-                                >
-                                    {t('No')}
-                                </Button>
-                                <Button
-                                    variant="contained"
-                                    color="error"
-                                    fullWidth
-                                    size="medium"
-                                    onClick={confirmDelete}
-                                    disabled={
-                                        busy ||
-                                        (needsMove &&
-                                            (destinations.length === 0 ||
-                                                moveTo === ''))
-                                    }
-                                >
-                                    {t('Yes')}
-                                </Button>
-                            </div>
-                        </div>
-                    )}
-                </DialogContent>
+                    <PopupButtons>
+                        <Button
+                            variant="outlined"
+                            disabled={busy}
+                            onClick={() => setEditor(null)}
+                        >
+                            {t('Cancel')}
+                        </Button>
+                        <Button
+                            type="submit"
+                            variant="contained"
+                            disabled={
+                                busy ||
+                                !editor ||
+                                editor.value.trim() === '' ||
+                                editor.value.trim() === editor.item?.name
+                            }
+                        >
+                            {t('Save')}
+                        </Button>
+                    </PopupButtons>
+                </form>
             </Dialog>
+
+            {/* Deleting a group or time slot: asked once, members moved first */}
+            <ConfirmDialog
+                open={!!deleting}
+                icon={<DeleteIcon fontSize="small" />}
+                title={
+                    deleting?.parent ? t('Delete subgroup?') : t('Delete group?')
+                }
+                subtitle={
+                    deleting?.parent
+                        ? `${deleting.parent.name} · ${deleting.item.name}`
+                        : deleting?.item.name
+                }
+                confirmLabel={t('Delete')}
+                busy={busy}
+                confirmDisabled={
+                    needsMove && (destinations.length === 0 || moveTo === '')
+                }
+                onConfirm={confirmDelete}
+                onClose={closeDelete}
+            >
+                {deleting && (
+                    <>
+                        {deletingSubgroups.length > 0 && (
+                            <p>
+                                {t(
+                                    'Its subgroups (:names) will be deleted too.',
+                                    {
+                                        names: deletingSubgroups
+                                            .map((s) => s.name)
+                                            .join(', '),
+                                    },
+                                )}
+                            </p>
+                        )}
+                        {needsMove &&
+                            (destinations.length > 0 ? (
+                                <FormControl
+                                    fullWidth
+                                    size="small"
+                                    sx={{ mt: 1 }}
+                                >
+                                    <InputLabel id="move-members-label">
+                                        {t('Move its :members to', {
+                                            members: membersLabel(
+                                                deleting.item.members_count,
+                                            ),
+                                        })}
+                                    </InputLabel>
+                                    <Select
+                                        labelId="move-members-label"
+                                        label={t('Move its :members to', {
+                                            members: membersLabel(
+                                                deleting.item.members_count,
+                                            ),
+                                        })}
+                                        value={moveTo}
+                                        onChange={(e) =>
+                                            setMoveTo(
+                                                e.target.value === 'all'
+                                                    ? 'all'
+                                                    : Number(e.target.value),
+                                            )
+                                        }
+                                    >
+                                        {destinations.map((d) => (
+                                            <MenuItem key={d.id} value={d.id}>
+                                                {d.label}
+                                            </MenuItem>
+                                        ))}
+                                    </Select>
+                                </FormControl>
+                            ) : (
+                                <Note tone="warn">
+                                    {t(
+                                        'Add another group first, so its members have somewhere to go.',
+                                    )}
+                                </Note>
+                            ))}
+                        <p>
+                            {t(
+                                'Past trainings, payments and invoices keep its name.',
+                            )}
+                        </p>
+                        {deleteError && <Note tone="error">{deleteError}</Note>}
+                    </>
+                )}
+            </ConfirmDialog>
 
             <GroupMembersDialog
                 of={membersOf}
@@ -733,5 +602,58 @@ export function ManageGroupsDialog({
                 onClose={() => setMembersOf(null)}
             />
         </>
+    );
+}
+
+/**
+ * A group (or, indented under it, a time slot): its name and members. Tapping
+ * it lists the members, ⋮ opens rename and delete.
+ */
+function GroupRow({
+    name,
+    detail,
+    indented = false,
+    onOpen,
+    onMenu,
+}: {
+    name: string;
+    detail: string;
+    indented?: boolean;
+    onOpen: () => void;
+    onMenu: () => void;
+}) {
+    return (
+        <div
+            className={`relative flex items-center border-b border-[var(--popup-border)] ${indented ? 'pl-11' : 'pl-[18px]'}`}
+        >
+            {indented && (
+                <span
+                    aria-hidden
+                    className="absolute inset-y-0 left-7 border-l-2 border-[var(--popup-border)]"
+                />
+            )}
+            <button
+                type="button"
+                onClick={onOpen}
+                className="min-w-0 flex-1 cursor-pointer py-3 text-left"
+            >
+                <span
+                    className={`block truncate text-[var(--popup-fg)] ${indented ? 'text-sm font-semibold' : 'text-[15px] font-bold'}`}
+                >
+                    {name}
+                </span>
+                <span className="mt-0.5 block text-[12.5px] text-[var(--popup-muted)]">
+                    {detail}
+                </span>
+            </button>
+            <button
+                type="button"
+                aria-label={t(':name, actions', { name })}
+                onClick={onMenu}
+                className="flex h-12 w-12 flex-none cursor-pointer items-center justify-center text-[var(--popup-muted)] hover:text-[var(--popup-fg)]"
+            >
+                <MoreVertIcon fontSize="small" />
+            </button>
+        </div>
     );
 }

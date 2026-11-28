@@ -102,8 +102,16 @@ class UnpaidFeeController extends Controller
             'subject' => ['nullable', 'string', 'max:200'],
         ]);
 
-        $reminder = $this->reminderFor($member);
         $club = Club::current();
+
+        // The club switched these emails off (Club settings)
+        if (! $club->payment_reminder_emails) {
+            throw ValidationException::withMessages([
+                'reminder' => __('Reminders by email are switched off in the club settings.'),
+            ]);
+        }
+
+        $reminder = $this->reminderFor($member);
         $text = trim((string) ($validated['text'] ?? ''));
         $customText = $text !== '' && $text !== $reminder->text($club) ? $text : null;
         $subject = trim((string) ($validated['subject'] ?? ''));

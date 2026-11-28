@@ -5,4 +5,8 @@ export type ClubSharedData = {
     email: string | null;
     /** Where the logo is shown from (changes when it is replaced); none: initials. */
     logo_url: string | null;
+    /** The club sends "payment received" emails (Club settings). */
+    payment_confirmation_emails: boolean;
+    /** The club sends reminders for unpaid fees (Club settings). */
+    payment_reminder_emails: boolean;
 };

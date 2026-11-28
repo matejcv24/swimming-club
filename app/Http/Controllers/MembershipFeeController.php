@@ -113,6 +113,13 @@ class MembershipFeeController extends Controller
         $member = $membershipFee->member;
         abort_unless($member && ! $member->trashed(), 404);
 
+        // The club switched these emails off (Club settings)
+        if (! Club::current()->payment_confirmation_emails) {
+            throw ValidationException::withMessages([
+                'confirmation' => __('Payment confirmations by email are switched off in the club settings.'),
+            ]);
+        }
+
         $address = PaymentReminderMessage::addressOf($member->load('parent'));
 
         if (! $address) {

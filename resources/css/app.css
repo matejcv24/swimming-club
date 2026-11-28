@@ -196,6 +196,18 @@
     }
 }
 
+/* A toast slides up a little as it appears (see ToastHost) */
+@keyframes toast-in {
+    from {
+        opacity: 0;
+        transform: translateY(12px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
 /* Phones zoom the page in when a text field with text smaller than 16px is tapped
    (e.g. the 14px search bars). On touch screens fields use 16px, so tapping one
    no longer zooms; pinch-to-zoom still works. */

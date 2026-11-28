@@ -1,13 +1,16 @@
-import { Transition } from '@headlessui/react';
-import { Form, Head, Link, router, usePage } from '@inertiajs/react';
-import { useRef, useState } from 'react';
-import Heading from '@/components/heading';
-import InputError from '@/components/input-error';
-import PasswordInput from '@/components/password-input';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
+import LockIcon from '@mui/icons-material/Lock';
+import NotificationsIcon from '@mui/icons-material/Notifications';
+import PersonIcon from '@mui/icons-material/Person';
+import Button from '@mui/material/Button';
+import Switch from '@mui/material/Switch';
+import TextField from '@mui/material/TextField';
+import { useState } from 'react';
+import type { FormEvent, ReactNode } from 'react';
+import { MuiThemeProvider } from '@/components/mui-theme-provider';
+import { FIELD_SX, IconBadge, Note } from '@/components/popup-ui';
 import { t } from '@/lib/i18n';
+import { showToast } from '@/lib/toast';
 import { send } from '@/routes/verification';
 
 type NotificationSettings = Record<string, boolean>;
@@ -29,249 +32,225 @@ export default function Profile({
     status?: string;
     notificationSettings: NotificationSettings | null;
 }) {
-    const { auth } = usePage().props;
-
     return (
-        <>
+        <MuiThemeProvider>
             <Head title={t('Account settings')} />
 
             <h1 className="sr-only">{t('Account settings')}</h1>
 
-            <div className="space-y-6">
-                <Heading
-                    variant="small"
-                    title={t('Name and email')}
-                    description={t('Update your name and email address')}
+            <div className="flex flex-col gap-4">
+                <ProfileCard
+                    mustVerifyEmail={mustVerifyEmail}
+                    status={status}
                 />
-
-                <Form
-                    action="/settings/profile"
-                    method="patch"
-                    options={{
-                        preserveScroll: true,
-                    }}
-                    className="space-y-6"
-                >
-                    {({ processing, recentlySuccessful, errors }) => (
-                        <>
-                            <div className="grid gap-2">
-                                <Label htmlFor="name">{t('Name')}</Label>
-
-                                <Input
-                                    id="name"
-                                    className="mt-1 block w-full"
-                                    defaultValue={auth.user.name}
-                                    name="name"
-                                    required
-                                    autoComplete="name"
-                                    placeholder={t('Full name')}
-                                />
-
-                                <InputError
-                                    className="mt-2"
-                                    message={errors.name}
-                                />
-                            </div>
-
-                            <div className="grid gap-2">
-                                <Label htmlFor="email">
-                                    {t('Email address')}
-                                </Label>
-
-                                <Input
-                                    id="email"
-                                    type="email"
-                                    className="mt-1 block w-full"
-                                    defaultValue={auth.user.email}
-                                    name="email"
-                                    required
-                                    autoComplete="username"
-                                    placeholder={t('Email address')}
-                                />
-
-                                <InputError
-                                    className="mt-2"
-                                    message={errors.email}
-                                />
-                            </div>
-
-                            {mustVerifyEmail &&
-                                auth.user.email_verified_at === null && (
-                                    <div>
-                                        <p className="-mt-4 text-sm text-muted-foreground">
-                                            {t(
-                                                'Your email address is unverified.',
-                                            )}{' '}
-                                            <Link
-                                                href={send()}
-                                                as="button"
-                                                className="text-foreground underline decoration-neutral-300 underline-offset-4 transition-colors duration-300 ease-out hover:decoration-current! dark:decoration-neutral-500"
-                                            >
-                                                {t(
-                                                    'Click here to resend the verification email.',
-                                                )}
-                                            </Link>
-                                        </p>
-
-                                        {status ===
-                                            'verification-link-sent' && (
-                                            <div className="mt-2 text-sm font-medium text-green-600">
-                                                {t(
-                                                    'A new verification link has been sent to your email address.',
-                                                )}
-                                            </div>
-                                        )}
-                                    </div>
-                                )}
-
-                            <div className="flex items-center gap-4">
-                                <Button
-                                    disabled={processing}
-                                    data-test="update-profile-button"
-                                >
-                                    {t('Save')}
-                                </Button>
-
-                                <Transition
-                                    show={recentlySuccessful}
-                                    enter="transition ease-in-out"
-                                    enterFrom="opacity-0"
-                                    leave="transition ease-in-out"
-                                    leaveTo="opacity-0"
-                                >
-                                    <p className="text-sm text-neutral-600">
-                                        {t('Saved')}
-                                    </p>
-                                </Transition>
-                            </div>
-                        </>
-                    )}
-                </Form>
+                <PasswordCard />
+                {notificationSettings && (
+                    <NotificationsCard settings={notificationSettings} />
+                )}
             </div>
-
-            <PasswordSection />
-
-            {notificationSettings && (
-                <NotificationsSection settings={notificationSettings} />
-            )}
-        </>
+        </MuiThemeProvider>
     );
 }
 
-function PasswordSection() {
-    const passwordInput = useRef<HTMLInputElement>(null);
-    const currentPasswordInput = useRef<HTMLInputElement>(null);
+/** A section of the page, in the same frame as the app's pop-ups. */
+function Card({
+    icon,
+    title,
+    subtitle,
+    children,
+}: {
+    icon: ReactNode;
+    title: string;
+    subtitle: string;
+    children: ReactNode;
+}) {
+    return (
+        <section className="overflow-hidden rounded-[20px] border border-[var(--popup-border)] bg-[var(--popup-bg)] text-[var(--popup-fg)]">
+            <div className="flex items-center gap-3 px-[18px] pt-[18px] pb-3.5">
+                <IconBadge>{icon}</IconBadge>
+                <div className="min-w-0">
+                    <h2 className="text-[17px] leading-tight font-extrabold">
+                        {title}
+                    </h2>
+                    <p className="mt-0.5 text-[12.5px] text-[var(--popup-muted)]">
+                        {subtitle}
+                    </p>
+                </div>
+            </div>
+            {children}
+        </section>
+    );
+}
+
+function ProfileCard({
+    mustVerifyEmail,
+    status,
+}: {
+    mustVerifyEmail: boolean;
+    status?: string;
+}) {
+    const { auth } = usePage().props;
+    const form = useForm({ name: auth.user.name, email: auth.user.email });
+
+    const submit = (event: FormEvent) => {
+        event.preventDefault();
+        form.patch('/settings/profile', {
+            preserveScroll: true,
+            onSuccess: () => showToast(t('Your name and email were saved')),
+        });
+    };
+
+    const unchanged =
+        form.data.name === auth.user.name &&
+        form.data.email === auth.user.email;
 
     return (
-        <div className="space-y-6">
-            <Heading
-                variant="small"
-                title={t('Change password')}
-                description={t('At least 8 characters')}
-            />
-
-            <Form
-                action="/settings/password"
-                method="put"
-                options={{ preserveScroll: true }}
-                resetOnError={[
-                    'password',
-                    'password_confirmation',
-                    'current_password',
-                ]}
-                resetOnSuccess
-                onError={(errors) => {
-                    if (errors.password) {
-                        passwordInput.current?.focus();
-                    }
-
-                    if (errors.current_password) {
-                        currentPasswordInput.current?.focus();
-                    }
-                }}
-                className="space-y-6"
+        <Card
+            icon={<PersonIcon fontSize="small" />}
+            title={t('Name and email')}
+            subtitle={t('Update your name and email address')}
+        >
+            <form
+                onSubmit={submit}
+                className="flex flex-col gap-5 px-[18px] pt-2 pb-[18px]"
             >
-                {({ errors, processing, recentlySuccessful }) => (
-                    <>
-                        <div className="grid gap-2">
-                            <Label htmlFor="current_password">
-                                {t('Current password')}
-                            </Label>
-                            <PasswordInput
-                                id="current_password"
-                                ref={currentPasswordInput}
-                                name="current_password"
-                                className="mt-1 block w-full"
-                                autoComplete="current-password"
-                                placeholder={t('Current password')}
-                            />
-                            <InputError message={errors.current_password} />
-                        </div>
+                <TextField
+                    label={t('Name')}
+                    value={form.data.name}
+                    onChange={(e) => form.setData('name', e.target.value)}
+                    error={!!form.errors.name}
+                    helperText={form.errors.name}
+                    required
+                    fullWidth
+                    autoComplete="name"
+                    sx={FIELD_SX}
+                />
+                <TextField
+                    label={t('Email address')}
+                    type="email"
+                    value={form.data.email}
+                    onChange={(e) => form.setData('email', e.target.value)}
+                    error={!!form.errors.email}
+                    helperText={form.errors.email}
+                    required
+                    fullWidth
+                    autoComplete="username"
+                    sx={FIELD_SX}
+                />
 
-                        <div className="grid gap-2">
-                            <Label htmlFor="password">
-                                {t('New password')}
-                            </Label>
-                            <PasswordInput
-                                id="password"
-                                ref={passwordInput}
-                                name="password"
-                                className="mt-1 block w-full"
-                                autoComplete="new-password"
-                                placeholder={t('New password')}
-                            />
-                            <InputError message={errors.password} />
-                        </div>
-
-                        <div className="grid gap-2">
-                            <Label htmlFor="password_confirmation">
-                                {t('Confirm password')}
-                            </Label>
-                            <PasswordInput
-                                id="password_confirmation"
-                                name="password_confirmation"
-                                className="mt-1 block w-full"
-                                autoComplete="new-password"
-                                placeholder={t('Confirm password')}
-                            />
-                            <InputError
-                                message={errors.password_confirmation}
-                            />
-                        </div>
-
-                        <div className="flex items-center gap-4">
-                            <Button
-                                disabled={processing}
-                                data-test="update-password-button"
-                            >
-                                {t('Save password')}
-                            </Button>
-
-                            <Transition
-                                show={recentlySuccessful}
-                                enter="transition ease-in-out"
-                                enterFrom="opacity-0"
-                                leave="transition ease-in-out"
-                                leaveTo="opacity-0"
-                            >
-                                <p className="text-sm text-neutral-600">
-                                    {t('Saved')}
-                                </p>
-                            </Transition>
-                        </div>
-                    </>
+                {mustVerifyEmail && auth.user.email_verified_at === null && (
+                    <Note tone="warn">
+                        {t('Your email address is unverified.')}{' '}
+                        <Link
+                            href={send()}
+                            as="button"
+                            className="cursor-pointer font-semibold underline underline-offset-4"
+                        >
+                            {t('Click here to resend the verification email.')}
+                        </Link>
+                        {status === 'verification-link-sent' && (
+                            <span className="mt-1 block font-semibold">
+                                {t(
+                                    'A new verification link has been sent to your email address.',
+                                )}
+                            </span>
+                        )}
+                    </Note>
                 )}
-            </Form>
-        </div>
+
+                <Button
+                    type="submit"
+                    variant="contained"
+                    fullWidth
+                    disabled={form.processing || unchanged}
+                    data-test="update-profile-button"
+                >
+                    {t('Save')}
+                </Button>
+            </form>
+        </Card>
+    );
+}
+
+function PasswordCard() {
+    const form = useForm({
+        current_password: '',
+        password: '',
+        password_confirmation: '',
+    });
+
+    const submit = (event: FormEvent) => {
+        event.preventDefault();
+        form.put('/settings/password', {
+            preserveScroll: true,
+            onSuccess: () => {
+                form.reset();
+                showToast(t('Your password was changed'));
+            },
+            onError: () =>
+                form.reset('password', 'password_confirmation', 'current_password'),
+        });
+    };
+
+    const field = (
+        name: 'current_password' | 'password' | 'password_confirmation',
+        label: string,
+        autoComplete: string,
+    ) => (
+        <TextField
+            label={label}
+            type="password"
+            value={form.data[name]}
+            onChange={(e) => form.setData(name, e.target.value)}
+            error={!!form.errors[name]}
+            helperText={form.errors[name]}
+            fullWidth
+            autoComplete={autoComplete}
+            sx={FIELD_SX}
+        />
+    );
+
+    return (
+        <Card
+            icon={<LockIcon fontSize="small" />}
+            title={t('Change password')}
+            subtitle={t('At least 8 characters')}
+        >
+            <form
+                onSubmit={submit}
+                className="flex flex-col gap-5 px-[18px] pt-2 pb-[18px]"
+            >
+                {field(
+                    'current_password',
+                    t('Current password'),
+                    'current-password',
+                )}
+                {field('password', t('New password'), 'new-password')}
+                {field(
+                    'password_confirmation',
+                    t('Confirm password'),
+                    'new-password',
+                )}
+                <Button
+                    type="submit"
+                    variant="contained"
+                    fullWidth
+                    disabled={
+                        form.processing ||
+                        !form.data.current_password ||
+                        !form.data.password
+                    }
+                    data-test="update-password-button"
+                >
+                    {t('Save')}
+                </Button>
+            </form>
+        </Card>
     );
 }
 
 /** Admins: which notifications they get (in the bell and as pushes). */
-function NotificationsSection({
-    settings,
-}: {
-    settings: NotificationSettings;
-}) {
+function NotificationsCard({ settings }: { settings: NotificationSettings }) {
     const [values, setValues] = useState(settings);
 
     const toggle = (type: string) => {
@@ -286,44 +265,31 @@ function NotificationsSection({
     };
 
     return (
-        <div className="space-y-4">
-            <Heading
-                variant="small"
-                title={t('Which notifications I get')}
-                description={t(
-                    'In the bell and as notifications on your devices',
-                )}
-            />
-
-            <div className="divide-y rounded-xl border">
+        <Card
+            icon={<NotificationsIcon fontSize="small" />}
+            title={t('Which notifications I get')}
+            subtitle={t('In the bell and as notifications on your devices')}
+        >
+            <ul className="border-t border-[var(--popup-border)]">
                 {NOTIFICATION_KINDS.map(({ type, label }) => (
-                    <button
+                    <li
                         key={type}
-                        type="button"
-                        role="switch"
-                        aria-checked={values[type]}
-                        onClick={() => toggle(type)}
-                        className="flex w-full cursor-pointer items-center gap-3 px-4 py-3 text-left text-sm"
+                        className="border-b border-[var(--popup-border)] last:border-b-0"
                     >
-                        <span className="flex-1">{t(label)}</span>
-                        <span
-                            aria-hidden="true"
-                            className={`relative h-5 w-9 flex-none rounded-full transition-colors ${
-                                values[type]
-                                    ? 'bg-hydra-blue'
-                                    : 'bg-muted-foreground/30'
-                            }`}
-                        >
-                            <span
-                                className={`absolute top-0.5 size-4 rounded-full bg-white shadow transition-all ${
-                                    values[type] ? 'left-[18px]' : 'left-0.5'
-                                }`}
+                        <label className="flex min-h-12 cursor-pointer items-center gap-3 px-[18px] py-1.5">
+                            <span className="flex-1 text-[15px] font-semibold">
+                                {t(label)}
+                            </span>
+                            <Switch
+                                checked={!!values[type]}
+                                onChange={() => toggle(type)}
+                                inputProps={{ 'aria-label': t(label) }}
                             />
-                        </span>
-                    </button>
+                        </label>
+                    </li>
                 ))}
-            </div>
-        </div>
+            </ul>
+        </Card>
     );
 }
 

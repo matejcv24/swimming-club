@@ -6,13 +6,20 @@ import Button from '@mui/material/Button';
 import Dialog from '@mui/material/Dialog';
 import DialogContent from '@mui/material/DialogContent';
 import DialogTitle from '@mui/material/DialogTitle';
+import Switch from '@mui/material/Switch';
 import TextField from '@mui/material/TextField';
 import { useRef, useState } from 'react';
 import type { ChangeEvent, FormEvent } from 'react';
 import { ClubMark } from '@/components/club-mark';
 import { MuiThemeProvider, POPUP_BG } from '@/components/mui-theme-provider';
-import { FIELD_SX, PopupHeader } from '@/components/popup-ui';
+import {
+    ConfirmDialog,
+    FIELD_SX,
+    PopupHeader,
+    SectionLabel,
+} from '@/components/popup-ui';
 import { t } from '@/lib/i18n';
+import { showToast } from '@/lib/toast';
 import type { ClubSharedData } from '@/types/club';
 
 /** The biggest logo file taken, as the server also checks. */
@@ -29,10 +36,14 @@ export function ClubSettingsDialog({ onClose }: { onClose: () => void }) {
         name: string;
         email: string;
         logo: File | null;
+        payment_confirmation_emails: boolean;
+        payment_reminder_emails: boolean;
     }>({
         name: club?.name ?? '',
         email: club?.email ?? '',
         logo: null,
+        payment_confirmation_emails: club?.payment_confirmation_emails ?? true,
+        payment_reminder_emails: club?.payment_reminder_emails ?? true,
     });
     const fileInput = useRef<HTMLInputElement>(null);
     // The newly chosen picture, shown before it is saved
@@ -97,6 +108,7 @@ export function ClubSettingsDialog({ onClose }: { onClose: () => void }) {
         router.delete('/club/logo', {
             preserveScroll: true,
             preserveState: true,
+            onSuccess: () => showToast(t('The logo was removed'), 'deleted'),
             onFinish: () => {
                 setRemoving(false);
                 setConfirmingRemove(false);
@@ -106,10 +118,19 @@ export function ClubSettingsDialog({ onClose }: { onClose: () => void }) {
 
     const submit = (event: FormEvent) => {
         event.preventDefault();
+        form.transform((data) => ({
+            ...data,
+            // Sent as a form (for the logo): booleans as 1 / 0
+            payment_confirmation_emails: data.payment_confirmation_emails ? 1 : 0,
+            payment_reminder_emails: data.payment_reminder_emails ? 1 : 0,
+        }));
         form.post('/club', {
             forceFormData: true,
             preserveScroll: true,
-            onSuccess: onClose,
+            onSuccess: () => {
+                showToast(t('The club settings were saved'));
+                onClose();
+            },
         });
     };
 
@@ -234,12 +255,38 @@ export function ClubSettingsDialog({ onClose }: { onClose: () => void }) {
                             )}
                         </div>
 
-                        <div className="flex gap-3">
+                        {/* Which emails the club sends to members and parents */}
+                        <div className="flex flex-col gap-1">
+                            <SectionLabel>{t('Emails to parents')}</SectionLabel>
+                            <EmailSwitch
+                                label={t('Payment confirmation')}
+                                hint={t(
+                                    'After a payment is saved, “Save and send” emails it to the parent.',
+                                )}
+                                checked={form.data.payment_confirmation_emails}
+                                onChange={(value) =>
+                                    form.setData(
+                                        'payment_confirmation_emails',
+                                        value,
+                                    )
+                                }
+                            />
+                            <EmailSwitch
+                                label={t('Reminder for an unpaid fee')}
+                                hint={t(
+                                    'In Unpaid fees, the envelope next to a member sends a reminder.',
+                                )}
+                                checked={form.data.payment_reminder_emails}
+                                onChange={(value) =>
+                                    form.setData('payment_reminder_emails', value)
+                                }
+                            />
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-3">
                             <Button
                                 type="button"
                                 variant="outlined"
-                                fullWidth
-                                size="medium"
                                 onClick={onClose}
                             >
                                 {t('Cancel')}
@@ -247,8 +294,6 @@ export function ClubSettingsDialog({ onClose }: { onClose: () => void }) {
                             <Button
                                 type="submit"
                                 variant="contained"
-                                fullWidth
-                                size="medium"
                                 disabled={form.processing}
                             >
                                 {t('Save')}
@@ -259,49 +304,53 @@ export function ClubSettingsDialog({ onClose }: { onClose: () => void }) {
             </Dialog>
 
             {/* Are you sure? */}
-            <Dialog
+            <ConfirmDialog
                 open={confirmingRemove}
-                onClose={() => !removing && setConfirmingRemove(false)}
-                disableRestoreFocus
-                fullWidth
-                maxWidth="xs"
-                PaperProps={{ sx: { bgcolor: POPUP_BG } }}
+                icon={<DeleteIcon fontSize="small" />}
+                title={t('Remove the logo?')}
+                subtitle={form.data.name}
+                confirmLabel={t('Remove')}
+                busy={removing}
+                onConfirm={removeLogo}
+                onClose={() => setConfirmingRemove(false)}
             >
-                <div className="flex flex-col gap-4 p-5">
-                    <div>
-                        <p className="text-base font-bold text-[var(--popup-fg)]">
-                            {t('Remove the logo?')}
-                        </p>
-                        <p className="mt-1 text-sm text-[var(--popup-muted)]">
-                            {t(
-                                'The logo will be deleted. You can upload a new one any time.',
-                            )}
-                        </p>
-                    </div>
-                    <div className="flex gap-3">
-                        <Button
-                            type="button"
-                            variant="outlined"
-                            fullWidth
-                            disabled={removing}
-                            onClick={() => setConfirmingRemove(false)}
-                        >
-                            {t('Cancel')}
-                        </Button>
-                        <Button
-                            type="button"
-                            variant="contained"
-                            color="error"
-                            fullWidth
-                            startIcon={<DeleteIcon />}
-                            disabled={removing}
-                            onClick={removeLogo}
-                        >
-                            {t('Remove')}
-                        </Button>
-                    </div>
-                </div>
-            </Dialog>
+                <p>
+                    {t(
+                        'The logo will be deleted. You can upload a new one any time.',
+                    )}
+                </p>
+            </ConfirmDialog>
         </MuiThemeProvider>
+    );
+}
+
+/** One email the club sends: what it is, when it goes out, and a switch. */
+function EmailSwitch({
+    label,
+    hint,
+    checked,
+    onChange,
+}: {
+    label: string;
+    hint: string;
+    checked: boolean;
+    onChange: (value: boolean) => void;
+}) {
+    return (
+        <label className="flex cursor-pointer items-center gap-3 border-b border-[var(--popup-border)] py-2.5 last:border-b-0">
+            <span className="min-w-0 flex-1">
+                <span className="block text-[15px] font-semibold text-[var(--popup-fg)]">
+                    {label}
+                </span>
+                <span className="block text-[12.5px] text-[var(--popup-muted)]">
+                    {hint}
+                </span>
+            </span>
+            <Switch
+                checked={checked}
+                onChange={(e) => onChange(e.target.checked)}
+                inputProps={{ 'aria-label': label }}
+            />
+        </label>
     );
 }

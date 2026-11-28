@@ -17,7 +17,11 @@ class MemberController extends Controller
 {
     public function index()
     {
-        $members = Member::visibleTo(Auth::user())->with('parent')->get();
+        // The latest fee's end date says whether this month is paid (the list's pill)
+        $members = Member::visibleTo(Auth::user())
+            ->with('parent')
+            ->withMax('membershipFees', 'end_date')
+            ->get();
 
         return inertia('members/index', [
             'members' => $members,

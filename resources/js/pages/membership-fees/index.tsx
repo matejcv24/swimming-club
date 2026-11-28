@@ -1,29 +1,20 @@
-import { Head, router } from '@inertiajs/react';
+import { Head, router, usePage } from '@inertiajs/react';
 import CreditCardIcon from '@mui/icons-material/CreditCard';
 import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
 import EmailIcon from '@mui/icons-material/Email';
+import HistoryIcon from '@mui/icons-material/History';
+import MoreVertIcon from '@mui/icons-material/MoreVert';
 import Autocomplete from '@mui/material/Autocomplete';
 import Button from '@mui/material/Button';
-import Chip from '@mui/material/Chip';
 import Dialog from '@mui/material/Dialog';
 import DialogContent from '@mui/material/DialogContent';
 import DialogTitle from '@mui/material/DialogTitle';
 import Divider from '@mui/material/Divider';
 import FormControl from '@mui/material/FormControl';
-import IconButton from '@mui/material/IconButton';
 import InputLabel from '@mui/material/InputLabel';
-import List from '@mui/material/List';
-import ListItem from '@mui/material/ListItem';
-import ListItemText from '@mui/material/ListItemText';
 import MenuItem from '@mui/material/MenuItem';
 import Select from '@mui/material/Select';
-import Table from '@mui/material/Table';
-import TableBody from '@mui/material/TableBody';
-import TableCell from '@mui/material/TableCell';
-import TableContainer from '@mui/material/TableContainer';
-import TableHead from '@mui/material/TableHead';
-import TableRow from '@mui/material/TableRow';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
@@ -39,22 +30,29 @@ import {
     POPUP_FG,
     popupFg,
 } from '@/components/mui-theme-provider';
-import {
-    ConfirmationPreviewDialog,
-    PaymentSavedDialog,
+import { ConfirmationDialog } from '@/components/payment-saved-dialog';
+import type {
+    ConfirmationPayment,
+    SavedFee,
 } from '@/components/payment-saved-dialog';
-import type { SavedFee } from '@/components/payment-saved-dialog';
 import {
-    CloseButton,
-    Hint,
+    ActionMenu,
+    ConfirmDialog,
+    DrillRow,
+    EmptyState,
+    Note,
     PopupHeader,
-    ShowHistoryButton,
+    SectionLabel,
+    SummaryCard,
+    YearSection,
 } from '@/components/popup-ui';
 import { CardsSkeleton } from '@/components/skeletons';
 import { usePagePopup } from '@/hooks/use-page-popup';
 import { groupNameOf, useGroups } from '@/lib/groups';
 import { locale, pickerLocaleText, t, tc } from '@/lib/i18n';
 import { clearOnClick } from '@/lib/search-field';
+import { showToast } from '@/lib/toast';
+import type { ClubSharedData } from '@/types/club';
 
 /** 'all' or one group's id */
 type GroupFilter = 'all' | number;
@@ -115,55 +113,141 @@ const inputSx = {
     '& .MuiSvgIcon-root': { color: POPUP_FG },
 };
 
-/**
- * The member's name stays in place while a wide table is scrolled sideways (on
- * phones), on the pop-up's own background so the other columns pass under it.
- */
-const STICKY_FIRST_COLUMN = {
-    position: 'sticky',
-    left: 0,
-    zIndex: 1,
-    bgcolor: POPUP_BG,
-    whiteSpace: 'nowrap',
-    boxShadow: `1px 0 0 ${popupFg(0.12)}`,
-} as const;
-
 const methodLabel = (method: 'cash' | 'card') =>
     method === 'card' ? t('Card') : t('Cash');
 
-function PaymentMethodBadge({ fee }: { fee: Fee }) {
+/** "07.06 – 07.07.2026" (both years only when they differ). */
+const period = (fee: Fee) => {
+    const start = dayjs(fee.start_date);
+    const end = dayjs(fee.end_date);
+
+    return start.year() === end.year()
+        ? `${start.format('DD.MM')} – ${end.format('DD.MM.YYYY')}`
+        : `${start.format('DD.MM.YYYY')} – ${end.format('DD.MM.YYYY')}`;
+};
+
+/** A payment as the confirmation pop-up shows it. */
+const toPayment = (fee: Fee, member: string): ConfirmationPayment => ({
+    id: fee.id,
+    member,
+    amount: Number(fee.amount),
+    payment_method: fee.payment_method,
+    start_date: fee.start_date,
+    end_date: fee.end_date,
+});
+
+/** The payments by year (of their start), newest year first. */
+const feeYears = (fees: Fee[]): [string, Fee[]][] => {
+    const years = new Map<string, Fee[]>();
+
+    fees.forEach((fee) => {
+        const year = dayjs(fee.start_date).format('YYYY');
+        years.set(year, [...(years.get(year) ?? []), fee]);
+    });
+
+    return [...years.entries()].sort(([a], [b]) => b.localeCompare(a));
+};
+
+/** Top of the history: paid until (green) or expired (red), how many, how much. */
+function HistorySummary({ fees }: { fees: Fee[] }) {
+    const paidUntil = fees.reduce(
+        (latest, fee) =>
+            !latest || dayjs(fee.end_date).isAfter(latest)
+                ? dayjs(fee.end_date)
+                : latest,
+        null as dayjs.Dayjs | null,
+    );
+    const total = fees.reduce((sum, fee) => sum + Number(fee.amount), 0);
+    const active = !!paidUntil && !paidUntil.isBefore(dayjs(), 'day');
+
     return (
-        <div
-            style={{
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                gap: 4,
-                flexShrink: 0,
-            }}
+        <SummaryCard
+            tone={active ? 'green' : 'red'}
+            title={
+                active
+                    ? t('Paid until :date', {
+                          date: paidUntil.format('DD.MM.YYYY'),
+                      })
+                    : t('The membership fee expired on :date', {
+                          date: paidUntil?.format('DD.MM.YYYY') ?? '',
+                      })
+            }
         >
-            <Chip
-                label={`${Number(fee.amount).toLocaleString('en-US', {
-                    minimumFractionDigits: 0,
-                    maximumFractionDigits: 2,
-                })} MKD`}
-                color="success"
-                size="small"
-            />
-            <Typography variant="caption" color="text.secondary">
-                {methodLabel(fee.payment_method)}
-            </Typography>
-            {fee.confirmation_sent_at && (
-                <Typography
-                    variant="caption"
-                    sx={{ color: 'success.main', lineHeight: 1.2 }}
-                >
-                    {t('Confirmation sent :date', {
-                        date: dayjs(fee.confirmation_sent_at).format('DD.MM'),
-                    })}
-                </Typography>
-            )}
-        </div>
+            {tc(':count payment|:count payments', fees.length)} ·{' '}
+            {formatCurrency(total)} MKD
+        </SummaryCard>
+    );
+}
+
+/**
+ * One payment: the period, whether its confirmation was sent, the amount and
+ * how it was paid. Admins tap it (or ⋮) for send, edit and delete.
+ */
+function HistoryRow({
+    fee,
+    canManage,
+    onOpen,
+}: {
+    fee: Fee;
+    canManage: boolean;
+    onOpen: () => void;
+}) {
+    const content = (
+        <>
+            <span className="min-w-0 flex-1">
+                <span className="block text-[15px] font-semibold text-[var(--popup-fg)]">
+                    {period(fee)}
+                </span>
+                {fee.confirmation_sent_at ? (
+                    <span className="mt-0.5 block text-[13px] font-semibold text-green-600 dark:text-green-400">
+                        {t('Confirmation sent on :date', {
+                            date: dayjs(fee.confirmation_sent_at).format(
+                                'DD.MM.YYYY',
+                            ),
+                        })}
+                    </span>
+                ) : (
+                    <span className="mt-0.5 block text-[13px] text-[var(--popup-muted)]">
+                        {t('No confirmation')}
+                    </span>
+                )}
+            </span>
+            <span className="flex-none text-right">
+                <span className="block text-[15px] font-bold text-green-600 dark:text-green-400">
+                    {formatCurrency(Number(fee.amount))} MKD
+                </span>
+                <span className="block text-[13px] text-[var(--popup-muted)]">
+                    {methodLabel(fee.payment_method)}
+                </span>
+            </span>
+        </>
+    );
+
+    if (!canManage) {
+        return (
+            <li className="flex items-center gap-3 border-b border-[var(--popup-border)] px-[18px] py-3">
+                {content}
+            </li>
+        );
+    }
+
+    return (
+        <li className="border-b border-[var(--popup-border)]">
+            <button
+                type="button"
+                onClick={onOpen}
+                aria-label={t('Payment :period, actions', {
+                    period: period(fee),
+                })}
+                className="flex w-full cursor-pointer items-center gap-3 px-[18px] py-3 text-left transition hover:bg-[var(--popup-ghost)]"
+            >
+                {content}
+                <MoreVertIcon
+                    fontSize="small"
+                    className="flex-none text-[var(--popup-muted)]"
+                />
+            </button>
+        </li>
     );
 }
 
@@ -189,6 +273,9 @@ export default function MembershipFeesIndex({
             new URLSearchParams(window.location.search).get('add') === '1',
     );
     const groups = useGroups();
+    // The club may have switched confirmation emails off (Club settings)
+    const { club } = usePage().props as { club: ClubSharedData | null };
+    const confirmationsOn = club?.payment_confirmation_emails ?? true;
     const activeMembers = members.filter((m) => m.status === 'active');
     const [selectedMember, setSelectedMember] = useState<Member | null>(null);
     const [fees, setFees] = useState<Fee[]>([]);
@@ -199,12 +286,13 @@ export default function MembershipFeesIndex({
     const [endDate, setEndDate] = useState<Dayjs | null>(null);
     const [showHistoryModal, setShowHistoryModal] = useState(false);
     const [editingFee, setEditingFee] = useState<Fee | null>(null);
-    // The payment just saved (null: the "payment saved" pop-up is closed)
-    const [savedFee, setSavedFee] = useState<SavedFee | null>(null);
-    // The payment whose confirmation email is shown before sending
-    const [previewFeeId, setPreviewFeeId] = useState<number | null>(null);
-    // The preview was opened from the "payment saved" pop-up (not the history)
-    const [previewFromSaved, setPreviewFromSaved] = useState(false);
+    // The confirmation pop-up: the payment, and whether it was just saved
+    const [confirmFor, setConfirmFor] = useState<{
+        payment: ConfirmationPayment;
+        saved: boolean;
+    } | null>(null);
+    // The payment whose actions (send, edit, delete) are open
+    const [actionsFee, setActionsFee] = useState<Fee | null>(null);
     const [editFeeForm, setEditFeeForm] = useState<{
         amount: string;
         payment_method: 'cash' | 'card';
@@ -313,28 +401,44 @@ export default function MembershipFeesIndex({
         [filteredSelectedMonthFees],
     );
 
-    const handleMemberSelect = useCallback(async (member: Member | null) => {
-        setSelectedMember(member);
-        setFees([]);
-
-        if (!member) {
-            return;
-        }
-
-        setLoadingFees(true);
-
-        try {
-            const response = await fetch(
-                `/membership-fees/by-member/${member.id}`,
-            );
-            const data = await response.json();
-            setFees(data.fees ?? []);
-        } catch {
+    const handleMemberSelect = useCallback(
+        async (member: Member | null, confirmFeeId: number | null = null) => {
+            setSelectedMember(member);
             setFees([]);
-        }
 
-        setLoadingFees(false);
-    }, []);
+            if (!member) {
+                return;
+            }
+
+            setLoadingFees(true);
+
+            try {
+                const response = await fetch(
+                    `/membership-fees/by-member/${member.id}`,
+                );
+                const data = await response.json();
+                const loaded: Fee[] = data.fees ?? [];
+                setFees(loaded);
+
+                // From a coach's payment notification: that payment's confirmation
+                const fee = confirmFeeId
+                    ? loaded.find((item) => item.id === confirmFeeId)
+                    : null;
+
+                if (fee) {
+                    setConfirmFor({
+                        payment: toPayment(fee, member.name),
+                        saved: false,
+                    });
+                }
+            } catch {
+                setFees([]);
+            }
+
+            setLoadingFees(false);
+        },
+        [],
+    );
 
     useEffect(() => {
         const params = new URLSearchParams(window.location.search);
@@ -355,13 +459,11 @@ export default function MembershipFeesIndex({
 
         if (notificationMember) {
             queueMicrotask(() => {
-                void handleMemberSelect(notificationMember);
+                void handleMemberSelect(
+                    notificationMember,
+                    userRole === 'admin' ? confirmFeeId : null,
+                );
                 setShowHistoryModal(true);
-
-                if (confirmFeeId && userRole === 'admin') {
-                    setPreviewFromSaved(false);
-                    setPreviewFeeId(confirmFeeId);
-                }
             });
         }
     }, [handleMemberSelect, members, userRole]);
@@ -382,11 +484,25 @@ export default function MembershipFeesIndex({
             },
             {
                 onSuccess: (page) => {
-                    // "Payment saved", with the offer to email a confirmation
-                    setSavedFee(
-                        (page.props.feeSaved as SavedFee | null | undefined) ??
-                            null,
-                    );
+                    // "Payment saved", with the confirmation email ready to send
+                    const saved = page.props.feeSaved as
+                        | SavedFee
+                        | null
+                        | undefined;
+
+                    if (saved) {
+                        setConfirmFor({
+                            payment: {
+                                id: saved.id,
+                                member: saved.member,
+                                amount: saved.amount,
+                                payment_method: saved.payment_method,
+                                start_date: saved.start_date,
+                                end_date: saved.end_date,
+                            },
+                            saved: true,
+                        });
+                    }
 
                     if (openedToAdd) {
                         // The pop-up closes after the "payment saved" one
@@ -413,35 +529,15 @@ export default function MembershipFeesIndex({
         }
     };
 
-    // "Not now" / "Close": the payment stays saved
-    const closeSaved = () => {
-        setSavedFee(null);
-        finishNewPayment();
-    };
+    // The confirmation pop-up closed (sent or not)
+    const closeConfirmation = () => {
+        const wasSaved = confirmFor?.saved ?? false;
+        setConfirmFor(null);
 
-    const openPreviewFromSaved = (feeId: number) => {
-        setSavedFee(null);
-        setPreviewFromSaved(true);
-        setPreviewFeeId(feeId);
-    };
-
-    const closePreview = () => {
-        setPreviewFeeId(null);
-
-        if (previewFromSaved) {
-            // Not sent after all: the payment itself is still saved
-            setPreviewFromSaved(false);
-            finishNewPayment();
-        }
-    };
-
-    const confirmationSent = () => {
-        setPreviewFeeId(null);
-
-        if (previewFromSaved) {
-            setPreviewFromSaved(false);
+        if (wasSaved) {
             finishNewPayment();
         } else if (selectedMember) {
+            // The history shows "confirmation sent" right away
             void handleMemberSelect(selectedMember);
         }
     };
@@ -468,6 +564,7 @@ export default function MembershipFeesIndex({
             onSuccess: () => {
                 setDeletingFee(null);
                 refreshHistory();
+                showToast(t('The payment was deleted'), 'deleted');
             },
             onFinish: () => setFeeBusy(false),
         });
@@ -507,6 +604,7 @@ export default function MembershipFeesIndex({
                 preserveState: true,
                 onSuccess: () => {
                     handleEditFeeClose();
+                    showToast(t('The payment was changed'));
 
                     if (selectedMember) {
                         void handleMemberSelect(selectedMember);
@@ -558,7 +656,7 @@ export default function MembershipFeesIndex({
                     />
                 </DialogTitle>
 
-                <DialogContent sx={{ overflowY: 'auto' }}>
+                <DialogContent sx={{ overflowY: 'auto', px: '18px' }}>
                     <div className="flex flex-col gap-6 py-4">
                         <Autocomplete
                             options={activeMembers}
@@ -580,114 +678,37 @@ export default function MembershipFeesIndex({
                         />
 
                         {selectedMember && (
-                            <>
-                                <div>
-                                    <Typography
-                                        variant="caption"
-                                        color="text.secondary"
-                                        sx={{
-                                            textTransform: 'uppercase',
-                                            letterSpacing: 1,
-                                        }}
-                                    >
-                                        {t('Last Payment — :name', {
-                                            name: selectedMember.name,
-                                        })}
-                                    </Typography>
-
-                                    {loadingFees ? (
-                                        <CardsSkeleton cards={1} />
-                                    ) : fees.length === 0 ? (
-                                        <Typography
-                                            variant="body2"
-                                            color="text.secondary"
-                                            sx={{ mt: 1 }}
-                                        >
-                                            {t('No payments recorded yet.')}
-                                        </Typography>
-                                    ) : (
-                                        <>
-                                            <List disablePadding sx={{ mt: 1 }}>
-                                                <ListItem
-                                                    sx={{
-                                                        px: 0,
-                                                        cursor: 'pointer',
-                                                        display: 'flex',
-                                                        flexWrap: 'nowrap',
-                                                        justifyContent:
-                                                            'space-between',
-                                                        alignItems: 'center',
-                                                        gap: 1,
-                                                    }}
-                                                    onClick={() =>
-                                                        setShowHistoryModal(
-                                                            true,
-                                                        )
-                                                    }
-                                                >
-                                                    <ListItemText
-                                                        primary={
-                                                            <Typography variant="body2">
-                                                                {dayjs(
-                                                                    fees[0]
-                                                                        .start_date,
-                                                                ).format(
-                                                                    'DD.MM.YYYY',
-                                                                )}{' '}
-                                                                →{' '}
-                                                                {dayjs(
-                                                                    fees[0]
-                                                                        .end_date,
-                                                                ).format(
-                                                                    'DD.MM.YYYY',
-                                                                )}
-                                                            </Typography>
-                                                        }
-                                                        sx={{
-                                                            flex: '1 1 auto',
-                                                            minWidth: 0,
-                                                        }}
-                                                    />
-                                                    <PaymentMethodBadge
-                                                        fee={fees[0]}
-                                                    />
-                                                </ListItem>
-                                            </List>
-                                            {/* The whole payment history opens from here */}
-                                            {fees.length > 1 && (
-                                                <div className="mt-2 flex justify-center">
-                                                    <ShowHistoryButton
-                                                        label={t(
-                                                            'View all :count payments',
-                                                            {
-                                                                count: fees.length,
-                                                            },
-                                                        )}
-                                                        onClick={() =>
-                                                            setShowHistoryModal(
-                                                                true,
-                                                            )
-                                                        }
-                                                    />
-                                                </div>
+                            <div className="flex flex-col gap-2">
+                                <SectionLabel>
+                                    {t('Last payment')}
+                                </SectionLabel>
+                                {loadingFees ? (
+                                    <CardsSkeleton cards={1} />
+                                ) : fees.length === 0 ? (
+                                    <p className="text-sm text-[var(--popup-muted)]">
+                                        {t('No payments recorded yet.')}
+                                    </p>
+                                ) : (
+                                    <ul className="-mx-[18px] border-t border-[var(--popup-border)]">
+                                        {/* The whole payment history opens from here */}
+                                        <DrillRow
+                                            title={period(fees[0])}
+                                            subtitle={tc(
+                                                ':count payment|:count payments',
+                                                fees.length,
                                             )}
-                                        </>
-                                    )}
-                                </div>
-                                <Divider />
-                            </>
+                                            value={`${formatCurrency(Number(fees[0].amount))} MKD`}
+                                            valueClassName="text-green-600 dark:text-green-400"
+                                            onClick={() =>
+                                                setShowHistoryModal(true)
+                                            }
+                                        />
+                                    </ul>
+                                )}
+                            </div>
                         )}
 
-                        <Typography
-                            variant="caption"
-                            color="text.secondary"
-                            sx={{
-                                textTransform: 'uppercase',
-                                letterSpacing: 1,
-                            }}
-                        >
-                            {t('Record New Payment')}
-                        </Typography>
+                        <SectionLabel>{t('Record New Payment')}</SectionLabel>
 
                         <div className="flex gap-3">
                             <TextField
@@ -778,103 +799,41 @@ export default function MembershipFeesIndex({
                         {!openedToAdd && <Divider />}
 
                         {userRole === 'admin' && !openedToAdd && (
-                            <div className="flex flex-col gap-4">
-                                <Typography
-                                    variant="caption"
-                                    color="text.secondary"
-                                    sx={{
-                                        textTransform: 'uppercase',
-                                        letterSpacing: 1,
-                                    }}
-                                >
+                            <div className="flex flex-col gap-2">
+                                <SectionLabel>
                                     {t('Membership Fees By Year')}
-                                </Typography>
+                                </SectionLabel>
 
                                 {allFees === undefined ? (
                                     <CardsSkeleton />
                                 ) : sortedYears.length > 0 ? (
-                                    <List disablePadding>
+                                    <ul className="-mx-[18px] border-t border-[var(--popup-border)]">
                                         {sortedYears.map((year) => (
-                                            <ListItem
+                                            <DrillRow
                                                 key={year}
-                                                divider
-                                                sx={{
-                                                    px: 0,
-                                                    cursor: 'pointer',
-                                                    display: 'flex',
-                                                    flexDirection: 'column',
-                                                    height: 'auto',
-                                                    gap: 2,
-                                                    paddingY: 1.5,
-                                                    alignItems: 'center',
-                                                    '&:hover': {
-                                                        bgcolor: popupFg(0.05),
-                                                    },
-                                                }}
+                                                title={year}
+                                                subtitle={tc(
+                                                    ':count month|:count months',
+                                                    yearGroups[year].monthCount,
+                                                )}
+                                                value={`${formatCurrency(yearGroups[year].total)} MKD`}
+                                                valueClassName="text-green-600 dark:text-green-400"
                                                 onClick={() => {
                                                     setSelectedYear(year);
                                                     setShowYearHistoryModal(
                                                         true,
                                                     );
                                                 }}
-                                            >
-                                                <div
-                                                    style={{
-                                                        display: 'flex',
-                                                        justifyContent:
-                                                            'center',
-                                                        alignItems: 'center',
-                                                        gap: '16px',
-                                                    }}
-                                                >
-                                                    <Typography variant="body2">
-                                                        {year}
-                                                    </Typography>
-                                                    <Typography
-                                                        variant="caption"
-                                                        color="primary"
-                                                    >
-                                                        {tc(
-                                                            ':count month|:count months',
-                                                            yearGroups[year]
-                                                                .monthCount,
-                                                        )}
-                                                    </Typography>
-                                                </div>
-
-                                                <Chip
-                                                    label={t(
-                                                        'Total: :amount MKD',
-                                                        {
-                                                            amount: formatCurrency(
-                                                                yearGroups[year]
-                                                                    .total,
-                                                            ),
-                                                        },
-                                                    )}
-                                                    color="success"
-                                                    size="small"
-                                                />
-                                                {/* Says plainly that the whole history opens from here */}
-                                                <ShowHistoryButton
-                                                    label={t('View months')}
-                                                    onClick={() => {
-                                                        setSelectedYear(year);
-                                                        setShowYearHistoryModal(
-                                                            true,
-                                                        );
-                                                    }}
-                                                />
-                                            </ListItem>
+                                            />
                                         ))}
-                                    </List>
+                                    </ul>
                                 ) : (
-                                    <Typography
-                                        variant="body2"
-                                        color="text.secondary"
-                                    >
-                                        {t('No membership fees recorded yet.')}
-                                    </Typography>
+                                    <EmptyState
+                                        icon={<CreditCardIcon />}
+                                        title={t(
+                                            'No membership fees recorded yet.',
+                                        )}
+                                    />
                                 )}
                             </div>
                         )}
@@ -892,119 +851,49 @@ export default function MembershipFeesIndex({
                     sx: { bgcolor: POPUP_BG },
                 }}
             >
-                <DialogTitle sx={{ p: 0 }}>
-                    <div className="flex items-center justify-between px-4 py-3">
-                        <Typography variant="h6" fontWeight="bold">
-                            {t('Payment History — :name', {
-                                name: selectedMember?.name ?? '',
-                            })}
-                        </Typography>
-                        <CloseButton
-                            onClick={() => setShowHistoryModal(false)}
-                        />
-                    </div>
-                    <Divider />
-                </DialogTitle>
+                <PopupHeader
+                    icon={<HistoryIcon fontSize="small" />}
+                    title={t('Payment history')}
+                    subtitle={selectedMember?.name ?? ''}
+                    onClose={() => setShowHistoryModal(false)}
+                />
 
                 <DialogContent sx={{ p: 0 }}>
-                    <List disablePadding>
-                        {fees.map((fee) => (
-                            <ListItem
-                                key={fee.id}
-                                divider
-                                sx={{
-                                    px: 2,
-                                    display: 'flex',
-                                    flexWrap: 'nowrap',
-                                    justifyContent: 'space-between',
-                                    alignItems: 'center',
-                                    gap: 1,
-                                }}
+                    {/* Paid until, how many payments, how much in total */}
+                    {fees.length > 0 ? (
+                        <HistorySummary fees={fees} />
+                    ) : (
+                        !loadingFees && (
+                            <EmptyState
+                                icon={<CreditCardIcon />}
+                                title={t('No payments recorded yet.')}
+                            />
+                        )
+                    )}
+                    <ul className="border-t border-[var(--popup-border)]">
+                        {feeYears(fees).map(([year, yearFees], index) => (
+                            <YearSection
+                                key={year}
+                                year={year}
+                                summary={`${yearFees.length} · ${formatCurrency(
+                                    yearFees.reduce(
+                                        (sum, fee) => sum + Number(fee.amount),
+                                        0,
+                                    ),
+                                )} MKD`}
+                                defaultOpen={index === 0}
                             >
-                                {/* Start and end on their own lines, so long month
-                                    names never push the amount and buttons around */}
-                                <ListItemText
-                                    primary={
-                                        <Typography variant="body2">
-                                            <span className="block">
-                                                {dayjs(fee.start_date).format(
-                                                    'DD MMMM YYYY',
-                                                )}{' '}
-                                                →
-                                            </span>
-                                            <span className="block">
-                                                {dayjs(fee.end_date).format(
-                                                    'DD MMMM YYYY',
-                                                )}
-                                            </span>
-                                        </Typography>
-                                    }
-                                    secondary={
-                                        // Admins: the "payment received" email, shown first
-                                        userRole === 'admin' &&
-                                        !fee.confirmation_sent_at ? (
-                                            <Button
-                                                size="small"
-                                                variant="text"
-                                                startIcon={
-                                                    <EmailIcon fontSize="small" />
-                                                }
-                                                onClick={() => {
-                                                    setPreviewFromSaved(false);
-                                                    setPreviewFeeId(fee.id);
-                                                }}
-                                                sx={{
-                                                    mt: 0.5,
-                                                    ml: -0.75,
-                                                    px: 0.75,
-                                                    minHeight: 32,
-                                                    whiteSpace: 'nowrap',
-                                                }}
-                                            >
-                                                {t('Send confirmation')}
-                                            </Button>
-                                        ) : undefined
-                                    }
-                                    sx={{ flex: '1 1 auto', minWidth: 0 }}
-                                />
-                                <div className="flex flex-none items-center gap-1">
-                                    <PaymentMethodBadge fee={fee} />
-                                    {userRole === 'admin' && (
-                                        <div className="flex flex-col gap-2">
-                                            <Hint title={t('Edit payment')}>
-                                                <IconButton
-                                                    size="small"
-                                                    color="primary"
-                                                    onClick={() =>
-                                                        handleEditFeeOpen(fee)
-                                                    }
-                                                    aria-label={t(
-                                                        'Edit payment',
-                                                    )}
-                                                >
-                                                    <EditIcon fontSize="small" />
-                                                </IconButton>
-                                            </Hint>
-                                            <Hint title={t('Delete payment')}>
-                                                <IconButton
-                                                    size="small"
-                                                    color="error"
-                                                    onClick={() =>
-                                                        setDeletingFee(fee)
-                                                    }
-                                                    aria-label={t(
-                                                        'Delete payment',
-                                                    )}
-                                                >
-                                                    <DeleteIcon fontSize="small" />
-                                                </IconButton>
-                                            </Hint>
-                                        </div>
-                                    )}
-                                </div>
-                            </ListItem>
+                                {yearFees.map((fee) => (
+                                    <HistoryRow
+                                        key={fee.id}
+                                        fee={fee}
+                                        canManage={userRole === 'admin'}
+                                        onOpen={() => setActionsFee(fee)}
+                                    />
+                                ))}
+                            </YearSection>
                         ))}
-                    </List>
+                    </ul>
                 </DialogContent>
             </Dialog>
 
@@ -1019,17 +908,12 @@ export default function MembershipFeesIndex({
                         sx: { bgcolor: POPUP_BG },
                     }}
                 >
-                    <DialogTitle sx={{ p: 0 }}>
-                        <div className="flex items-center justify-between px-4 py-3">
-                            <Typography variant="h6" fontWeight="bold">
-                                {t('Edit Payment — :name', {
-                                    name: selectedMember?.name ?? '',
-                                })}
-                            </Typography>
-                            <CloseButton onClick={handleEditFeeClose} />
-                        </div>
-                        <Divider />
-                    </DialogTitle>
+                    <PopupHeader
+                        icon={<EditIcon fontSize="small" />}
+                        title={t('Edit payment')}
+                        subtitle={selectedMember?.name ?? ''}
+                        onClose={handleEditFeeClose}
+                    />
 
                     <DialogContent>
                         <div className="flex flex-col gap-6 py-4">
@@ -1169,94 +1053,61 @@ export default function MembershipFeesIndex({
                     sx: { bgcolor: POPUP_BG },
                 }}
             >
-                <DialogTitle sx={{ p: 0 }}>
-                    <div className="flex items-center justify-between px-4 py-3">
-                        <Typography variant="h6" fontWeight="bold">
-                            {t('Membership Fees - :year', {
-                                year: selectedYear ?? '',
-                            })}
-                        </Typography>
-                        <CloseButton
-                            onClick={() => {
-                                setShowYearHistoryModal(false);
-                                setSelectedYear(null);
-                            }}
-                        />
-                    </div>
-                    <Divider />
-                </DialogTitle>
+                <PopupHeader
+                    icon={<CreditCardIcon fontSize="small" />}
+                    title={t('Membership Fees')}
+                    subtitle={t(':year · by month', { year: selectedYear ?? '' })}
+                    onClose={() => {
+                        setShowYearHistoryModal(false);
+                        setSelectedYear(null);
+                    }}
+                />
 
                 <DialogContent sx={{ p: 0 }}>
-                    <List disablePadding>
+                    {selectedYear && yearGroups[selectedYear] && (
+                        <SummaryCard
+                            tone="green"
+                            title={`${selectedYear}: ${formatCurrency(yearGroups[selectedYear].total)} MKD`}
+                        >
+                            {tc(
+                                ':count month|:count months',
+                                yearGroups[selectedYear].monthCount,
+                            )}{' '}
+                            ·{' '}
+                            {tc(
+                                ':count payment|:count payments',
+                                yearMonths.reduce(
+                                    (count, month) =>
+                                        count +
+                                        groupedFeesByMonth[month].fees.length,
+                                    0,
+                                ),
+                            )}
+                        </SummaryCard>
+                    )}
+                    <ul className="border-t border-[var(--popup-border)]">
                         {yearMonths.map((month) => {
                             const monthData = groupedFeesByMonth[month];
 
                             return (
-                                <ListItem
+                                <DrillRow
                                     key={month}
-                                    divider
-                                    sx={{
-                                        px: 2,
-                                        py: 2,
-                                        display: 'flex',
-                                        flexDirection: 'column',
-                                        height: 'auto',
-                                        gap: 2,
-                                        alignItems: 'center',
-                                        cursor: 'pointer',
-                                        '&:hover': {
-                                            bgcolor: popupFg(0.05),
-                                        },
-                                    }}
+                                    title={dayjs(month).format('MMMM YYYY')}
+                                    subtitle={tc(
+                                        ':count payment|:count payments',
+                                        monthData.fees.length,
+                                    )}
+                                    value={`${formatCurrency(monthData.total)} MKD`}
+                                    valueClassName="text-green-600 dark:text-green-400"
                                     onClick={() => {
                                         setSelectedMonth(month);
                                         setMonthPoolFilter('all');
                                         setShowMonthDetailModal(true);
                                     }}
-                                >
-                                    <div
-                                        style={{
-                                            display: 'flex',
-                                            justifyContent: 'center',
-                                            alignItems: 'center',
-                                            gap: '16px',
-                                        }}
-                                    >
-                                        <Typography variant="body2">
-                                            {dayjs(month).format('MMMM YYYY')}
-                                        </Typography>
-                                        <Typography
-                                            variant="caption"
-                                            color="primary"
-                                        >
-                                            {tc(
-                                                ':count payment|:count payments',
-                                                monthData.fees.length,
-                                            )}
-                                        </Typography>
-                                    </div>
-
-                                    <Chip
-                                        label={t('Total: :amount MKD', {
-                                            amount: formatCurrency(
-                                                monthData.total,
-                                            ),
-                                        })}
-                                        color="success"
-                                        size="small"
-                                    />
-                                    <ShowHistoryButton
-                                        label={t('View payments')}
-                                        onClick={() => {
-                                            setSelectedMonth(month);
-                                            setMonthPoolFilter('all');
-                                            setShowMonthDetailModal(true);
-                                        }}
-                                    />
-                                </ListItem>
+                                />
                             );
                         })}
-                    </List>
+                    </ul>
                 </DialogContent>
             </Dialog>
 
@@ -1269,34 +1120,29 @@ export default function MembershipFeesIndex({
                 }}
                 disableRestoreFocus
                 fullWidth
-                maxWidth="md"
+                maxWidth="sm"
                 PaperProps={{
                     sx: { bgcolor: POPUP_BG },
                 }}
             >
-                <DialogTitle sx={{ p: 0 }}>
-                    <div className="flex items-center justify-between px-4 py-3">
-                        <Typography variant="h6" fontWeight="bold">
-                            {t('Membership Details — :month', {
-                                month: selectedMonth
-                                    ? dayjs(selectedMonth).format('MMMM YYYY')
-                                    : '',
-                            })}
-                        </Typography>
-                        <CloseButton
-                            onClick={() => {
-                                setShowMonthDetailModal(false);
-                                setSelectedMonth(null);
-                                setMonthPoolFilter('all');
-                            }}
-                        />
-                    </div>
-                    <Divider />
-                </DialogTitle>
+                <PopupHeader
+                    icon={<CreditCardIcon fontSize="small" />}
+                    title={t('Membership Fees')}
+                    subtitle={
+                        selectedMonth
+                            ? dayjs(selectedMonth).format('MMMM YYYY')
+                            : ''
+                    }
+                    onClose={() => {
+                        setShowMonthDetailModal(false);
+                        setSelectedMonth(null);
+                        setMonthPoolFilter('all');
+                    }}
+                />
 
                 <DialogContent sx={{ p: 0 }}>
-                    <div className="grid gap-3 px-4 py-3 sm:grid-cols-3">
-                        <FormControl sx={inputSx}>
+                    <div className="px-[18px] pt-1 pb-3">
+                        <FormControl fullWidth size="small" sx={inputSx}>
                             <InputLabel id="month-pool-filter-label">
                                 {t('Group')}
                             </InputLabel>
@@ -1320,222 +1166,142 @@ export default function MembershipFeesIndex({
                                 ))}
                             </Select>
                         </FormControl>
-                        <TextField
-                            label={t('Paid Memberships')}
-                            value={filteredSelectedMonthFees.length}
-                            InputProps={{ readOnly: true }}
-                            sx={inputSx}
-                        />
-                        <TextField
-                            label={t('Total Value')}
-                            value={`${formatCurrency(filteredSelectedMonthTotal)} MKD`}
-                            InputProps={{ readOnly: true }}
-                            sx={inputSx}
-                        />
                     </div>
-                    <Divider />
-                    <TableContainer>
-                        <Table>
-                            <TableHead>
-                                <TableRow>
-                                    <TableCell
-                                        sx={{
-                                            color: POPUP_FG,
-                                            fontWeight: 'bold',
-                                            ...STICKY_FIRST_COLUMN,
-                                        }}
-                                    >
-                                        {t('Member')}
-                                    </TableCell>
-                                    <TableCell
-                                        sx={{
-                                            color: POPUP_FG,
-                                            fontWeight: 'bold',
-                                        }}
-                                    >
-                                        {t('Group')}
-                                    </TableCell>
-                                    <TableCell
-                                        sx={{
-                                            color: POPUP_FG,
-                                            fontWeight: 'bold',
-                                        }}
-                                    >
-                                        {t('Start Date')}
-                                    </TableCell>
-                                    <TableCell
-                                        sx={{
-                                            color: POPUP_FG,
-                                            fontWeight: 'bold',
-                                        }}
-                                    >
-                                        {t('End Date')}
-                                    </TableCell>
-                                    <TableCell
-                                        sx={{
-                                            color: POPUP_FG,
-                                            fontWeight: 'bold',
-                                        }}
-                                    >
-                                        {t('Amount')}
-                                    </TableCell>
-                                    <TableCell
-                                        sx={{
-                                            color: POPUP_FG,
-                                            fontWeight: 'bold',
-                                        }}
-                                    >
-                                        {t('Method')}
-                                    </TableCell>
-                                </TableRow>
-                            </TableHead>
-                            <TableBody>
-                                {filteredSelectedMonthFees.length === 0 && (
-                                    <TableRow>
-                                        <TableCell
-                                            colSpan={6}
-                                            sx={{
-                                                color: popupFg(0.7),
-                                                textAlign: 'center',
-                                                py: 4,
-                                            }}
-                                        >
-                                            {t(
-                                                'No payments recorded for this group.',
-                                            )}
-                                        </TableCell>
-                                    </TableRow>
-                                )}
-                                {filteredSelectedMonthFees.map((fee) => (
-                                    <TableRow key={fee.id}>
-                                        <TableCell
-                                            sx={{
-                                                color: POPUP_FG,
-                                                fontWeight: 600,
-                                                ...STICKY_FIRST_COLUMN,
-                                            }}
-                                        >
+                    <SummaryCard
+                        tone="green"
+                        title={`${formatCurrency(filteredSelectedMonthTotal)} MKD`}
+                    >
+                        {tc(
+                            ':count payment|:count payments',
+                            filteredSelectedMonthFees.length,
+                        )}
+                    </SummaryCard>
+                    {filteredSelectedMonthFees.length === 0 ? (
+                        <EmptyState
+                            icon={<CreditCardIcon />}
+                            title={t('No payments recorded for this group.')}
+                        />
+                    ) : (
+                        <ul className="border-t border-[var(--popup-border)]">
+                            {filteredSelectedMonthFees.map((fee) => (
+                                <li
+                                    key={fee.id}
+                                    className="flex items-center gap-3 border-b border-[var(--popup-border)] px-[18px] py-3"
+                                >
+                                    <span className="min-w-0 flex-1">
+                                        <span className="block truncate text-[15px] font-semibold text-[var(--popup-fg)]">
                                             {fee.member?.name ??
                                                 fee.member_name ??
                                                 '—'}
-                                        </TableCell>
-                                        <TableCell sx={{ color: POPUP_FG }}>
+                                        </span>
+                                        <span className="block text-[13px] text-[var(--popup-muted)]">
+                                            {period(fee)} ·{' '}
                                             {groupNameOf(
                                                 groups,
                                                 fee.group_id,
                                                 fee.group?.name,
                                             )}
-                                        </TableCell>
-                                        <TableCell sx={{ color: POPUP_FG }}>
-                                            {dayjs(fee.start_date).format(
-                                                'DD.MM.YYYY',
-                                            )}
-                                        </TableCell>
-                                        <TableCell sx={{ color: POPUP_FG }}>
-                                            {dayjs(fee.end_date).format(
-                                                'DD.MM.YYYY',
-                                            )}
-                                        </TableCell>
-                                        <TableCell sx={{ color: POPUP_FG }}>
+                                        </span>
+                                    </span>
+                                    <span className="flex-none text-right">
+                                        <span className="block text-[15px] font-bold text-green-600 dark:text-green-400">
                                             {formatCurrency(Number(fee.amount))}{' '}
                                             MKD
-                                        </TableCell>
-                                        <TableCell
-                                            sx={{
-                                                color: POPUP_FG,
-                                            }}
-                                        >
+                                        </span>
+                                        <span className="block text-[13px] text-[var(--popup-muted)]">
                                             {methodLabel(fee.payment_method)}
-                                        </TableCell>
-                                    </TableRow>
-                                ))}
-                            </TableBody>
-                        </Table>
-                    </TableContainer>
+                                        </span>
+                                    </span>
+                                </li>
+                            ))}
+                        </ul>
+                    )}
                 </DialogContent>
             </Dialog>
-            <PaymentSavedDialog
-                fee={savedFee}
-                canSend={userRole === 'admin'}
-                onClose={closeSaved}
-                onSend={openPreviewFromSaved}
+            {/* One step: the payment, who the confirmation goes to, Send */}
+            <ConfirmationDialog
+                payment={confirmFor?.payment ?? null}
+                saved={confirmFor?.saved ?? false}
+                canSend={userRole === 'admin' && confirmationsOn}
+                emailsOff={!confirmationsOn}
+                onClose={closeConfirmation}
+                onSent={closeConfirmation}
             />
 
-            {/* The confirmation email as it will be sent: Cancel, or Send */}
+            {/* One payment's actions (admins): send, edit, delete */}
             {userRole === 'admin' && (
-                <ConfirmationPreviewDialog
-                    feeId={previewFeeId}
-                    onClose={closePreview}
-                    onSent={confirmationSent}
+                <ActionMenu
+                    open={!!actionsFee}
+                    title={
+                        actionsFee
+                            ? `${period(actionsFee)} · ${formatCurrency(Number(actionsFee.amount))} MKD`
+                            : ''
+                    }
+                    subtitle={
+                        actionsFee
+                            ? methodLabel(actionsFee.payment_method)
+                            : undefined
+                    }
+                    onClose={() => setActionsFee(null)}
+                    actions={[
+                        {
+                            label: actionsFee?.confirmation_sent_at
+                                ? t('Send the confirmation again')
+                                : t('Send confirmation'),
+                            icon: <EmailIcon fontSize="small" />,
+                            tone: 'primary',
+                            hidden: !confirmationsOn,
+                            onClick: () => {
+                                if (actionsFee) {
+                                    setConfirmFor({
+                                        payment: toPayment(
+                                            actionsFee,
+                                            selectedMember?.name ?? '',
+                                        ),
+                                        saved: false,
+                                    });
+                                }
+                            },
+                        },
+                        {
+                            label: t('Edit payment'),
+                            icon: <EditIcon fontSize="small" />,
+                            onClick: () =>
+                                actionsFee && handleEditFeeOpen(actionsFee),
+                        },
+                        {
+                            label: t('Delete payment'),
+                            icon: <DeleteIcon fontSize="small" />,
+                            tone: 'danger',
+                            onClick: () => setDeletingFee(actionsFee),
+                        },
+                    ]}
                 />
             )}
 
             {/* Deleting a payment: asked once */}
             {userRole === 'admin' && (
-                <Dialog
+                <ConfirmDialog
                     open={!!deletingFee}
-                    onClose={() => !feeBusy && setDeletingFee(null)}
-                    disableRestoreFocus
-                    fullWidth
-                    maxWidth="xs"
-                    PaperProps={{ sx: { bgcolor: POPUP_BG } }}
+                    icon={<DeleteIcon fontSize="small" />}
+                    title={t('Delete payment?')}
+                    subtitle={
+                        deletingFee
+                            ? `${selectedMember?.name ?? ''} · ${formatCurrency(Number(deletingFee.amount))} MKD`
+                            : undefined
+                    }
+                    confirmLabel={t('Delete')}
+                    busy={feeBusy}
+                    onConfirm={deleteFee}
+                    onClose={() => setDeletingFee(null)}
                 >
-                    <DialogTitle sx={{ p: 0 }}>
-                        <div className="flex items-center justify-between px-4 py-3">
-                            <Typography variant="h6" fontWeight="bold">
-                                {t('Delete payment')}
-                            </Typography>
-                            <CloseButton onClick={() => setDeletingFee(null)} />
-                        </div>
-                        <Divider />
-                    </DialogTitle>
-                    <DialogContent>
-                        <div className="flex flex-col gap-4 py-4">
-                            {deletingFee && (
-                                <Typography variant="body1">
-                                    {t(
-                                        'Delete the payment of :amount MKD for :from – :to?',
-                                        {
-                                            amount: formatCurrency(
-                                                Number(deletingFee.amount),
-                                            ),
-                                            from: dayjs(
-                                                deletingFee.start_date,
-                                            ).format('DD.MM.YYYY'),
-                                            to: dayjs(
-                                                deletingFee.end_date,
-                                            ).format('DD.MM.YYYY'),
-                                        },
-                                    )}
-                                </Typography>
-                            )}
-                            <Typography variant="body2" color="text.secondary">
-                                {t(
-                                    'Only for a payment entered by mistake: profit and reports will no longer count it. This cannot be undone.',
-                                )}
-                            </Typography>
-                            <div className="flex gap-3">
-                                <Button
-                                    variant="outlined"
-                                    fullWidth
-                                    onClick={() => setDeletingFee(null)}
-                                    disabled={feeBusy}
-                                >
-                                    {t('Cancel')}
-                                </Button>
-                                <Button
-                                    variant="contained"
-                                    color="error"
-                                    fullWidth
-                                    onClick={deleteFee}
-                                    disabled={feeBusy}
-                                >
-                                    {t('Delete')}
-                                </Button>
-                            </div>
-                        </div>
-                    </DialogContent>
-                </Dialog>
+                    {deletingFee && <p>{period(deletingFee)}</p>}
+                    <Note tone="error">
+                        {t(
+                            'Only for a payment entered by mistake: profit and reports will no longer count it. This cannot be undone.',
+                        )}
+                    </Note>
+                </ConfirmDialog>
             )}
         </MuiThemeProvider>
     );

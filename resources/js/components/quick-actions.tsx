@@ -7,7 +7,13 @@ import dayjs from 'dayjs';
 import { useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 import { MuiThemeProvider, POPUP_BG } from '@/components/mui-theme-provider';
-import { CloseButton, IconBadge } from '@/components/popup-ui';
+import {
+    EmptyState,
+    Note,
+    PopupHeader,
+    SectionLabel,
+    Tile,
+} from '@/components/popup-ui';
 import { useGroups } from '@/lib/groups';
 import { t } from '@/lib/i18n';
 
@@ -146,6 +152,8 @@ function GroupPicker({
     targets: AttendanceTarget[];
     onClose: () => void;
 }) {
+    const groups = useGroups();
+
     return (
         <MuiThemeProvider>
             <Dialog
@@ -155,42 +163,85 @@ function GroupPicker({
                 maxWidth="xs"
                 PaperProps={{ sx: { bgcolor: POPUP_BG } }}
             >
-                <div className="flex flex-col gap-4 p-5">
-                    <div className="flex items-center gap-3">
-                        <IconBadge>
-                            <EventAvailableIcon fontSize="small" />
-                        </IconBadge>
-                        <div className="min-w-0 flex-1">
-                            <p className="text-base font-bold text-[var(--popup-fg)]">
-                                {t('Which group is the attendance for?')}
-                            </p>
-                            <p className="text-sm text-[var(--popup-muted)]">
-                                {dayjs().format('DD.MM.YYYY')}
-                            </p>
+                <PopupHeader
+                    icon={<EventAvailableIcon fontSize="small" />}
+                    title={t('Which group?')}
+                    subtitle={`${dayjs().format('DD.MM.YYYY')} · ${t('enter attendance')}`}
+                    onClose={onClose}
+                />
+                {targets.length === 0 ? (
+                    <EmptyState
+                        icon={<EventAvailableIcon />}
+                        title={t('No groups yet')}
+                        text={t('Ask an admin to add one.')}
+                    />
+                ) : (
+                    <>
+                        <Note tone="info" className="mx-[18px] mb-3">
+                            {t(
+                                'Attendance is entered separately for each time slot.',
+                            )}
+                        </Note>
+                        <div className="max-h-[60vh] overflow-y-auto pb-3">
+                            {groups
+                                .filter((group) =>
+                                    targets.some(
+                                        (target) => target.groupId === group.id,
+                                    ),
+                                )
+                                .map((group) => (
+                                    <section
+                                        key={group.id}
+                                        className="border-t border-[var(--popup-border)] px-[18px] pt-3 pb-3.5"
+                                    >
+                                        <div className="mb-2.5">
+                                            <SectionLabel>{group.name}</SectionLabel>
+                                        </div>
+                                        <div className="grid grid-cols-2 gap-2.5">
+                                            {targets
+                                                .filter(
+                                                    (target) =>
+                                                        target.groupId ===
+                                                        group.id,
+                                                )
+                                                .map((target) => (
+                                                    <Tile
+                                                        key={target.key}
+                                                        wide={
+                                                            target.subgroupId ===
+                                                            null
+                                                        }
+                                                        label={
+                                                            target.subgroupId ===
+                                                            null
+                                                                ? undefined
+                                                                : t('Time slot')
+                                                        }
+                                                        name={
+                                                            target.subgroupId ===
+                                                            null
+                                                                ? t('Whole group')
+                                                                : (group.subgroups.find(
+                                                                      (sub) =>
+                                                                          sub.id ===
+                                                                          target.subgroupId,
+                                                                  )?.name ??
+                                                                  target.label)
+                                                        }
+                                                        onClick={() => {
+                                                            onClose();
+                                                            openTodaysAttendance(
+                                                                target,
+                                                            );
+                                                        }}
+                                                    />
+                                                ))}
+                                        </div>
+                                    </section>
+                                ))}
                         </div>
-                        <CloseButton onClick={onClose} />
-                    </div>
-                    <div className="flex flex-col gap-2">
-                        {targets.map((target) => (
-                            <button
-                                key={target.key}
-                                type="button"
-                                onClick={() => {
-                                    onClose();
-                                    openTodaysAttendance(target);
-                                }}
-                                className="cursor-pointer rounded-xl border border-[var(--popup-border)] px-4 py-3 text-left font-semibold text-[var(--popup-fg)] transition hover:border-hydra-blue hover:bg-hydra-blue/10"
-                            >
-                                {target.label}
-                            </button>
-                        ))}
-                        {targets.length === 0 && (
-                            <p className="text-sm text-[var(--popup-muted)]">
-                                {t('No groups yet. Ask an admin to add one.')}
-                            </p>
-                        )}
-                    </div>
-                </div>
+                    </>
+                )}
             </Dialog>
         </MuiThemeProvider>
     );
