@@ -1,5 +1,6 @@
 import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
 import LockIcon from '@mui/icons-material/Lock';
+import MailOutlineIcon from '@mui/icons-material/MailOutline';
 import NotificationsIcon from '@mui/icons-material/Notifications';
 import PersonIcon from '@mui/icons-material/Person';
 import Button from '@mui/material/Button';
@@ -12,6 +13,7 @@ import { FIELD_SX, IconBadge, Note } from '@/components/popup-ui';
 import { t } from '@/lib/i18n';
 import { showToast } from '@/lib/toast';
 import { send } from '@/routes/verification';
+import type { ClubSharedData } from '@/types/club';
 
 type NotificationSettings = Record<string, boolean>;
 
@@ -32,6 +34,9 @@ export default function Profile({
     status?: string;
     notificationSettings: NotificationSettings | null;
 }) {
+    const { auth } = usePage().props;
+    const isAdmin = (auth.user as { role?: string }).role === 'admin';
+
     return (
         <MuiThemeProvider>
             <Head title={t('Account settings')} />
@@ -44,6 +49,7 @@ export default function Profile({
                     status={status}
                 />
                 <PasswordCard />
+                {isAdmin && <EmailsCard />}
                 {notificationSettings && (
                     <NotificationsCard settings={notificationSettings} />
                 )}
@@ -246,6 +252,137 @@ function PasswordCard() {
                 </Button>
             </form>
         </Card>
+    );
+}
+
+type EmailSwitchKey =
+    | 'payment_confirmation_emails'
+    | 'auto_payment_confirmation'
+    | 'payment_reminder_emails'
+    | 'auto_payment_reminder';
+
+/**
+ * Admins: the emails the club sends to parents, and whether they go out by
+ * themselves. Each switch is saved as soon as it is flipped.
+ */
+function EmailsCard() {
+    const { club } = usePage().props as { club: ClubSharedData | null };
+    const [values, setValues] = useState<Record<EmailSwitchKey, boolean>>({
+        payment_confirmation_emails: club?.payment_confirmation_emails ?? true,
+        auto_payment_confirmation: club?.auto_payment_confirmation ?? false,
+        payment_reminder_emails: club?.payment_reminder_emails ?? true,
+        auto_payment_reminder: club?.auto_payment_reminder ?? false,
+    });
+
+    const toggle = (key: EmailSwitchKey) => {
+        const before = values;
+        const next = { ...values, [key]: !values[key] };
+        setValues(next);
+        router.patch(
+            '/club/emails',
+            { [key]: next[key] },
+            {
+                preserveScroll: true,
+                preserveState: true,
+                onSuccess: () => showToast(t('The email settings were saved')),
+                onError: () => setValues(before),
+            },
+        );
+    };
+
+    return (
+        <Card
+            icon={<MailOutlineIcon fontSize="small" />}
+            title={t('Emails to parents')}
+            subtitle={t('For the whole club: every admin sees the same')}
+        >
+            <ul className="border-t border-[var(--popup-border)]">
+                <SwitchRow
+                    label={t('Payment confirmation')}
+                    hint={t('Admins can email it to the parent after a payment.')}
+                    checked={values.payment_confirmation_emails}
+                    onChange={() => toggle('payment_confirmation_emails')}
+                />
+                <SwitchRow
+                    indented
+                    label={t('Send automatically')}
+                    hint={t('As soon as a payment is saved.')}
+                    checked={
+                        values.payment_confirmation_emails &&
+                        values.auto_payment_confirmation
+                    }
+                    disabled={!values.payment_confirmation_emails}
+                    onChange={() => toggle('auto_payment_confirmation')}
+                />
+                <SwitchRow
+                    label={t('Reminder for an unpaid fee')}
+                    hint={t('Admins can send it from Unpaid fees.')}
+                    checked={values.payment_reminder_emails}
+                    onChange={() => toggle('payment_reminder_emails')}
+                />
+                <SwitchRow
+                    indented
+                    label={t('Send automatically')}
+                    hint={t(
+                        'Every morning, once to each member whose fee ran out.',
+                    )}
+                    checked={
+                        values.payment_reminder_emails &&
+                        values.auto_payment_reminder
+                    }
+                    disabled={!values.payment_reminder_emails}
+                    onChange={() => toggle('auto_payment_reminder')}
+                />
+            </ul>
+        </Card>
+    );
+}
+
+/** A setting with a short explanation and its switch; "automatic" ones indented. */
+function SwitchRow({
+    label,
+    hint,
+    checked,
+    disabled = false,
+    indented = false,
+    onChange,
+}: {
+    label: string;
+    hint: string;
+    checked: boolean;
+    disabled?: boolean;
+    indented?: boolean;
+    onChange: () => void;
+}) {
+    return (
+        <li className="border-b border-[var(--popup-border)] last:border-b-0">
+            <label
+                className={`relative flex min-h-12 items-center gap-3 py-2 pr-[18px] ${indented ? 'pl-11' : 'pl-[18px]'} ${disabled ? 'opacity-50' : 'cursor-pointer'}`}
+            >
+                {indented && (
+                    <span
+                        aria-hidden
+                        className="absolute inset-y-0 left-7 border-l-2 border-[var(--popup-border)]"
+                    />
+                )}
+                <span className="min-w-0 flex-1">
+                    <span
+                        className={`block font-semibold ${indented ? 'text-sm' : 'text-[15px]'}`}
+                    >
+                        {label}
+                    </span>
+                    <span className="block text-[12.5px] text-[var(--popup-muted)]">
+                        {hint}
+                    </span>
+                </span>
+                <Switch
+                    checked={checked}
+                    disabled={disabled}
+                    onChange={onChange}
+                    inputProps={{ 'aria-label': label }}
+                />
+            </label>
+        </li>
     );
 }
 

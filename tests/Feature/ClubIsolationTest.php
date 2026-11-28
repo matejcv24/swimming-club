@@ -273,7 +273,7 @@ class ClubIsolationTest extends TestCase
             'staff/invitations/{invitation}/resend', 'salaries', 'salaries/{salary}', 'salaries/by-coach/{coach}',
             'invoices', 'invoices/{invoice}', 'invoices/by-month/{month}', 'profit', 'reports/monthly',
             'notifications', 'notifications/{notification}/read', 'notifications/{notification}/open', 'notifications/seen', 'notifications/{notification}', 'unpaid-fees/{member}/email', 'family',
-            'club', 'club/logo', 'invitation/{token}', 'clubs/{club}/switch',
+            'club', 'club/emails', 'club/logo', 'invitation/{token}', 'clubs/{club}/switch',
         ];
 
         // The person's own account and device, signing in, and framework routes

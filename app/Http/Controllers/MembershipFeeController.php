@@ -87,6 +87,20 @@ class MembershipFeeController extends Controller
 
         // The "payment saved" pop-up: the summary, and where a confirmation would go
         $address = PaymentReminderMessage::addressOf($member->load('parent'));
+        $club = Club::current();
+        $autoSent = false;
+
+        // The club sends confirmations by itself: right away, to the same address
+        if ($address && $club->payment_confirmation_emails && $club->auto_payment_confirmation) {
+            try {
+                Mail::to($address[0])->send(new PaymentConfirmationMail($fee, $club));
+                $fee->forceFill(['confirmation_sent_at' => now()])->save();
+                $autoSent = true;
+            } catch (Throwable $e) {
+                // Not sent: the pop-up offers to send it by hand instead
+                report($e);
+            }
+        }
 
         return back()
             ->with('success', 'Payment recorded!')
@@ -100,6 +114,7 @@ class MembershipFeeController extends Controller
                 'end_date' => $fee->end_date?->toDateString(),
                 'email' => $address[0] ?? null,
                 'email_of' => $address[1] ?? null,
+                'auto_sent' => $autoSent,
             ]);
     }
 

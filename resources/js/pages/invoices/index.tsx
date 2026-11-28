@@ -425,6 +425,7 @@ export default function InvoicesIndex({ invoices }: Props) {
                                         yearGroups[year].monthCount,
                                     )}
                                     value={`${formatCurrency(yearGroups[year].total)} MKD`}
+                                    valueClassName="text-red-500 dark:text-red-400"
                                     onClick={() => {
                                         setSelectedYear(year);
                                         setShowYearDetailModal(true);
@@ -460,7 +461,7 @@ export default function InvoicesIndex({ invoices }: Props) {
                 <DialogContent sx={{ p: 0 }}>
                     {selectedYear && yearGroups[selectedYear] && (
                         <SummaryCard
-                            tone="blue"
+                            tone="red"
                             title={`${selectedYear}: ${formatCurrency(yearGroups[selectedYear].total)} MKD`}
                         >
                             {tc(
@@ -501,7 +502,7 @@ export default function InvoicesIndex({ invoices }: Props) {
                                                 {invoiceLabel(invoice)}
                                             </span>
                                         </span>
-                                        <span className="flex-none text-[15px] font-bold whitespace-nowrap text-[var(--popup-fg)]">
+                                        <span className="flex-none text-[15px] font-bold whitespace-nowrap text-red-500 dark:text-red-400">
                                             {formatCurrency(invoice.amount)} MKD
                                         </span>
                                         <MoreVertIcon

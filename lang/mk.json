@@ -775,5 +775,14 @@
     "employee": "вработен",
     "enter attendance": "внеси присуство",
     "fees": "членарини",
-    "salary": "плата"
+    "salary": "плата",
+    "Admins can email it to the parent after a payment.": "Администраторите можат да ја пратат до родителот по уплатата.",
+    "Admins can send it from Unpaid fees.": "Администраторите можат да го пратат од Неплатени членарини.",
+    "As soon as a payment is saved.": "Штом се зачува уплатата.",
+    "Every morning, once to each member whose fee ran out.": "Секое утро, еднаш до секој член на кого му истекла членарината.",
+    "For the whole club: every admin sees the same": "За целиот клуб: сите администратори го гледаат истото",
+    "Member's contact details": "Контакт податоци за член",
+    "Send automatically": "Испраќај автоматски",
+    "The confirmation was sent to :email": "Потврдата е испратена до :email",
+    "The email settings were saved": "Поставките за е-пошта се зачувани"
 }

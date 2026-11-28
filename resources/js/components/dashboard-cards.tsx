@@ -267,7 +267,12 @@ export function DashboardCards({
                     }
                     onHover={prefetchOnHover('/invoices')}
                 >
-                    <Amount value={formatCurrency(invoiceTotal)} unit="MKD" />
+                    {/* Money going out: red (income is green) */}
+                    <Amount
+                        value={formatCurrency(invoiceTotal)}
+                        unit="MKD"
+                        className={invoiceTotal > 0 ? 'text-red-500' : ''}
+                    />
                 </StatCard>
             )}
 

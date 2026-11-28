@@ -11,7 +11,7 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Club extends Model
 {
-    protected $fillable = ['name', 'slug', 'status', 'sport', 'sport_other', 'custom_domain', 'locale', 'email', 'logo_path', 'payment_confirmation_emails', 'payment_reminder_emails'];
+    protected $fillable = ['name', 'slug', 'status', 'sport', 'sport_other', 'custom_domain', 'locale', 'email', 'logo_path', 'payment_confirmation_emails', 'payment_reminder_emails', 'auto_payment_confirmation', 'auto_payment_reminder'];
 
     /**
      * The club this request is for (see CurrentClub), or "not found" when none

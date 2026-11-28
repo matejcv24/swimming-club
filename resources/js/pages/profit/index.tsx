@@ -174,11 +174,7 @@ export default function ProfitIndex({ profits }: Props) {
                         <SummaryCard
                             tone={openMonth.profit < 0 ? 'red' : 'green'}
                             title={`${signed(openMonth.profit)} MKD`}
-                        >
-                            {openMonth.profit < 0
-                                ? t('More went out than came in')
-                                : t('More came in than went out')}
-                        </SummaryCard>
+                        />
                         <ul className="mb-3 border-t border-[var(--popup-border)]">
                             {[
                                 {
@@ -208,7 +204,7 @@ export default function ProfitIndex({ profits }: Props) {
                                         className={`text-[15px] font-bold ${
                                             part.sign > 0
                                                 ? 'text-green-600 dark:text-green-400'
-                                                : 'text-[var(--popup-fg)]'
+                                                : 'text-red-500 dark:text-red-400'
                                         }`}
                                     >
                                         {part.sign > 0 ? '+' : '−'}
